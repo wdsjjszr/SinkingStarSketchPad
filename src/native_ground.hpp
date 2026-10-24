@@ -2,6 +2,7 @@
 #include "grid_math.hpp"
 #include <cstdint>
 #include <map>
+#include <limits>
 #include <set>
 #include <string>
 #include <tuple>
@@ -65,9 +66,62 @@ inline std::vector<Cell> surfaces(const Scene &scene){
 }
 struct Snapshot {
     std::string scene,error;
+    uintptr_t scene_id=0;
     std::vector<Cell> cells;
     std::set<double> heights;
+    std::map<I3,uint32_t> voxels;
+    I3 wall_min{},wall_max{};
     size_t wall_sets=0,fences=0,oceans=0,voxel_count=0;
     bool ready=false;
+    void set_geometry(Scene data){
+        cells=surfaces(data);for(const auto &cell:cells)heights.insert(cell.center.z);
+        voxels=std::move(data.voxels);voxel_count=voxels.size();
+        if(!voxels.empty()){
+            wall_min=wall_max=voxels.begin()->first;
+            for(const auto &[p,id]:voxels){
+                wall_min={std::min(wall_min.x,p.x),std::min(wall_min.y,p.y),std::min(wall_min.z,p.z)};
+                wall_max={std::max(wall_max.x,p.x),std::max(wall_max.y,p.y),std::max(wall_max.z,p.z)};
+            }
+        }
+        ready=true;
+    }
 };
+struct CharacterSample {
+    uintptr_t scene_id=0;
+    grid::V position;
+    uint32_t entity_id=0;
+    unsigned controlled_count=0;
+    bool valid=false;
+    std::string error;
+};
+constexpr bool controlled(uint16_t status,uint16_t active){return (status&active)!=0;}
+constexpr bool precedes(grid::V a,grid::V b,uint32_t a_id,uint32_t b_id){
+    if(a.x!=b.x)return a.x<b.x;if(a.y!=b.y)return a.y<b.y;if(a.z!=b.z)return a.z<b.z;return a_id<b_id;
+}
+constexpr bool nearer(double distance,double z,double best_distance,double best_z){
+    return distance<best_distance||(distance==best_distance&&z<best_z);
+}
+inline const Cell *cell_at(const Snapshot &ground,int x,int y,double z){
+    auto key=std::make_tuple(double(x),double(y),z);
+    auto it=std::lower_bound(ground.cells.begin(),ground.cells.end(),key,[](const Cell &cell,const auto &key){
+        return std::tie(cell.center.x,cell.center.y,cell.center.z)<key;
+    });
+    return it!=ground.cells.end()&&std::tie(it->center.x,it->center.y,it->center.z)==key?&*it:nullptr;
+}
+inline const Cell *nearest(const Snapshot &ground,grid::V position){
+    if(!ground.ready||!grid::finite(position))return nullptr;
+    const int x=coordinate(position.x),y=coordinate(position.y);const Cell *best=nullptr;
+    double distance=std::numeric_limits<double>::infinity();
+    for(double z:ground.heights)if(auto cell=cell_at(ground,x,y,z)){
+        const double d=std::abs(z-position.z);
+        if(!best||nearer(d,z,distance,best->center.z)){best=cell;distance=d;}
+    }
+    if(best)return best;
+    for(const auto &cell:ground.cells){
+        auto delta=cell.center-position;const double d=grid::dot(delta,delta);
+        if(!best||nearer(d,cell.center.z,distance,best->center.z)){best=&cell;distance=d;}
+    }
+    return best;
+}
+inline grid::Lattice lattice(double z){return {true,{0,0,z},{1,0,0},{0,-1,0}};}
 }

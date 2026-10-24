@@ -404,7 +404,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
         ImGui::TextWrapped("%s",tr(Label::GroundDebugLegend));
     }
     if(ImGui::Checkbox(tr(Label::NativeDebug),&native_ground_debug)){
-        native_ground_bridge::enable(native_ground_debug);native_ground_snapshot.reset();native_ground_height=std::numeric_limits<double>::quiet_NaN();status();
+        native_ground_height=std::numeric_limits<double>::quiet_NaN();status();
     }
     if(native_ground_debug){
         if(!native_ground_snapshot)ImGui::TextWrapped("%s",tr(Label::NativeLoading));
