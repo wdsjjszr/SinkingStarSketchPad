@@ -35,6 +35,16 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GridCenters,"Cell centers","中心点") X(GridIntersections,"Grid intersections","网格交点") \
  X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
  X(DrawingSettingsFailed,"Could not save drawing settings.","无法保存绘图设置。") \
+ X(Settings,"Settings","设置") X(SettingsTitle,"Settings###SketchSettings","设置###SketchSettings") \
+ X(SettingsHelp,"Changes apply immediately and are saved automatically. E hides/restores this window with drawing.","修改即时生效并自动保存。E 随绘图菜单隐藏 / 恢复本窗口。") \
+ X(HintSettings,"Plane change preview","平面变动预览") X(HintMode,"Show on plane changes","在平面变动时显示预览") \
+ X(HintOn,"On","开") X(HintOff,"Off","关") X(HintWheelOnly,"Height adjustment only","仅微调") \
+ X(HintDuration,"Preview duration (seconds)","预览时长（秒）") \
+ X(HintHelp,"Initial level entry stays silent. Height adjustment only means wheel height changes. Ctrl+click the duration to enter a value; zero disables the preview.","进入关卡首次初始化不提示。仅微调指滚轮改高。Ctrl+点击时长可直接输入；0 秒不显示。") \
+ X(WheelSettings,"Wheel behavior while drawing","绘图时滚轮行为") X(Wheel,"Wheel","滚轮") X(CtrlWheel,"Ctrl + wheel","Ctrl + 滚轮") \
+ X(ShiftWheel,"Shift + wheel","Shift + 滚轮") X(AltWheel,"Alt + wheel","Alt + 滚轮") \
+ X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
+ X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the next/previous color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择下一色 / 上一色。关闭绘图后滚轮用于相机缩放。") \
  X(GridDrawing,"Grid drawing","网格绘画") \
  X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \

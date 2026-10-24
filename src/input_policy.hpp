@@ -1,6 +1,9 @@
 #pragma once
+#include <array>
 
 namespace sketch::input {
+enum class WheelAction {None,Plane,Color};
+inline constexpr std::array<WheelAction,4> default_wheel={WheelAction::Plane,WheelAction::None,WheelAction::Color,WheelAction::None};
 struct PlaneWheel {
     double remainder=0;
     constexpr int consume(double wheel,bool enabled){

@@ -7,14 +7,33 @@ struct Preview {
     bool enabled=true,centers=true,intersections=false,borders=false,checker=false;
     int opacity=45;
     constexpr int alpha()const{return (opacity*255+50)/100;}
+    constexpr bool visible()const{return opacity>0&&(centers||intersections||borders||checker);}
+};
+enum class HintMode {On,Off,WheelOnly};
+enum class HintSource {Initialize,Mark,Wheel};
+struct HintPreferences {
+    Preview style{true,false,false,true,true,25};
+    HintMode mode=HintMode::On;
+    unsigned duration_ms=1000;
+    constexpr bool permits(HintSource source)const{
+        return duration_ms&&source!=HintSource::Initialize&&mode!=HintMode::Off&&(mode!=HintMode::WheelOnly||source==HintSource::Wheel);
+    }
 };
 struct PlaneHint {
     Lattice lattice;
-    uint64_t until=0,generation=0;
+    uint64_t started=0,generation=0;
     unsigned page=0;
-    constexpr void clear(){until=0;}
-    constexpr void show(Lattice plane,uint64_t now,unsigned current_page,uint64_t scene){lattice=plane;until=now+2000;page=current_page;generation=scene;}
-    constexpr bool active(uint64_t now,unsigned current_page,uint64_t scene)const{return until>now&&page==current_page&&generation==scene;}
+    HintSource source=HintSource::Initialize;
+    bool showing=false;
+    constexpr void clear(){showing=false;}
+    constexpr void show(Lattice plane,uint64_t now,unsigned current_page,uint64_t scene,HintSource reason,const HintPreferences &preferences){
+        clear();if(!preferences.permits(reason))return;
+        lattice=plane;started=now;page=current_page;generation=scene;source=reason;showing=true;
+    }
+    constexpr bool active(uint64_t now,unsigned current_page,uint64_t scene,const HintPreferences &preferences)const{
+        return showing&&preferences.permits(source)&&page==current_page&&generation==scene&&now>=started&&now-started<preferences.duration_ms;
+    }
+    constexpr void expire(uint64_t now,unsigned current_page,uint64_t scene,const HintPreferences &preferences){if(!active(now,current_page,scene,preferences))clear();}
 };
 struct ClipPoint {double x=0,y=0,w=0;};
 constexpr ClipPoint mix(ClipPoint a,ClipPoint b,double t){return {a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.w+(b.w-a.w)*t};}

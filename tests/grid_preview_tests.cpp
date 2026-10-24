@@ -2,13 +2,28 @@
 #include <cassert>
 using namespace sketch::grid;
 constexpr bool hints(){
-    PlaneHint hint;Lattice a{true,{0,0,2},{1,0,0},{0,-1,0}},b=a;b.origin.z=3;
-    hint.show(a,10,0,1);if(!hint.active(2009,0,1)||hint.active(2010,0,1)||hint.active(20,1,1))return false;
-    hint.show(b,100,0,1);if(hint.lattice.origin.z!=3||!hint.active(2099,0,1))return false;
-    hint.show(b,200,0,1);if(!hint.active(2199,0,1)||hint.active(201,0,2))return false;
-    hint.clear();return !hint.active(201,0,1);
+    HintPreferences preferences;PlaneHint hint;Lattice a{true,{0,0,2},{1,0,0},{0,-1,0}},b=a;b.origin.z=3;
+    hint.show(a,10,0,1,HintSource::Initialize,preferences);if(hint.showing)return false;
+    hint.show(a,10,0,1,HintSource::Mark,preferences);
+    if(!hint.active(1009,0,1,preferences)||hint.active(1010,0,1,preferences)||hint.active(20,1,1,preferences))return false;
+    hint.show(b,100,0,1,HintSource::Wheel,preferences);if(hint.lattice.origin.z!=3||!hint.active(1099,0,1,preferences))return false;
+    hint.show(b,200,0,1,HintSource::Mark,preferences);if(!hint.active(1199,0,1,preferences)||hint.active(201,0,2,preferences))return false;
+    preferences.duration_ms=5000;if(!hint.active(5199,0,1,preferences)||hint.active(5200,0,1,preferences))return false;
+    preferences.mode=HintMode::WheelOnly;hint.expire(201,0,1,preferences);if(hint.showing)return false;
+    preferences.mode=HintMode::On;if(hint.active(202,0,1,preferences))return false;
+    hint.show(a,300,0,1,HintSource::Mark,preferences);preferences.duration_ms=0;hint.expire(301,0,1,preferences);
+    preferences.duration_ms=1000;if(hint.active(302,0,1,preferences))return false;
+    hint.show(a,400,0,1,HintSource::Mark,preferences);hint.expire(1400,0,1,preferences);
+    preferences.duration_ms=5000;return !hint.active(1401,0,1,preferences);
 }
-static_assert(hints(),"Only the newest plane/page/scene hint lasts two seconds, including reselecting the same plane");
+static_assert(hints(),"Initialization stays silent; hints use the newest mark/page/scene, live duration and policy, without reviving expired hints");
+static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==25,"Hint defaults enable gray borders and checker at 25 percent opacity");
+constexpr bool policies(){
+    HintPreferences p;if(!p.permits(HintSource::Mark)||!p.permits(HintSource::Wheel)||p.permits(HintSource::Initialize))return false;
+    p.mode=HintMode::WheelOnly;if(p.permits(HintSource::Mark)||!p.permits(HintSource::Wheel))return false;
+    p.mode=HintMode::Off;return !p.permits(HintSource::Mark)&&!p.permits(HintSource::Wheel);
+}
+static_assert(policies(),"On, off and wheel-only policies exclude automatic level initialization");
 static_assert(Preview{}.centers&&!Preview{}.intersections&&!Preview{}.borders&&!Preview{}.checker&&Preview{}.opacity==45,"Preview defaults preserve center dots");
 static_assert(Preview{}.alpha()==115&&Preview{true,true,false,false,false,100}.alpha()==255&&Preview{true,true,false,false,false,0}.alpha()==0,"Opacity includes exact transparent and opaque endpoints");
 static_assert(preview_gray==190&&cross_arm==.12&&cross_width>border_width,"Gray crosses follow the grid axes and are slightly thicker than borders");
@@ -21,7 +36,7 @@ constexpr bool clipping(){
 }
 static_assert(clipping(),"Checker polygons clip to the viewport and reject the back of the camera");
 int main(){
-    PlaneHint hint;assert(!hint.active(0,0,0));
+    PlaneHint hint;assert(!hint.active(0,0,0,HintPreferences{}));
     CellMask mask(-1,-1,2,2,false);mask.cells[0]=1;
     assert(mask.at(-1,-1)&&!mask.at(0,0)&&!mask.at(-2,-1));
     assert(mask.horizontal(-1,-1)&&mask.horizontal(-1,0)&&!mask.horizontal(0,0));

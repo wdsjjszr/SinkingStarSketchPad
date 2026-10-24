@@ -44,6 +44,7 @@ void load_camera_preferences(){
 }
 bool loaded=false, editing=false, visible=true, dirty=false, disabled=false, reshade_menu=false;
 bool dragging=false, erasing=false, text_open=false, text_focus=false, protected_file=false;
+bool settings_open=false;
 Tool selected=Tool::Pen;
 unsigned selected_color=0;
 float width=3;
@@ -79,7 +80,8 @@ void cancel_ground_marking(){
 bool path_active=false,grid_drawing=false;
 grid::Preview grid_preview;
 grid::PlaneHint plane_hint;
-grid::Preview plane_hint_preview{true,false,false,true,true,25};
+grid::HintPreferences hint_preferences;
+auto wheel_actions=input::default_wheel;
 grid::VisibilityCache plane_visibility;
 double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
@@ -117,6 +119,13 @@ void load_drawing_preferences(){
     grid_preview.centers=read(L"Centers",1)!=0;grid_preview.intersections=read(L"Intersections",0)!=0;
     grid_preview.borders=read(L"Borders",0)!=0;grid_preview.checker=read(L"Checker",0)!=0;
     grid_preview.opacity=std::clamp(read(L"Opacity",45),0,100);
+    auto &style=hint_preferences.style;
+    style.centers=read(L"HintCenters",0)!=0;style.intersections=read(L"HintIntersections",0)!=0;
+    style.borders=read(L"HintBorders",1)!=0;style.checker=read(L"HintChecker",1)!=0;style.opacity=std::clamp(read(L"HintOpacity",25),0,100);
+    int mode=read(L"HintMode",0);hint_preferences.mode=mode>=0&&mode<=2?grid::HintMode(mode):grid::HintMode::On;
+    hint_preferences.duration_ms=unsigned(std::clamp(read(L"HintDurationMs",1000),0,5000));
+    const wchar_t *keys[]={L"Wheel",L"CtrlWheel",L"ShiftWheel",L"AltWheel"};
+    for(unsigned i=0;i<4;++i){int value=read(keys[i],int(input::default_wheel[i]));wheel_actions[i]=value>=0&&value<=2?input::WheelAction(value):input::default_wheel[i];}
 }
 void drawing_preferences_changed(){drawing_preferences_dirty=true;drawing_preferences_due=GetTickCount64()+500;}
 void save_drawing_preferences(){
@@ -124,6 +133,10 @@ void save_drawing_preferences(){
     auto write=[&](const wchar_t *key,int value){auto text=std::to_wstring(value);ok=WritePrivateProfileStringW(L"Drawing",key,text.c_str(),path.c_str())!=FALSE&&ok;};
     write(L"GridMode",grid_drawing);write(L"Preview",grid_preview.enabled);write(L"Centers",grid_preview.centers);
     write(L"Intersections",grid_preview.intersections);write(L"Borders",grid_preview.borders);write(L"Checker",grid_preview.checker);write(L"Opacity",grid_preview.opacity);
+    const auto &style=hint_preferences.style;
+    write(L"HintCenters",style.centers);write(L"HintIntersections",style.intersections);write(L"HintBorders",style.borders);
+    write(L"HintChecker",style.checker);write(L"HintOpacity",style.opacity);write(L"HintMode",int(hint_preferences.mode));write(L"HintDurationMs",int(hint_preferences.duration_ms));
+    const wchar_t *keys[]={L"Wheel",L"CtrlWheel",L"ShiftWheel",L"AltWheel"};for(unsigned i=0;i<4;++i)write(keys[i],int(wheel_actions[i]));
     if(ok)drawing_preferences_dirty=false;else{note(tr(Label::DrawingSettingsFailed));drawing_preferences_due=GetTickCount64()+5000;}
 }
 void status() {
@@ -138,9 +151,14 @@ void status() {
     f << "grid_drawing=" << grid_drawing << "\ngrid_preview=" << grid_preview.enabled << "\ngrid_preview_centers=" << grid_preview.centers
       << "\ngrid_preview_intersections=" << grid_preview.intersections << "\ngrid_preview_borders=" << grid_preview.borders
       << "\ngrid_preview_checker=" << grid_preview.checker << "\ngrid_preview_opacity=" << grid_preview.opacity
-      << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation)
+      << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences)
       << "\nshape_gesture=" << unsigned(shape_gesture.phase) << "\ndraft_format=" << doc.format_version
       << "\nworld_strokes=" << std::count_if(page().begin(),page().end(),[](const auto &stroke){return stroke->lattice.ready;}) << '\n';
+    f << "settings_open=" << settings_open << "\nhint_mode=" << unsigned(hint_preferences.mode) << "\nhint_duration_ms=" << hint_preferences.duration_ms
+      << "\nhint_centers=" << hint_preferences.style.centers << "\nhint_intersections=" << hint_preferences.style.intersections
+      << "\nhint_borders=" << hint_preferences.style.borders << "\nhint_checker=" << hint_preferences.style.checker << "\nhint_opacity=" << hint_preferences.style.opacity
+      << "\nhint_source=" << unsigned(plane_hint.source) << "\nhint_started=" << plane_hint.started << '\n';
+    for(unsigned i=0;i<4;++i)f << "wheel_binding_" << i << '=' << unsigned(wheel_actions[i]) << '\n';
     f << "ground_marking=" << ground_marking << "\nground_request_pending=" << bool(ground_request.tag.id)
       << "\nground_scene_ready=" << ground_scene_ready << "\nground_generation=" << ground_generation
       << "\nground_ready=" << doc.grids[doc.page].ready << "\nground_z=" << camera_plane()
@@ -280,6 +298,7 @@ void grid_dot(ImDrawList *draw,const grid::Lattice &g,double i,double j,Point si
     double x,y;if(camera.project(g.world(i,j),x,y)&&x>=0&&x<=1&&y>=0&&y<=1)draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),2,color);
 }
 void draw_grid_layers(ImDrawList *draw,const grid::Preview &style,const grid::Lattice &g,const grid::CellMask &mask,Point size){
+    if(!style.visible())return;
     const int alpha=style.alpha();const auto color=IM_COL32(grid::preview_gray,grid::preview_gray,grid::preview_gray,alpha);
     if(style.checker||style.centers)for(int j=mask.y;j<mask.y+mask.height;++j)for(int i=mask.x;i<mask.x+mask.width;++i){
         if(!mask.at(i,j))continue;
@@ -310,17 +329,17 @@ bool ground_ready(){
     return ground_scene_ready&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
 }
 void draw_plane_hint(ImDrawList *draw,Point size){
-    if(!camera.valid||!plane_hint.active(GetTickCount64(),doc.page,ground_generation))return;
+    if(!camera.valid||!hint_preferences.style.visible()||!plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences))return;
     const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return;
     int x=int(std::floor(i+.5)),y=int(std::floor(j+.5));
     plane_visibility.update(camera,g,ground_ready()?native_ground_snapshot:nullptr,x-64,y-64);
-    draw_grid_layers(draw,plane_hint_preview,g,plane_visibility.mask,size);
+    draw_grid_layers(draw,hint_preferences.style,g,plane_visibility.mask,size);
 }
-void set_ground(double z){
+void set_ground(double z,grid::HintSource source=grid::HintSource::Mark){
     auto &g=doc.grids[doc.page];
     bool different=!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1;
     if(different){settle_drawing();g=native_ground::lattice(z);finish_path();}
-    ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation);
+    ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation,source,hint_preferences);
     if(different)changed();else status();
 }
 void request_ground(GroundAction action,Point mouse={},Point size={}){
@@ -347,7 +366,7 @@ void poll_ground(){
     auto state=native_ground_bridge::snapshot();ground_character=state.character;ground_scene_ready=state.scene.ready;
     if(state.generation!=ground_generation){
         settle_drawing();plane_wheel.remainder=0;
-        ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};plane_hint.clear();
+        ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};plane_hint.clear();plane_visibility={};
         for(auto &g:doc.grids)g={};cancel_ground_marking();finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
     }
     if(state.ground!=native_ground_snapshot){
@@ -462,6 +481,31 @@ void export_svg(Point size) {
     }catch(const std::exception&e){note(std::string(tr(Label::ExportFailed))+e.what());}
 }
 bool in_rect(Point p,ImVec2 a,ImVec2 b){return p.x>=a.x&&p.y>=a.y&&p.x<=b.x&&p.y<=b.y;}
+void drawing_settings(Point size,Point mouse,bool &over_ui){
+    if(!settings_open)return;
+    ImGui::SetNextWindowPos(ImVec2(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ImVec2(.5f,.5f));
+    ImGui::SetNextWindowSize(ImVec2(std::min(480.f,size.x-40),std::min(580.f,size.y-40)),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(320,200),ImVec2(size.x-40,size.y-40));
+    if(ImGui::Begin(tr(Label::SettingsTitle),&settings_open,ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoCollapse)){
+        ImGui::TextWrapped("%s",tr(Label::SettingsHelp));ImGui::SeparatorText(tr(Label::HintSettings));
+        const char *modes[]={tr(Label::HintOn),tr(Label::HintOff),tr(Label::HintWheelOnly)};int mode=int(hint_preferences.mode);
+        bool changed=ImGui::Combo(tr(Label::HintMode),&mode,modes,3);hint_preferences.mode=grid::HintMode(mode);
+        auto &style=hint_preferences.style;
+        changed|=ImGui::Checkbox(tr(Label::GridCenters),&style.centers);ImGui::SameLine();changed|=ImGui::Checkbox(tr(Label::GridIntersections),&style.intersections);
+        changed|=ImGui::Checkbox(tr(Label::GridBorders),&style.borders);ImGui::SameLine();changed|=ImGui::Checkbox(tr(Label::GridChecker),&style.checker);
+        changed|=ImGui::SliderInt(tr(Label::GridOpacity),&style.opacity,0,100,"%d%%",ImGuiSliderFlags_AlwaysClamp);
+        float seconds=hint_preferences.duration_ms/1000.f;
+        if(ImGui::SliderFloat(tr(Label::HintDuration),&seconds,0,5,"%.2f s",ImGuiSliderFlags_AlwaysClamp)){hint_preferences.duration_ms=unsigned(std::lround(seconds*1000));changed=true;}
+        ImGui::TextWrapped("%s",tr(Label::HintHelp));ImGui::SeparatorText(tr(Label::WheelSettings));
+        const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};
+        const Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
+        for(unsigned i=0;i<4;++i){int action=int(wheel_actions[i]);if(ImGui::Combo(tr(bindings[i]),&action,actions,3)){wheel_actions[i]=input::WheelAction(action);plane_wheel.remainder=0;changed=true;}}
+        ImGui::TextWrapped("%s",tr(Label::WheelHelp));
+        if(changed){plane_hint.expire(GetTickCount64(),doc.page,ground_generation,hint_preferences);drawing_preferences_changed();status();}
+    }
+    auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
+    over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
+}
 void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     static ImVec2 toolbar_position;static float toolbar_overflow=0;
     if(toolbar_overflow>0)ImGui::SetNextWindowPos(ImVec2(toolbar_position.x,std::max(20.f,toolbar_position.y-toolbar_overflow)),ImGuiCond_Always);
@@ -472,6 +516,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     ImGui::SetNextItemWidth(195);int choice=static_cast<int>(language);
     const char *languages[]={"System / 系统","English","简体中文 / Chinese"};
     if(ImGui::Combo("Language / 语言###SketchLanguage",&choice,languages,3))set_language(static_cast<i18n::Language>(choice));
+    ImGui::SameLine();if(ImGui::Button(tr(Label::Settings)))settings_open=!settings_open;
     const char *labels[]={tr(Label::Pen),tr(Label::Line),tr(Label::Arrow),tr(Label::Rectangle),tr(Label::Ellipse),tr(Label::Text),tr(Label::Eraser),tr(Label::Path)};
     for(unsigned i=0;i<8;++i){if(i%4)ImGui::SameLine();const bool active=selected==Tool(i);if(active)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.46f,.36f,.18f,1));if(ImGui::Button(labels[i])){commit();select_tool(Tool(i));}if(active)ImGui::PopStyleColor();}
     for(unsigned i=0;i<5;++i){if(i)ImGui::SameLine();ImGui::PushID(int(i));auto c=ImGui::ColorConvertU32ToFloat4(colors[i]);if(ImGui::ColorButton(tr(Label::Color),c,0,ImVec2(28,25)))selected_color=i;ImGui::PopID();}
@@ -548,6 +593,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     }
 }
 void keys(effect_runtime*rt) {
+    if(!text_open&&ImGui::GetIO().WantTextInput)return;
     const bool ctrl=rt->is_key_down(VK_CONTROL),shift=rt->is_key_down(VK_SHIFT),alt=rt->is_key_down(VK_MENU);
     if((ground_marking||ground_request.tag.id)&&rt->is_key_pressed(VK_ESCAPE)){cancel_ground_marking();status();return;}
     if(shape_gesture.active()&&rt->is_key_pressed(VK_ESCAPE)){cancel();status();return;}
@@ -644,7 +690,7 @@ void shift_plane_wheel(Point mouse,Point size,bool over_ui){
     bool owns=editing&&input_focus.canvas_ready()&&!reshade_menu&&!over_ui&&!text_open&&!ImGui::IsAnyItemActive()
         &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y&&doc.grids[doc.page].ready;
     int steps=plane_wheel.consume(ImGui::GetIO().MouseWheel,owns);if(!steps)return;
-    settle_drawing();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps);
+    settle_drawing();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps,grid::HintSource::Wheel);
 }
 void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
@@ -690,6 +736,7 @@ void overlay(effect_runtime*rt) {
     if(rt!=primary)return;
     try {
         if(!loaded)load();
+        plane_hint.expire(GetTickCount64(),doc.page,ground_generation,hint_preferences);
         ++frame_count;if(frame_count==30)status();
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
@@ -709,6 +756,7 @@ void overlay(effect_runtime*rt) {
         bool over_ui=false;
         if(editing&&foreground&&!reshade_menu) {
             controls(rt,size,mouse,over_ui);
+            drawing_settings(size,mouse,over_ui);
         }
         over_ui|=ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopup);
         if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
@@ -721,7 +769,7 @@ void overlay(effect_runtime*rt) {
         if(!reshade_menu){
             const bool free=free_camera_bridge::snapshot().camera.enabled;
             const bool capture_mouse=(editing||free)&&foreground;
-            const bool capture_keys=capture_mouse&&(free||input::capture_keyboard(text_open,rt->is_key_down(VK_CONTROL),rt->is_key_down(VK_MENU)));
+            const bool capture_keys=capture_mouse&&(free||input::capture_keyboard(text_open||ImGui::IsAnyItemActive(),rt->is_key_down(VK_CONTROL),rt->is_key_down(VK_MENU)));
             // InputProcessing=1 lets ReShade honor the two capture flags
             // separately. The block request enables add-on input routing even
             // when ReShade's own Home overlay is closed. Set current AND next

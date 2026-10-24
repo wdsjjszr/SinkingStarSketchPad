@@ -27,3 +27,15 @@ void compile_legacy_backup_failure(const std::filesystem::path &draft){
     assert(!save()&&dirty&&doc.format_version==2);
 }
 void compile_world_export(Point size){export_svg(size);}
+void compile_settings_roundtrip(const std::filesystem::path &isolated_directory){
+    data_path=isolated_directory/L"drafts.txt";auto ini=isolated_directory/L"settings.ini";
+    WritePrivateProfileStringW(L"Interface",L"Language",L"en",ini.c_str());
+    hint_preferences.mode=grid::HintMode::WheelOnly;hint_preferences.duration_ms=1250;
+    hint_preferences.style={true,true,true,false,false,37};wheel_actions[0]=input::WheelAction::Color;
+    drawing_preferences_dirty=true;save_drawing_preferences();assert(!drawing_preferences_dirty);
+    hint_preferences={};wheel_actions=input::default_wheel;load_drawing_preferences();
+    assert(hint_preferences.duration_ms==1250&&hint_preferences.mode==grid::HintMode::WheelOnly&&hint_preferences.style.opacity==37);
+    assert(hint_preferences.style.centers&&hint_preferences.style.intersections&&!hint_preferences.style.borders&&!hint_preferences.style.checker);
+    assert(wheel_actions[0]==input::WheelAction::Color);
+    wchar_t language[16];GetPrivateProfileStringW(L"Interface",L"Language",L"",language,16,ini.c_str());assert(std::wstring(language)==L"en");
+}
