@@ -51,7 +51,7 @@
 
 `status.txt` 新增 `native_ground_debug`、`native_ground_ready`、`native_ground_scene`、`native_ground_cells`、`native_ground_visible`、`native_ground_heights`、`native_ground_voxels` 和 `native_ground_error`。反馈缺失地面时，请同时提供场景名、预览高度、截图及该状态文件。
 
-本版本仅做静态检查与编译，没有运行测试程序或游戏。需人工确认体素顶面是否与实际站立格高度对齐，以及基准底层、水域和分层是否符合当前关卡。
+开发侧仅做静态检查与编译，没有运行测试程序或游戏。Fix1 交付后，用户人工确认已测试关卡中的网格均能正确显示。实现原理、Settings 修复与验证范围见 [原生地面格实验技术说明](NATIVE_GROUND_EXPERIMENT.md)。
 
 ## English
 
@@ -79,4 +79,4 @@ This separate preview leaves existing detection, manual marking and paths unchan
 
 Entities are enumerated from the scene's complete entity-ID table, skipping empty and deleted slots. The object list used to find characters omits some static entities, including Settings.
 
-For missing surfaces, report the scene, selected height, screenshot and `native_ground_*` entries in `SinkingStarSketch-data/status.txt`. Only static checks and compilation were performed; no test programs or game sessions were run.
+For missing surfaces, report the scene, selected height, screenshot and `native_ground_*` entries in `SinkingStarSketch-data/status.txt`. Development validation was limited to static checks and compilation; no test programs or game sessions were run by the developer. After Fix1, the user confirmed correct grid display in the levels they checked. See the [experiment technical note (Chinese)](NATIVE_GROUND_EXPERIMENT.md) for implementation details and validation scope.
