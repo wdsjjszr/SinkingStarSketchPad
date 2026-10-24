@@ -29,3 +29,6 @@ SinkingStarSketch-assets/
 !.env.example
 Thumbs.db
 .DS_Store
+
+# Local project plans and coding standards
+/.local-docs/
