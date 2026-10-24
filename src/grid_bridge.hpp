@@ -9,9 +9,15 @@
 
 namespace sketch::grid_bridge {
 struct Region {uint64_t resource,offset;ULONGLONG tick;std::vector<grid::V> centers;};
+struct Snapshot {
+    std::vector<grid::Detection> layers;
+    std::map<int,std::vector<grid::V>> points;
+    size_t input_count;
+    explicit Snapshot(const std::vector<grid::V> &input):layers(grid::detect_layers(input)),points(grid::group_heights(input)),input_count(input.size()){}
+};
 inline std::mutex mutex;
 inline std::vector<Region> regions;
-inline std::shared_ptr<const std::vector<grid::Detection>> result;
+inline std::shared_ptr<const Snapshot> result;
 inline std::condition_variable wake;
 inline std::thread worker;
 inline bool running=false;
@@ -46,13 +52,13 @@ inline void start(){
         while(running){
             if(wake.wait_for(lock,std::chrono::seconds(1),[]{return !running;}))break;
             std::vector<grid::V> all;for(const auto &region:regions)all.insert(all.end(),region.centers.begin(),region.centers.end());
-            lock.unlock();std::shared_ptr<const std::vector<grid::Detection>> detected;
-            try{detected=std::make_shared<const std::vector<grid::Detection>>(grid::detect_layers(all));}catch(...){}
+            lock.unlock();std::shared_ptr<const Snapshot> detected;
+            try{detected=std::make_shared<const Snapshot>(all);}catch(...){}
             lock.lock();if(detected)result=std::move(detected);
         }
     });
 }
-inline std::shared_ptr<const std::vector<grid::Detection>> snapshot(){std::lock_guard<std::mutex> lock(mutex);return result;}
+inline std::shared_ptr<const Snapshot> snapshot(){std::lock_guard<std::mutex> lock(mutex);return result;}
 inline void cleanup(){
     {std::lock_guard<std::mutex> lock(mutex);running=false;}wake.notify_all();if(worker.joinable())worker.join();
     std::lock_guard<std::mutex> lock(mutex);regions.clear();result={};

@@ -23,6 +23,11 @@ inline std::vector<V> instance_centers(const char *data,size_t bytes){
     for(size_t n=0;n<count;n+=step){float m[12];std::memcpy(m,data+n*48,48);V p;if(instance_center(m,p))points.push_back(p);}
     return points;
 }
+inline std::map<int,std::vector<V>> group_heights(const std::vector<V> &input){
+    std::map<int,std::vector<V>> heights;
+    for(V p:input)heights[int(std::round(p.z*100))].push_back(p);
+    return heights;
+}
 struct Detection {Lattice lattice;unsigned centers=0,edges=0;std::set<std::pair<int,int>> cells;};
 inline std::vector<Detection> detect_layers(const std::vector<V> &input){
     // Quantization removes repeated draw instances and tiny animation errors.

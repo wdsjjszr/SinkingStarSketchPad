@@ -8,6 +8,8 @@ int main(int argc,char**argv){try{
     std::vector<grid::V> points;
     for(int x=0;x<12;++x)for(int y=0;y<10;++y){points.push_back({x*1.25+.5,y*1.25+.75,2});points.push_back(points.back());}
     for(int n=0;n<40;++n)points.push_back({n*.193,n*.117,4.2});
+    auto debug_points=grid::group_heights(points);
+    check(debug_points.size()==2&&debug_points.at(200).size()==240&&debug_points.at(420).size()==40,"Debug input keeps duplicate centers and scattered points rejected by grid scoring");
     auto result=grid::detect(points);
     check(result.lattice.ready&&result.centers==120,"Automatic lattice rejects duplicates and scattered objects");
     check(std::abs(result.lattice.u.x-1.25)<.001&&std::abs(result.lattice.origin.x-.5)<.001&&std::abs(result.lattice.origin.y+.5)<.001&&result.lattice.origin.z==2,"Spacing, center phase and height inferred from instances");

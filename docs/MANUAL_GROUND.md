@@ -23,6 +23,17 @@
 
 `SinkingStarSketch-data/status.txt` 中的 `ground_marking`、`ground_locked`、`ground_z` 和 `ground_layers` 可用于反馈当前状态。
 
+### Debug 坐标点
+
+按 E 打开菜单，在地面标识选项下勾选 **Debug：显示识别输入点**。该开关独立于手动标识模式，开启后可继续点选地面，也可关闭菜单观察场景。
+
+- 彩色小点：当前进入网格识别的全部输入坐标，按高度分色；尚未通过网格评分的点也会显示。
+- 白色圆环：最终候选网格的可选格心。缺失区域如果有彩色点而没有白圈，说明已采集到点，但未形成可选网格。
+- 悬停彩色点可查看世界坐标 XYZ；菜单显示总输入点数、屏幕内输入点数和最终候选格心数。重复输入可能重叠，计数保留重复项。
+- 输入与识别结果使用同一份约每秒更新的快照。Debug 不再抽样或限制显示点数；仍然只包含现有采集链路通过实例矩阵筛选并送入识别的点，不是场景的全部顶点。被墙体遮住的点也会显示。
+
+`status.txt` 额外记录 `ground_input_points`、`ground_debug` 和 `ground_debug_visible`。点数较多时 Debug 绘制可能降低帧率，可随时取消勾选。
+
 ## English
 
 This experimental build retains grid candidates at different heights and lets you lock one for new paths on the current scratch page.
@@ -36,3 +47,5 @@ This experimental build retains grid candidates at different heights and lets yo
 Each scratch page has its own session-only lock. Switching floors finishes the current path; existing paths retain their positions and heights. Restarting restores automatic selection without changing saved paths. Free-camera movement and right-drag rotation remain available; its wheel zoom resumes after marking ends.
 
 Selection uses observed grid cells, without scene-depth occlusion or entity classification. Walls can hide a selectable candidate. Each layer still needs at least six centers and the existing two-dimensional adjacency checks, so small or uncaptured platforms may be unavailable. Check alignment visually in the actual game. This build has only been checked statically and compiled; no runtime tests were executed.
+
+Enable **Debug: show detection input points** below the ground options to display every input coordinate from the existing capture pipeline, including points rejected by grid scoring. Colors distinguish heights; white rings show selectable candidate cells. Hover a colored point for XYZ. The toolbar reports total inputs, on-screen inputs and candidate cells, counting repeated inputs separately. Capture and detection share the same snapshot, refreshed about once per second. Debug adds no sampling limit, but it only shows points already accepted by the existing instance-matrix capture filters. It ignores wall occlusion, remains visible when the toolbar is closed, and may reduce frame rate with large point sets.

@@ -47,9 +47,11 @@ float width=3;
 Stroke pending;
 grid::Camera camera;
 grid::Detection detected_grid;
-std::shared_ptr<const std::vector<grid::Detection>> detected_layers;
+std::shared_ptr<const grid_bridge::Snapshot> ground_snapshot;
 std::array<bool,3> ground_locked{};
 bool ground_marking=false;
+bool ground_debug=false;
+unsigned ground_debug_visible=0;
 std::vector<grid::PlaneHit> ground_hits;
 size_t ground_choice=0;
 bool path_active=false, grid_preview=true;
@@ -86,7 +88,9 @@ void status() {
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << detected_grid.lattice.ready << "\ngrid_centers=" << detected_grid.centers << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
     f << "ground_marking=" << ground_marking << "\nground_locked=" << ground_locked[doc.page]
-      << "\nground_z=" << camera_plane() << "\nground_layers=" << (detected_layers?detected_layers->size():0) << '\n';
+      << "\nground_z=" << camera_plane() << "\nground_layers=" << (ground_snapshot?ground_snapshot->layers.size():0)
+      << "\nground_input_points=" << (ground_snapshot?ground_snapshot->input_count:0)
+      << "\nground_debug=" << ground_debug << "\nground_debug_visible=" << ground_debug_visible << '\n';
 }
 void set_language(i18n::Language value){
     language=value;auto path=data_path.parent_path()/L"settings.ini";
@@ -199,7 +203,7 @@ void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
     double x,y;if(camera.project(g.world(i,j),x,y))draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),9,colors[selected_color],24,2.5f);
 }
 void update_ground_pick(Point mouse,Point size){
-    auto hits=detected_layers?grid::pick_planes(*detected_layers,camera,mouse.x/size.x,mouse.y/size.y):std::vector<grid::PlaneHit>{};
+    auto hits=ground_snapshot?grid::pick_planes(ground_snapshot->layers,camera,mouse.x/size.x,mouse.y/size.y):std::vector<grid::PlaneHit>{};
     bool same=hits.size()==ground_hits.size();
     if(same)for(size_t n=0;n<hits.size();++n)if(hits[n].center.z!=ground_hits[n].center.z){same=false;break;}
     if(!same)ground_choice=0;
@@ -209,12 +213,12 @@ void update_ground_pick(Point mouse,Point size){
 }
 void anchor_ground(){
     if(ground_hits.empty()){note(tr(camera.valid?Label::GroundNoHit:Label::NoCamera));return;}
-    doc.grids[doc.page]=(*detected_layers)[ground_hits[ground_choice].layer].lattice;
+    doc.grids[doc.page]=ground_snapshot->layers[ground_hits[ground_choice].layer].lattice;
     ground_locked[doc.page]=true;finish_path();changed();note(tr(Label::GroundAnchored),2500);
 }
 void draw_ground_preview(ImDrawList *draw,Point size){
     if(ground_hits.empty())return;
-    const auto &hit=ground_hits[ground_choice];const auto &layer=(*detected_layers)[hit.layer];const auto &g=layer.lattice;
+    const auto &hit=ground_hits[ground_choice];const auto &layer=ground_snapshot->layers[hit.layer];const auto &g=layer.lattice;
     const auto a=hit.center-g.u*.5-g.v*.5;
     const grid::V world[]={a,a+g.u,a+g.u+g.v,a+g.v};ImVec2 corners[4];
     for(unsigned n=0;n<4;++n){double x,y;if(!camera.project(world[n],x,y))return;corners[n]=ImVec2(float(x*size.x),float(y*size.y));}
@@ -226,6 +230,26 @@ void draw_ground_preview(ImDrawList *draw,Point size){
             draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),3,IM_COL32(109,227,255,190));
     }
     ImGui::SetTooltip(tr(Label::GroundHover),g.origin.z,unsigned(ground_choice+1),unsigned(ground_hits.size()));
+}
+void draw_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_ui){
+    ground_debug_visible=0;if(!ground_snapshot||!camera.valid)return;
+    grid::V nearest;double nearest_distance=64;bool found=false;unsigned color_index=0;
+    for(const auto &[height,points]:ground_snapshot->points){
+        float red,green,blue;ImGui::ColorConvertHSVtoRGB(float(std::fmod(color_index++*.61803398875,1.)),.75f,1.f,red,green,blue);
+        const ImU32 color=IM_COL32(int(red*255),int(green*255),int(blue*255),235);
+        for(auto p:points){
+            double x,y;if(!camera.project(p,x,y)||x<0||x>=1||y<0||y>=1)continue;
+            const float px=float(x*size.x),py=float(y*size.y);
+            draw->AddRectFilled(ImVec2(px-2,py-2),ImVec2(px+2,py+2),color);++ground_debug_visible;
+            const double distance=(px-mouse.x)*(px-mouse.x)+(py-mouse.y)*(py-mouse.y);
+            if(distance<nearest_distance){nearest_distance=distance;nearest=p;found=true;}
+        }
+    }
+    for(const auto &layer:ground_snapshot->layers)for(auto [cx,cy]:layer.cells){
+        double x,y;if(!camera.project({cx/1000.,cy/1000.,layer.lattice.origin.z},x,y)||x<0||x>=1||y<0||y>=1)continue;
+        draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),5,IM_COL32(255,255,255,210),8,1);
+    }
+    if(found&&!over_ui)ImGui::SetTooltip(tr(Label::GroundDebugPoint),nearest.x,nearest.y,nearest.z);
 }
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
     auto a=pixel(s.points.front(),size),b=pixel(s.points.back(),size);
@@ -321,12 +345,18 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     }
     if(ground_marking){
         ImGui::TextWrapped("%s",tr(Label::GroundHelp));
-        ImGui::Text(tr(Label::GroundLayers),unsigned(detected_layers?detected_layers->size():0));
+        ImGui::Text(tr(Label::GroundLayers),unsigned(ground_snapshot?ground_snapshot->layers.size():0));
         ImGui::TextWrapped("%s",tr(Label::GroundLimits));
     }
     if(ground_locked[doc.page]){
         ImGui::Text(tr(Label::GroundLocked),doc.grids[doc.page].origin.z);ImGui::SameLine();
         if(ImGui::Button(tr(Label::GroundAuto))){ground_locked[doc.page]=false;ground_marking=false;ground_hits.clear();finish_path();status();}
+    }
+    if(ImGui::Checkbox(tr(Label::GroundDebug),&ground_debug))status();
+    if(ground_debug){
+        size_t cells=0;if(ground_snapshot)for(const auto &layer:ground_snapshot->layers)cells+=layer.cells.size();
+        ImGui::Text(tr(Label::GroundDebugStats),ground_snapshot?ground_snapshot->input_count:size_t(0),ground_debug_visible,cells);
+        ImGui::TextWrapped("%s",tr(Label::GroundDebugLegend));
     }
     auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
     toolbar_position=pos;toolbar_overflow=pos.y+extent.y-size.y+20;
@@ -438,8 +468,8 @@ void overlay(effect_runtime*rt) {
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
         camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));if(!camera.valid)camera=camera_bridge::snapshot(size.x,size.y);
-        auto layers=grid_bridge::snapshot();
-        if(layers!=detected_layers){detected_layers=std::move(layers);auto best=detected_layers?grid::best_detection(*detected_layers):nullptr;detected_grid=best?*best:grid::Detection{};}
+        auto snapshot=grid_bridge::snapshot();
+        if(snapshot!=ground_snapshot){ground_snapshot=std::move(snapshot);auto best=ground_snapshot?grid::best_detection(ground_snapshot->layers):nullptr;detected_grid=best?*best:grid::Detection{};}
         if(!ground_locked[doc.page]&&camera.valid&&detected_grid.lattice.ready){
             auto &g=doc.grids[doc.page];const auto &found=detected_grid.lattice;
             if(!g.ready||grid::length(g.origin-found.origin)>.002||grid::length(g.u-found.u)>.002||grid::length(g.v-found.v)>.002){g=found;finish_path();changed();}
@@ -479,6 +509,7 @@ void overlay(effect_runtime*rt) {
         ImDrawList *draw=ImGui::GetBackgroundDrawList();
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
         if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
+        if(ground_debug&&visible&&foreground&&!reshade_menu)draw_ground_debug(draw,mouse,size,over_ui);else ground_debug_visible=0;
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}
         if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}

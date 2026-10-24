@@ -43,6 +43,10 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GroundLocked,"Ground locked at height %.3g","地面已锁定：高度 %.3g") X(GroundAuto,"Use automatic ground","恢复自动地面") \
  X(GroundNoHit,"No candidate ground here. Try a detected cell center or wait for grid detection.","此处没有候选地面，请靠近已识别格心，或等待网格识别。") \
  X(GroundAnchored,"Ground anchored. Keep clicking to switch floors; finish marking to draw a path.","地面已锚定；可继续点击切换高度，结束标识后绘制路径。") \
+ X(GroundDebug,"Debug: show detection input points","Debug：显示识别输入点") \
+ X(GroundDebugStats,"Input points: %zu | on-screen: %u | candidate cells: %zu","输入点：%zu · 屏幕内：%u · 可选格心：%zu") \
+ X(GroundDebugLegend,"Colors distinguish input heights; white rings mark selectable cells. Hover a point for XYZ. Points without a ring did not form a selectable grid cell.","彩色点按高度区分，白圈表示可选格心；悬停查看 XYZ。没有白圈的点未形成可选网格格心。") \
+ X(GroundDebugPoint,"Input point: X %.4f  Y %.4f  Z %.4f","输入点：X %.4f  Y %.4f  Z %.4f") \
  X(CameraReady,"Game camera connected","游戏主相机已连接") \
  X(CameraWait,"Waiting for the game camera. Enter a level to show paths.","等待游戏主相机；请先进入关卡。路径暂不显示。") \
  X(Anchoring,"Pen/text: screen space. Path Alt+H: anchored to world cells.","画笔和文字固定在画面；路径 Alt+H 固定在游戏格子上。") \
