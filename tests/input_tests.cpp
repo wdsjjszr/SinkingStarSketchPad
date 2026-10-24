@@ -2,6 +2,14 @@
 #include <cassert>
 #include <iostream>
 using namespace sketch::input;
+constexpr bool plane_wheel_checks(){
+    PlaneWheel wheel;
+    if(wheel.consume(.25,true)||wheel.consume(.5,true)||wheel.consume(.25,true)!=1)return false;
+    if(wheel.consume(-2.5,true)!=-2||wheel.consume(-.5,true)!=-1)return false;
+    wheel.consume(.5,true);wheel.consume(1,false);
+    return wheel.remainder==0&&wheel.consume(3,true)==3;
+}
+static_assert(plane_wheel_checks(),"Whole wheel steps move planes; fractions accumulate and UI/focus ownership resets the remainder");
 constexpr bool held_middle_focus(){
     Focus focus;focus.update(true,true);if(focus.canvas_ready())return false;
     focus.update(true,false);if(!focus.canvas_ready())return false;

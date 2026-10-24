@@ -1,6 +1,13 @@
 #pragma once
 
 namespace sketch::input {
+struct PlaneWheel {
+    double remainder=0;
+    constexpr int consume(double wheel,bool enabled){
+        if(!enabled){remainder=0;return 0;}
+        remainder+=wheel;int steps=int(remainder);remainder-=steps;return steps;
+    }
+};
 // Keep editing intent across focus changes, but never carry a held mouse
 // button into the game after Alt+Tab or a click used to activate its window.
 struct Focus {

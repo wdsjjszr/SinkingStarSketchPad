@@ -74,6 +74,7 @@ grid::Preview grid_preview;
 grid::PlaneHint plane_hint;
 double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
+input::PlaneWheel plane_wheel;
 void finish_path(){path_active=false;}
 void select_tool(Tool t){cancel_ground_marking();selected=t;finish_path();}
 Page erase_before;
@@ -580,6 +581,12 @@ void cursor(ImDrawList*draw,Point p) {
     float scale=std::clamp(ImGui::GetIO().DisplaySize.y/1440.f,1.f,1.5f);
     cursor_style::draw(draw,v(p),mode,colors[selected_color],scale);
 }
+void shift_plane_wheel(Point mouse,Point size,bool over_ui){
+    bool owns=editing&&input_focus.canvas_ready()&&!reshade_menu&&!over_ui&&!text_open&&!ImGui::IsAnyItemActive()
+        &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y&&doc.grids[doc.page].ready;
+    int steps=plane_wheel.consume(ImGui::GetIO().MouseWheel,owns);if(!steps)return;
+    commit();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps);
+}
 void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
     ImGui::SetNextWindowPos(ImVec2(std::max(20.f,size.x-485),80),ImGuiCond_FirstUseEver);
@@ -612,7 +619,7 @@ void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bo
                (rt->is_key_down('Q')?1:0)-(rt->is_key_down('Z')?1:0),ImGui::GetIO().DeltaTime,rt->is_key_down(VK_SHIFT));
         if(!over_ui&&input_focus.canvas_ready()){
             if(ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
-            c.magnify(ImGui::GetIO().MouseWheel);
+            if(!editing)c.magnify(ImGui::GetIO().MouseWheel);
         }
     }
     free_camera_bridge::change(c);
@@ -646,6 +653,7 @@ void overlay(effect_runtime*rt) {
         }
         if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
         poll_ground();
+        shift_plane_wheel(mouse,size,over_ui);
         if(ground_marking&&editing&&foreground&&!over_ui&&!reshade_menu&&input_focus.canvas_ready())update_ground_pick(mouse,size);
         else ground_hit={};
         if(editing&&foreground&&!reshade_menu&&input_focus.canvas_ready())canvas(rt,size,mouse,over_ui);
