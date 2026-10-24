@@ -12,12 +12,12 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - Crystal-blade pointer, star drawing crosshair, and rune-ring eraser.
 - Pen, lines, arrows, rectangles, ellipses, text, and whole-mark erasing.
 - Three automatically saved scratch pages, undo/redo, and SVG export.
-- Automatic grid inference and a cell-center preview, without manual calibration.
-- Experimental [manual ground marking](docs/MANUAL_GROUND.md): point at a detected floor, preview its height, and lock it for new paths; use the wheel to choose overlapping layers.
+- Native ground cells with automatic initialization from the controlled character and optional character following.
+- [Automatic / manual ground marking](docs/MANUAL_GROUND.md): click a ground cell to set a plane with native wall occlusion; middle-click toggles following or marks once.
 - World-space path marks reprojected with the game camera.
 - Persistent System / English / Simplified Chinese language selection.
 
-**Beta:** grid inference and synthetic camera projection have been tested, but full alignment across all actual game levels has not been comprehensively verified. Inspect the cell-center preview in your level. Routes do not check obstacles, solve puzzles, or control the player. Ordinary drawing and text stay in screen space.
+**Beta:** the user confirmed native ground previews in the levels they checked. The new character following and wall-aware picking have only received static checks and compilation; full alignment across actual game levels remains unverified. Inspect the cell-center preview in your level. Routes do not check obstacles, solve puzzles, or control the player. Ordinary drawing and text stay in screen space.
 
 ## Use
 
@@ -41,6 +41,8 @@ cd SinkingStarSketchPad
 .\build.ps1 -Compiler 'C:\path\to\llvm-mingw\bin\clang++.exe'
 .\test.ps1 -Compiler 'C:\path\to\llvm-mingw\bin\clang++.exe'
 ```
+
+`test.ps1` performs static compilation checks only; it does not execute test programs. Ground marking no longer observes or scores GPU instance uploads.
 
 The add-on is written to `build/SinkingStarSketch.addon64`. Do not substitute an arbitrary MSVC-targeting `clang++`: the ImGui ABI adapter is explicitly designed for the MinGW/MSVC boundary used by this project.
 
@@ -66,7 +68,7 @@ This creates a ZIP in `dist/` with bilingual manual-install/uninstall guides, ch
 
 ## Source layout
 
-- `src/`: add-on, drawing model, camera/grid observers, cursor artwork, and localization.
+- `src/`: add-on, drawing model, camera observers, native ground readers, cursor artwork, and localization.
 - `tests/`: model, grid/projection, localization tests, and a synthetic DX12 rendering host.
 - `config/`: example ReShade configuration for packaged installs.
 - `scripts/`: release packager.

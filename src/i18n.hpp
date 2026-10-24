@@ -32,7 +32,6 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(CameraLive,"Camera override connected","相机覆盖已连接") X(CameraWaiting,"Waiting for a fresh game camera frame","等待新的游戏相机帧") \
  X(Stats,"Page %u/3 | %zu marks | %s","草稿 %u/3 · %zu 条笔迹 · %s") \
  X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Cell-center preview","格心预览") \
- X(GridStats,"Auto grid: %.3g cell size | %u detected centers","自动格子：间距 %.3g · %u 个格心") \
  X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
  X(GridWait,"Waiting for native ground. Automatic mode uses the controlled character; manual mode needs a marked plane.","等待原生地面。自动模式按当前角色选面；手动模式请先标记平面。") \
  X(GroundMark,"Mark plane","标记平面") X(GroundFinish,"Cancel marking","取消标记") \
@@ -43,16 +42,11 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GroundLoading,"Native ground is loading or unavailable.","原生地面正在加载或暂不可用。") \
  X(GroundWall,"A wall blocks this position. Point at a visible ground cell.","此处被墙面遮挡，请指向可见的地面格。") \
  X(GroundShortcut,"Middle click on canvas: automatic mode toggles following; manual mode marks once and exits, including on failure.","画布中键：自动模式切换随角色移动；手动模式快速标定一次，无论成功与否均结束标记。") \
- X(GroundLayers,"Candidate height layers: %u","候选高度层：%u") \
  X(GroundLimits,"Occlusion checks native solid walls. Decorative models, platforms and lilies are not included.","遮挡仅检查原生实心墙体；暂不包含装饰模型、升降台和莲叶。") \
  X(GroundHover,"Ground height %.3g","地面高度 %.3g") \
  X(GroundLocked,"Target plane: height %.3g","目标平面：高度 %.3g") X(GroundAuto,"Automatic marking","自动标识") \
  X(GroundNoHit,"No native ground cell under the pointer.","指针下没有原生地面格。") \
  X(GroundAnchored,"Target plane set. Marking finished.","目标平面已设置，标记已结束。") \
- X(GroundDebug,"Debug: show detection input points","Debug：显示识别输入点") \
- X(GroundDebugStats,"Input points: %zu | on-screen: %u | candidate cells: %zu","输入点：%zu · 屏幕内：%u · 可选格心：%zu") \
- X(GroundDebugLegend,"Colors distinguish input heights; white rings mark selectable cells. Hover a point for XYZ. Points without a ring did not form a selectable grid cell.","彩色点按高度区分，白圈表示可选格心；悬停查看 XYZ。没有白圈的点未形成可选网格格心。") \
- X(GroundDebugPoint,"Input point: X %.4f  Y %.4f  Z %.4f","输入点：X %.4f  Y %.4f  Z %.4f") \
  X(NativeDebug,"Debug: preview native ground cells","Debug：预览原生地面格") \
  X(NativeLoading,"Reading the current scene's native ground...","正在读取当前场景的原生地面格……") \
  X(NativeError,"Native ground unavailable: %s","原生地面格暂不可用：%s") \

@@ -2,7 +2,7 @@
 
 In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
 
-**Release status: beta.** The game camera and grid data have been investigated, and automatic detection and projection have been tested. Full visual alignment across the game's levels has not been comprehensively verified. Check the cell-center preview in your level before relying on a route.
+**Release status: beta.** The user confirmed the native ground preview in the levels they checked. The new ground following and picking have only been checked statically and compiled. Full visual alignment across the game's levels has not been comprehensively verified. Check the cell-center preview in your level before relying on a route.
 
 ## Requirements
 
@@ -73,6 +73,7 @@ Other accepted values are `zh-CN` and `auto`. The setting changes the mod interf
 | Save | Ctrl+S |
 | Clear this page, with undo | Ctrl+Shift+Delete |
 | Finish text entry | Ctrl+Enter |
+| Toggle character following (automatic ground) / mark once (manual ground) | Middle-click on canvas while drawing |
 
 E/G/B only trigger without Ctrl, Shift, or Alt, and pause while the text entry dialog is open. They were checked against the game's default keymaps; customized keymaps may conflict. While drawing, ordinary keyboard input continues to the game, including movement and camera controls. Use Alt+letter for tools and Alt+1-5 for colors to avoid triggering tools with game movement keys. The mod captures the keyboard while text entry is open or Ctrl/Alt is held for mod shortcuts. Custom game bindings may still overlap those chords. With the free camera disabled, mouse input is reserved for drawing; press E to use mouse controls in the game. Alt+Tab preserves drawing mode and text entry, commits and saves the current stroke, and pauses mouse interaction until the game is active again. Release held mouse buttons before drawing again.
 
@@ -101,13 +102,15 @@ The camera panel also offers X/Y/height offsets, yaw, tilt, zoom and reset-to-cu
 
 ## Cell paths that follow the camera
 
-1. Enter a level, press **E**, then **Alt+H** or click **Path Alt+H**.
-2. Wait for **Auto grid** and **Game camera connected**. Detection generally needs a few seconds and enough regular game instances. No manual calibration is requested.
+1. Enter a level, press **E**, then **Alt+H** or click **Path**.
+2. Automatic marking initializes a unit-spaced plane from the controlled character. **Follow character** defaults off; enable it or middle-click on the canvas to follow. Wait for native ground and a valid game camera.
 3. Enable **Cell-center preview** to inspect the snap points near your mouse.
 4. Click a cell center to start a path. Click another cell in the same row or column to connect the intermediate centers.
 5. Place a point at each corner. A diagonal target is rejected until you add the corner.
 6. Click **Finish / New path** to begin a separate route.
 7. Press **E** to return to the game. The path is stored using a world-space grid reference and is reprojected with the camera as it moves or zooms.
+
+Each page keeps its own ground mode, following preference and target for this session. In manual mode, click **Mark plane**, then left-click a ground cell. Success exits marking; a blocked wall or empty space shows a message and keeps marking active. Middle-click makes one attempt and exits even on failure, preserving the selected tool. The wheel remains available for free-camera zoom. Switching levels reinitializes automatic targets and clears manual targets, while retaining existing paths. See [ground marking](MANUAL_GROUND.md).
 
 With the free camera disabled, right-click/Ctrl+Z undoes the most recent path addition and ends the active path. Alt+K selects the whole-path/whole-mark eraser. A path retains its own grid reference, so a later change in automatic detection does not move existing marks.
 
@@ -141,11 +144,11 @@ To disable a manual install, exit the game and move this add-on out of the game 
 ## Troubleshooting and scope
 
 - No toolbar: confirm installation beside the actual executable, completely restart the game, then press E. **Home** opens ReShade's own settings, whose language is separate from this mod.
-- Grid/camera still waiting: enter a regular level, wait, and inspect the preview. The detector relies on upright instances on a regular horizontal grid; sloped terrain, unusual floors, camera/level transitions, wrapping-map behavior, and game updates need verification. Do not assume an arbitrary grid if detection is unavailable.
+- Grid/camera still waiting: enter a regular level, wait, and inspect the preview. Ground cells come from native scene data. Character selection, special supports, camera/level transitions, wrapping-map copies and game updates need verification. Manual wall occlusion only covers solid native voxels, not decorative models. Do not assume an arbitrary grid if detection is unavailable.
 - Incorrect alignment: stop using that route and keep a screenshot plus a description of the level/camera view for a bug report. Do not treat the preview as an obstacle or walkability map.
 - Missing Chinese glyphs after an upgrade: keep your existing `ReShade.ini` and inspect its font setting. In ReShade settings, choose `SinkingStarSketch-assets/NotoSansCJKsc-Regular.otf` as the font and restart if needed.
 - Diagnostics: `ReShade.log` and `SinkingStarSketch-data/status.txt`. Review logs and remove personal paths before posting them publicly.
-- Current validation covers real-game upload data, grid inference, draft compatibility, both UI languages, DX12 rendering, and synthetic camera movement/zoom/resize. Full gameplay alignment across all levels remains unverified.
+- The native preview was confirmed by the user in tested levels. New character following and wall-aware picking have static checks and compilation only; no test programs or game sessions were run for this change.
 
 ## Credits and third-party notices
 

@@ -1,4 +1,5 @@
 #include "../src/free_camera.hpp"
+#include "../src/native_ground_pick.hpp"
 #include <cassert>
 #include <iostream>
 using namespace sketch;
@@ -17,6 +18,10 @@ int main(){
     auto changed=decode(p.data());assert(changed.valid&&pair_valid(changed.vp,changed.inv));
     assert(grid::length(changed.eye-frame.eye)>1&&grid::length(changed.forward-frame.forward)>.1);
     grid::Camera camera{changed.vp,changed.inv,0,true};grid::Lattice cells{true,{.5,.5,0},{1,0,0},{0,1,0}};
+    native_ground::Scene terrain;terrain.bounds={-5,-5,11,11,false};native_ground::Snapshot ground;ground.set_geometry(terrain);
+    double pick_x,pick_y;assert(camera.project({0,0,0},pick_x,pick_y));
+    auto hit=native_ground::pick(ground,camera,pick_x,pick_y);
+    assert(hit.result==native_ground::PickResult::Ground&&grid::length(hit.center)<1e-6);
     for(int i=-3;i<=3;++i)for(int j=-3;j<=3;++j){double x,y,a,b;assert(camera.project(cells.world(i,j),x,y));assert(cells.snap(camera,x,y,a,b)&&a==i&&b==j);}
     auto moved_game=fixture(25);assert(c.apply(moved_game.data()));for(int i=0;i<32;++i)assert(std::abs(moved_game[i]-p[i])<.001); // remains independent of gameplay follow camera
     auto reflected=original;auto mirror=identity();mirror[10]=-1;auto reflected_vp=mul(frame.vp,mirror);Mat inv;assert(inverse(reflected_vp,inv));store(reflected.data()+32,reflected_vp);store(reflected.data()+96,inv);

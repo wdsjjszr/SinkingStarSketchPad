@@ -8,7 +8,6 @@
 #include "i18n.hpp"
 #include "cursor_style.hpp"
 #include "camera_bridge.hpp"
-#include "grid_bridge.hpp"
 #include "native_ground_bridge.hpp"
 #include "native_ground_pick.hpp"
 #include "input_policy.hpp"
@@ -609,7 +608,6 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     if(_wcsicmp(name.c_str(),L"sinking_star.exe")!=0&&_wcsicmp(name.c_str(),L"SketchDX12Test.exe")!=0)return false;
     module_handle=addon;
     if(!reshade::register_addon(addon,reshade_module))return false;
-    grid_bridge::start();
     native_ground_bridge::start();
     reshade::register_event<reshade::addon_event::init_pipeline_layout>(free_camera_bridge::layout_init);
     reshade::register_event<reshade::addon_event::destroy_pipeline_layout>(free_camera_bridge::layout_destroy);
@@ -620,11 +618,9 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     reshade::register_event<reshade::addon_event::reset_command_list>(free_camera_bridge::reset);
     reshade::register_event<reshade::addon_event::destroy_command_list>(free_camera_bridge::reset);
     reshade::register_event<reshade::addon_event::destroy_resource>(free_camera_bridge::resource_destroy);
-    reshade::register_event<reshade::addon_event::destroy_resource>(grid_bridge::destroyed);
     reshade::register_event<reshade::addon_event::execute_command_list>(free_camera_bridge::execute);
     reshade::register_event<reshade::addon_event::copy_resource>(free_camera_bridge::resource_copy);
     reshade::register_event<reshade::addon_event::copy_buffer_region>(free_camera_bridge::buffer_copy);
-    reshade::register_event<reshade::addon_event::copy_buffer_region>(grid_bridge::copied);
     reshade::register_event<reshade::addon_event::update_descriptor_tables>(camera_bridge::updated);
     reshade::register_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::register_event<reshade::addon_event::reshade_open_overlay>(opened);
@@ -642,7 +638,6 @@ extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     reshade::unregister_event<reshade::addon_event::reset_command_list>(free_camera_bridge::reset);
     reshade::unregister_event<reshade::addon_event::destroy_command_list>(free_camera_bridge::reset);
     reshade::unregister_event<reshade::addon_event::destroy_resource>(free_camera_bridge::resource_destroy);
-    reshade::unregister_event<reshade::addon_event::destroy_resource>(grid_bridge::destroyed);
     reshade::unregister_event<reshade::addon_event::execute_command_list>(free_camera_bridge::execute);
     reshade::unregister_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::unregister_event<reshade::addon_event::reshade_open_overlay>(opened);
@@ -650,8 +645,6 @@ extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     reshade::unregister_event<reshade::addon_event::update_descriptor_tables>(camera_bridge::updated);
     reshade::unregister_event<reshade::addon_event::copy_resource>(free_camera_bridge::resource_copy);
     reshade::unregister_event<reshade::addon_event::copy_buffer_region>(free_camera_bridge::buffer_copy);
-    reshade::unregister_event<reshade::addon_event::copy_buffer_region>(grid_bridge::copied);
-    grid_bridge::cleanup();
     native_ground_bridge::cleanup();
     free_camera_bridge::cleanup();
     camera_bridge::cleanup();

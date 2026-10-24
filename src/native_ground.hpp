@@ -74,7 +74,7 @@ struct Snapshot {
     size_t wall_sets=0,fences=0,oceans=0,voxel_count=0;
     bool ready=false;
     void set_geometry(Scene data){
-        cells=surfaces(data);for(const auto &cell:cells)heights.insert(cell.center.z);
+        cells=surfaces(data);heights.clear();for(const auto &cell:cells)heights.insert(cell.center.z);
         voxels=std::move(data.voxels);voxel_count=voxels.size();
         if(!voxels.empty()){
             wall_min=wall_max=voxels.begin()->first;

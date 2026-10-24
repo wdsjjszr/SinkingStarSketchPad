@@ -1,82 +1,78 @@
-# 手动标识地面 / Manual ground marking (experimental)
+# 原生地面自动／手动标识 / Native ground marking
 
 ## 中文
 
-这是供真实关卡人工验证的候选地面选层功能。自动识别会保留不同高度的候选网格，手动模式可选择其中一层作为当前草稿页的新路径平面。
+地面格来自当前关卡的原生逻辑数据：实心墙体的暴露顶面、Settings 基准底层、blocking 地板 Fence。格距固定为 1 世界单位，格心 X/Y 为整数；不再从 GPU 实例推断或打分。
 
-1. 正常退出游戏，用本次构建的 `SinkingStarSketch.addon64` 替换原有同名插件，保留现有 ReShade、字体、设置和草稿。
-2. 进入关卡，按 E 打开菜单，点击现有选项下方的 **手动标识地面**。该按钮同时选择路径工具。
-3. 移动鼠标查看青色格子和附近格心；悬停提示会显示高度和鼠标下的候选层数量。
-4. 左键锚定当前预览平面。上下层重叠时，保持鼠标位置并滚动滚轮选择另一层，再左键确认。可以连续点击不同高度的地面。
-5. 按 Esc 或点击 **结束地面标识**，随后点击地面绘制路径。点击 **恢复自动地面** 可重新使用评分最高的网格。
+### 自动标识
 
-每个草稿页独立锁定平面。切换平面会结束当前路径，已有路径保留各自的位置与高度。锁定状态仅在本次游戏会话内有效；重启后恢复自动识别，已保存路径的高度不变。
+1. 进入关卡，按 **E** 打开绘图工具栏。每页默认使用 **自动标识**，**随角色移动** 默认不勾选。
+2. 首次取得数据时，以当前控制角色的位置确定目标平面。优先找角色同一 XY 格内高度最近的地面；同列没有地面时，找全场三维距离最近的地面格。距离相同优先较低处。
+3. 多角色同时受控时，采用 ootss-cmd 的方法：只考虑带 `Status_Flags.ACTIVE` 的角色，按 X、Y、Z、实体 ID 升序选择一个；每次采样重新检查控制状态。
+4. 勾选 **随角色移动** 后立即更新，并随角色或当前控制角色的变化更新平面。取消勾选后固定在当前高度。在绘图状态下，画布空白处 **中键** 可切换该开关。
 
-自由相机可继续移动和右键旋转。标识模式中，滚轮用于选层；结束标识后恢复相机缩放。
+角色位置约每 33 毫秒采样，地形约每秒刷新；地形重建期间角色采样会等待。未读取到角色或地面时暂停自动更新，已确定的同场景平面保留；读取恢复后继续。
 
-当前限制：
+### 手动标识
 
-- 根据实例推断的格心和高度选层，尚未接入场景深度，不判断墙体遮挡，也不识别实体种类。请以网格预览是否贴合目标地面为准。
-- 只在候选网格实际观测到的格子范围内提供点选；没有候选格子的空处不会命中无限延伸的平面。
-- 每层仍需满足现有二维网格识别条件（至少六个格心及横纵相邻关系）。很小的平台、零散实例或未捕获的地面可能没有候选层。
-- 仅完成静态检查和编译，实际游戏中的地面高度、贴合程度、遮挡和操作手感需人工确认。
+切换到 **手动标识** 时保留当前目标平面，不会立即进入标记。点击 **标记平面** 会选择路径工具并进入标记模式；悬停可预览地面格和高度。
 
-`SinkingStarSketch-data/status.txt` 中的 `ground_marking`、`ground_locked`、`ground_z` 和 `ground_layers` 可用于反馈当前状态。
+| 操作 | 选中地面 | 墙面遮挡或空处 |
+| --- | --- | --- |
+| 标记模式中左键 | 设置目标平面，自动结束标记 | 提示原因，继续等待标记 |
+| 手动模式中键 | 快速标定一次，结束标记 | 提示原因，结束标记 |
 
-### Debug 坐标点
+中键快速标定保留当前绘图工具，本次点击不会添加路径点。若此前正在标记，中键尝试后也会结束标记。Esc、切页、切换工具或再次点击取消按钮可以取消标记。切回自动模式会重新按角色位置确定目标，保留该页的跟随开关。
 
-按 E 打开菜单，在地面标识选项下勾选 **Debug：显示识别输入点**。该开关独立于手动标识模式，开启后可继续点选地面，也可关闭菜单观察场景。
+只选相机射线首先可见的原生地面；先碰到实心墙的侧面或底面会提示遮挡，不会选择墙后的地面。墙顶本身可以选中。滚轮不再切换重叠高度，保持自由相机缩放功能；点选使用自由相机当前有效投影。
 
-- 彩色小点：当前进入网格识别的全部输入坐标，按高度分色；尚未通过网格评分的点也会显示。
-- 白色圆环：最终候选网格的可选格心。缺失区域如果有彩色点而没有白圈，说明已采集到点，但未形成可选网格。
-- 悬停彩色点可查看世界坐标 XYZ；菜单显示总输入点数、屏幕内输入点数和最终候选格心数。重复输入可能重叠，计数保留重复项。
-- 输入与识别结果使用同一份约每秒更新的快照。Debug 不再抽样或限制显示点数；仍然只包含现有采集链路通过实例矩阵筛选并送入识别的点，不是场景的全部顶点。被墙体遮住的点也会显示。
+### 页面、焦点和保存
 
-`status.txt` 额外记录 `ground_input_points`、`ground_debug` 和 `ground_debug_visible`。点数较多时 Debug 绘制可能降低帧率，可随时取消勾选。
+三个草稿页的模式、跟随开关和目标平面彼此独立，仅保留在本次会话中。重启后各页恢复自动、不跟随，并重新初始化。换关卡会保留各页模式和跟随开关，但清除目标：自动页重新初始化，手动页等待重新标记。
 
-### 原生地面格 Debug 预览
+真正更换平面时结束当前路径；旧路径保留各自的高度和格子基准，不随目标移动。草稿文件格式不变。
 
-按 E 打开菜单，勾选 **Debug：预览原生地面格**。建议先关闭旧的“显示识别输入点”，方便对照。无需启动 ootss-cmd。默认关闭；开启后约每秒读取一次当前场景，关闭后停止读取。
+中键仅在绘图编辑状态、游戏前台、指针位于画布时生效。指针在工具栏或快捷键说明窗口内、编辑文字、操作控件或打开 ReShade 菜单时不触发。切回游戏后先松开所有鼠标按键。
 
-- 格距固定为游戏中的一格，即 1 世界单位；颜色按世界 Z 区分，可在 **预览高度** 中只显示一个高度。
-- **实心点与格框**：当前 `Wall_Set.wall_data` 的实心体素顶面。位图按 X、Y、Z 顺序展开，加上 Wall_Set 的逻辑位置与体素 corner，再取上方一格作为候选站立高度。相邻体素间的内部顶面不显示；同一 XY 可以保留多个 Z。
-- **空心圈**：Settings 给出的地表 / 地下基准底层，在 Settings 网格范围内显示，剔除占用格与相应水域。它是游戏逻辑参考平面，不表示该处画出了地形，也不是地形轮廓。天空基准不生成隐式地面。
-- **十字**：同时具有 `blocking` 与 `is_floor` 的 Fence，在自身所在格形成的地板。
-- 悬停格心显示 XYZ、来源和实体 ID；隐式底层没有来源实体，ID 为 0。菜单同时显示场景名、候选格总数、屏幕内格数、高度数和原始来源数量。
-- 预览独立于现有的自动识别和手动锚定，暂不改变路径平面。点和格框会穿过遮挡物显示，墙顶也属于候选，不能据此判断角色可达性。升降台、莲叶和世界环绕的额外渲染副本暂不包含。
+### 原生 Debug 与限制
 
-实现参考 ootss-cmd 的当前场景特征与 Jai 反射字段读取。只读取游戏内存，不修改游戏数据；读取失败或场景切换时丢弃旧候选并显示原因。当前零售版结构经过本机 EXE 与关卡文件静态核对，游戏更新改变场景代码特征时可能需要维护。
+**Debug：预览原生地面格** 只控制显示；地面读取始终为正式标识服务。可按高度筛选，悬停查看来源、实体 ID 和 XYZ。筛选不会限制正式选面。彩色实心点为墙顶、空心圈为基准底层、十字为地板；Debug 覆盖层仍会透视墙体显示。
 
-原生地面从当前场景的完整实体 ID 表枚举对象，跳过空槽和已删除槽。用于寻找角色的对象列表不包含全部静态对象，不能用它查找 Settings 或完整地形。
+- 遮挡仅检查实验已读取的原生实心墙体，不检查装饰模型、角色等其他可见物体。
+- 基准底层是逻辑参考面，可能没有可见地形；墙顶可选不代表角色可达。
+- 尚未包含升降台、莲叶、其他额外支撑及世界环绕的渲染副本。不复刻完整移动、技能和可达性规则。
+- 用户已确认 Fix1 实验在所测关卡中正确显示网格；本次角色跟随和墙体点选只做静态检查、编译链接，未执行测试程序或游戏。
 
-`status.txt` 新增 `native_ground_debug`、`native_ground_ready`、`native_ground_scene`、`native_ground_cells`、`native_ground_visible`、`native_ground_heights`、`native_ground_voxels` 和 `native_ground_error`。反馈缺失地面时，请同时提供场景名、预览高度、截图及该状态文件。
-
-开发侧仅做静态检查与编译，没有运行测试程序或游戏。Fix1 交付后，用户人工确认已测试关卡中的网格均能正确显示。实现原理、Settings 修复与验证范围见 [原生地面格实验技术说明](NATIVE_GROUND_EXPERIMENT.md)。
+诊断文件 `SinkingStarSketch-data/status.txt` 包含 `ground_mode`、`ground_follow`、`ground_marking`、`ground_ready`、`ground_z`、`ground_layers`、`ground_character_ready`、`ground_character_id`、`ground_controlled_count`、`ground_character_position`、`ground_character_error` 及 `native_ground_*`。旧 GPU 输入点 Debug 已移除。历史实验记录见 [NATIVE_GROUND_EXPERIMENT.md](NATIVE_GROUND_EXPERIMENT.md)。
 
 ## English
 
-This experimental build retains grid candidates at different heights and lets you lock one for new paths on the current scratch page.
+Ground comes from native scene data: exposed solid-wall tops, Settings layer bases and blocking floor Fences. Spacing is one world unit, with integer X/Y cell centers. GPU instance scoring is no longer used.
 
-1. Exit the game and replace only `SinkingStarSketch.addon64` with this build. Keep the existing ReShade, font, settings and drafts.
-2. Enter a level, press E and click **Mark ground manually** below the existing toolbar options. This also selects the path tool.
-3. Hover a floor to preview its cell and nearby detected centers. The tooltip shows the height and the number of overlapping candidates.
-4. Left-click to anchor the previewed floor. Keep the pointer still and use the wheel to switch overlapping layers, then click to confirm. You can anchor several floors in succession.
-5. Press Esc or click **Finish ground marking**, then click to draw paths. **Use automatic ground** restores the highest-scoring grid.
+### Automatic marking
 
-Each scratch page has its own session-only lock. Switching floors finishes the current path; existing paths retain their positions and heights. Restarting restores automatic selection without changing saved paths. Free-camera movement and right-drag rotation remain available; its wheel zoom resumes after marking ends.
+Each page starts in **Automatic marking**, with **Follow character** off. The first valid sample sets the target from the controlled character. Ground in the same XY cell takes priority, choosing the nearest height; if that column has no ground, choose the nearest cell in 3D. Equal distances prefer lower ground.
 
-Selection uses observed grid cells, without scene-depth occlusion or entity classification. Walls can hide a selectable candidate. Each layer still needs at least six centers and the existing two-dimensional adjacency checks, so small or uncaptured platforms may be unavailable. Check alignment visually in the actual game. This build has only been checked statically and compiled; no runtime tests were executed.
+Character selection follows ootss-cmd: recheck `Status_Flags.ACTIVE` each sample and, among controlled characters, choose the first by X, Y, Z, then entity ID. Positions refresh about every 33 ms; terrain refreshes about once per second. Terrain rebuilding can delay character samples. Reading never writes character memory.
 
-Enable **Debug: show detection input points** below the ground options to display every input coordinate from the existing capture pipeline, including points rejected by grid scoring. Colors distinguish heights; white rings show selectable candidate cells. Hover a colored point for XYZ. The toolbar reports total inputs, on-screen inputs and candidate cells, counting repeated inputs separately. Capture and detection share the same snapshot, refreshed about once per second. Debug adds no sampling limit, but it only shows points already accepted by the existing instance-matrix capture filters. It ignores wall occlusion, remains visible when the toolbar is closed, and may reduce frame rate with large point sets.
+Enable **Follow character** to update immediately and keep following the selected character's ground. Disable it to freeze the current plane. **Middle-click on the canvas while drawing** toggles following. Temporary read failures pause updates and preserve an established target in the same scene.
 
-### Native ground Debug preview
+### Manual marking
 
-Press E and enable **Debug: preview native ground cells**. Disable the older input-point display for a clearer comparison. ootss-cmd does not need to run. Reading starts only when enabled and refreshes about once per second.
+Switching to **Manual marking** retains the target. Click **Mark plane** to select the path tool and preview a ground cell. Left-click sets the plane and exits on success; a wall or empty location shows a message and keeps marking active. Esc, switching page/tool or the cancel button cancels marking.
 
-Cell spacing is one world unit. Colors distinguish world Z; **Preview height** can isolate a single height. Filled dots and cell outlines show exposed tops of solid `Wall_Set` voxels, including wall tops. Rings show the Settings ground / underground reference floor within the Settings grid, excluding occupied and water cells; they do not trace visible terrain. Crosses show blocking floor Fences. Hover a center for XYZ, source and entity ID (0 for an implicit floor). Multiple surfaces can share XY.
+In manual mode, **middle-click** makes one attempt and exits marking on either success or failure, preserving the selected tool and adding no path point. Switching back to automatic immediately requests a new character-based target and retains that page's following preference.
 
-This separate preview leaves existing detection, manual marking and paths unchanged. It draws through occluders and does not determine reachability. Elevator platforms, lilies and extra world-wrap render copies are not included. Reading uses the current-scene code signature and reflected Jai fields, with old candidates cleared on failure. It never writes game memory. The retail executable and level data were inspected statically; future game changes may require updating the scene signature.
+Picking uses the current effective camera, including free camera. A solid wall's side or underside blocks ground behind it; an exposed wall top can be selected. Overlapping floors cannot be cycled through with the wheel. The wheel remains available for free-camera zoom.
 
-Entities are enumerated from the scene's complete entity-ID table, skipping empty and deleted slots. The object list used to find characters omits some static entities, including Settings.
+### Pages, focus and limits
 
-For missing surfaces, report the scene, selected height, screenshot and `native_ground_*` entries in `SinkingStarSketch-data/status.txt`. Development validation was limited to static checks and compilation; no test programs or game sessions were run by the developer. After Fix1, the user confirmed correct grid display in the levels they checked. See the [experiment technical note (Chinese)](NATIVE_GROUND_EXPERIMENT.md) for implementation details and validation scope.
+Modes, following preferences and targets are independent per page and last for this session only. Restarting restores automatic mode with following off. Changing levels clears all targets while retaining modes, preferences and existing paths: automatic pages reinitialize, manual pages wait for another mark. Changing the target ends the active path; existing paths retain their own lattice and height. The draft format is unchanged.
+
+Middle-click only acts in drawing mode, with the game foreground and the pointer on the canvas. Panels, text entry, active widgets and the ReShade menu suppress it. Release held mouse buttons after returning to the game.
+
+**Debug: preview native ground cells** controls display only. Height filtering does not restrict picking. Dots are voxel tops, rings are logical layer bases and crosses are floor Fences. Hover for source, entity ID and XYZ. Debug still draws through walls.
+
+Occlusion covers native solid voxels only. Decorative models, characters, elevator platforms, lilies, extra supports and world-wrap render copies are not included. Logical bases need not have visible terrain; selecting a wall top does not establish walkability. No movement, skill or reachability solver is included.
+
+The user confirmed the earlier Fix1 preview in the levels they checked. This integration received static checks and compilation/linking only; no test programs or game sessions were run. Use the `ground_*` and `native_ground_*` fields in `SinkingStarSketch-data/status.txt` for diagnostics. The old GPU input-point Debug was removed.

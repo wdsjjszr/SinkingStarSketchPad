@@ -1,5 +1,5 @@
 #include "../src/model.hpp"
-#include "../src/grid_pick.hpp"
+#include "../src/native_ground_pick.hpp"
 #include <iostream>
 #include <sstream>
 using namespace sketch;
@@ -18,17 +18,17 @@ int main(int argc,char **argv){try{
     auto first=perspective(8.5,8.5,500,50),second=perspective(11.5,7.5,500,73);
     const grid::V origin{9,9,2.75};std::array<std::array<double,2>,3> clicks;
     first.project(origin,clicks[0][0],clicks[0][1]);first.project(origin+grid::V{1,0,0},clicks[1][0],clicks[1][1]);first.project(origin+grid::V{0,-1,0},clicks[2][0],clicks[2][1]);
-    double x,y;second.project(origin,x,y);grid::Lattice g;
+    double x,y;check(second.project(origin,x,y),"Calibration target projects into the camera");grid::Lattice g;
     check(grid::calibrate(first,clicks,second,x,y,g),"Four-click perspective calibration");
     check(grid::length(g.origin-origin)<1e-6&&grid::length(g.u-grid::V{1,0,0})<1e-6,"Actual grid plane and spacing recovered");
     grid::Lattice rejected;
     check(!grid::calibrate(first,clicks,first,clicks[0][0],clicks[0][1],rejected),"No camera movement rejected");
-    grid::Detection floor{{true,{0,0,0},{1,0,0},{0,-1,0}},1,0,{{0,0}}};
-    auto upper=floor;upper.lattice.origin.z=3;
+    native_ground::Scene scene;scene.floors={{{0,0,0},native_ground::Source::Fence,1},{{0,0,3},native_ground::Source::Fence,2}};
+    native_ground::Snapshot ground;ground.set_geometry(scene);
     const auto picking_camera=perspective(0,0,10,1);
-    auto hits=grid::pick_planes({floor,upper},picking_camera,.5,.5);
-    check(hits.size()==2&&hits[0].layer==1&&hits[0].center.z==3&&hits[1].layer==0,"Overlapping floors are selectable in camera-distance order");
-    check(grid::pick_planes({floor},picking_camera,.6,.5).empty(),"An infinite plane cannot be selected outside its observed floor cells");
+    auto hit=native_ground::pick(ground,picking_camera,.5,.5);
+    check(hit.result==native_ground::PickResult::Ground&&hit.center.z==3,"Overlapping native floors select the closest visible surface");
+    check(native_ground::pick(ground,picking_camera,.6,.5).result==native_ground::PickResult::None,"An infinite plane cannot be selected outside native ground cells");
     for(auto c:{first,second,perspective(-12,13,320,80)}){
         auto world=g.world(-4,7);c.project(world,x,y);double i,j;
         check(g.snap(c,x,y,i,j)&&i==-4&&j==7,"Pan and zoom preserve lattice coordinates");
