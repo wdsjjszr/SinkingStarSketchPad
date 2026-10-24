@@ -10,6 +10,7 @@ constexpr bool hints(){
 }
 static_assert(hints(),"Only the newest plane/page/scene hint lasts two seconds, including reselecting the same plane");
 static_assert(Preview{}.centers&&!Preview{}.intersections&&!Preview{}.borders&&!Preview{}.checker&&Preview{}.opacity==45,"Preview defaults preserve center dots");
+static_assert(Preview{}.alpha()==115&&Preview{true,true,false,false,false,100}.alpha()==255&&Preview{true,true,false,false,false,0}.alpha()==0,"Opacity includes exact transparent and opaque endpoints");
 static_assert(inside_height(.5,0)&&inside_height(0,0)&&!inside_height(1,0)&&inside_height(-.5,-1),"Cut solid interiors, retain voxel tops and handle negative heights");
 constexpr bool clipping(){
     Polygon p;p.count=4;p.points={ClipPoint{-2,-2,1},ClipPoint{2,-2,1},ClipPoint{2,2,1},ClipPoint{-2,2,1}};

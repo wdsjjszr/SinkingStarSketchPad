@@ -5,6 +5,7 @@
 #include <reshade.hpp>
 #include "imgui_abi.hpp"
 #include "model.hpp"
+#include "drawing_math.hpp"
 #include "grid_preview.hpp"
 #include "i18n.hpp"
 #include "cursor_style.hpp"
@@ -23,7 +24,7 @@ effect_runtime *primary = nullptr;
 std::recursive_mutex state_mutex;
 Document doc;
 std::array<History,3> history;
-std::filesystem::path data_path;
+std::filesystem::path data_path,legacy_draft_source;
 i18n::Language language=i18n::Language::System;
 bool chinese(){return i18n::use_chinese(language,PRIMARYLANGID(GetUserDefaultUILanguage())==LANG_CHINESE);}
 const char *tr(i18n::Text text){return i18n::get(text,chinese());}
@@ -80,6 +81,9 @@ void select_tool(Tool t){cancel_ground_marking();selected=t;finish_path();}
 Page erase_before;
 char text_buffer[2049]={};
 Point text_position;
+grid::Lattice text_lattice;
+unsigned text_color=0;
+float text_width=3;
 ULONGLONG save_due=0, toast_until=0, frame_count=0;
 bool camera_preferences_dirty=false;
 ULONGLONG camera_preferences_due=0;
@@ -154,6 +158,14 @@ bool save() {
     if (!dirty) return true;
     try {
         if (protected_file) throw std::runtime_error("Old draft is unreadable and could not be backed up");
+        if(doc.format_version<3&&!legacy_draft_source.empty()){
+            const auto keep=data_path.parent_path()/L"drafts.pre-v3.txt";
+            if(!std::filesystem::exists(keep)){
+                auto temporary=keep.wstring()+L"."+std::to_wstring(GetTickCount64())+L".tmp";
+                std::filesystem::copy_file(legacy_draft_source,temporary,std::filesystem::copy_options::none);
+                if(!MoveFileExW(temporary.c_str(),keep.c_str(),MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Cannot preserve the pre-v3 draft backup");
+            }
+        }
         const auto temp=data_path.wstring()+L".tmp", backup=data_path.wstring()+L".bak";
         { std::ofstream out(temp.c_str(),std::ios::binary|std::ios::trunc); doc.write(out); out.flush(); if(!out) throw std::runtime_error("Write failed"); }
         HANDLE file=CreateFileW(temp.c_str(),GENERIC_WRITE,FILE_SHARE_READ,nullptr,OPEN_EXISTING,0,nullptr);
@@ -164,7 +176,7 @@ bool save() {
         if(std::filesystem::exists(data_path)) ok=ReplaceFileW(data_path.c_str(),temp.c_str(),backup.c_str(),0,nullptr,nullptr);
         else ok=MoveFileExW(temp.c_str(),data_path.c_str(),MOVEFILE_WRITE_THROUGH);
         if(!ok) throw std::runtime_error("Cannot replace draft file: "+std::to_string(GetLastError()));
-        dirty=false; return true;
+        dirty=false;doc.format_version=3;legacy_draft_source.clear();return true;
     } catch(const std::exception &e) { note(std::string(tr(Label::SaveFailed))+e.what(),15000); log(toast); save_due=GetTickCount64()+15000; return false; }
 }
 void load() {
@@ -172,9 +184,10 @@ void load() {
     if(!n || n>=32768) throw std::runtime_error("Cannot locate addon directory");
     auto dir=std::filesystem::path(path).parent_path()/L"SinkingStarSketch-data";
     std::filesystem::create_directories(dir); data_path=dir/L"drafts.txt";load_language();load_camera_preferences();load_drawing_preferences();
-    auto read=[](const std::filesystem::path &p) {
+    auto read=[&](const std::filesystem::path &p) {
         if(std::filesystem::file_size(p)>16*1024*1024) throw std::runtime_error("Draft file too large");
-        std::ifstream in(p,std::ios::binary); return Document::read(in);
+        std::ifstream in(p,std::ios::binary);auto result=Document::read(in);
+        legacy_draft_source=result.format_version<3?p:std::filesystem::path{};return result;
     };
     if(std::filesystem::exists(data_path)) {
         try { doc=read(data_path); }
@@ -202,7 +215,7 @@ void commit() {
 void cancel() { dragging=false; if(erasing) {page()=std::move(erase_before); erasing=false;} }
 void finish_text() {
     if(text_buffer[0] && page().size()<2000 && doc.point_count()<120000) {
-        Stroke s; s.tool=Tool::Text;s.color=selected_color;s.width=width;s.points={text_position};s.text=text_buffer;
+        Stroke s;s.tool=Tool::Text;s.color=text_color;s.width=text_width;s.lattice=text_lattice;s.points={text_position};s.text=text_buffer;
         history[doc.page].record(page());page().push_back(std::make_shared<const Stroke>(std::move(s)));changed();
     }
     text_open=false; text_buffer[0]=0;
@@ -218,12 +231,7 @@ void polyline(ImDrawList *draw,const std::vector<Point>&p,ImU32 color,float w) {
     std::vector<ImVec2> vertices;vertices.reserve(p.size());for(auto a:p)vertices.push_back(v(a));
     draw->AddPolyline(vertices.data(),static_cast<int>(vertices.size()),color,ImDrawFlags_None,w);
 }
-std::vector<Point> projected(const Stroke &s,Point size){
-    if(s.tool!=Tool::Path)return outline(s,size);
-    std::vector<Point> result;if(!camera.valid)return result;
-    for(const auto &p:s.points){double x,y;if(!camera.project(s.lattice.world(p.x,p.y),x,y))return {};result.push_back({float(x*size.x),float(y*size.y)});}
-    return result;
-}
+std::vector<Point> projected(const Stroke &s,Point size){return project_stroke(s,camera,size);}
 void path_click(Point mouse,Point size){
     if(!camera.valid){note(tr(Label::NoCamera));return;}
     double x=mouse.x/size.x,y=mouse.y/size.y;
@@ -263,7 +271,7 @@ void grid_dot(ImDrawList *draw,const grid::Lattice &g,double i,double j,Point si
 void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
     if((selected!=Tool::Path&&!grid_drawing)||!camera.valid)return;
     const auto &g=doc.grids[doc.page];double i,j;if(!g.snap(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
-    const int alpha=int(grid_preview.opacity*2.55);const auto color=IM_COL32(109,227,255,alpha);
+    const int alpha=grid_preview.alpha();const auto color=IM_COL32(109,227,255,alpha);
     if(grid_preview.enabled){
         if(grid_preview.checker)for(int a=-5;a<=5;++a)for(int b=-5;b<=5;++b)fill_grid_cell(draw,g,i+a,j+b,size,IM_COL32(109,227,255,(int(i+j)+a+b)%2?alpha:alpha/2));
         if(grid_preview.borders)for(int a=-5;a<=6;++a){grid_line(draw,g.world(i+a-.5,j-5.5),g.world(i+a-.5,j+5.5),size,color);grid_line(draw,g.world(i-5.5,j+a-.5),g.world(i+5.5,j+a-.5),size,color);}
@@ -290,7 +298,7 @@ void draw_plane_hint(ImDrawList *draw,Point size){
 void set_ground(double z){
     auto &g=doc.grids[doc.page];
     bool different=!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1;
-    if(different){g=native_ground::lattice(z);finish_path();}
+    if(different){commit();g=native_ground::lattice(z);finish_path();}
     ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation);
     if(different)changed();else status();
 }
@@ -386,14 +394,14 @@ void draw_native_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_
     }
 }
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
-    auto a=pixel(s.points.front(),size),b=pixel(s.points.back(),size);
+    auto p=projected(s,size);if(p.empty())return;auto a=p.front(),b=p.back();
     ImU32 c=colors[s.color],shadow=IM_COL32(9,14,23,210);
     if(s.tool==Tool::Text) {
         float fs=std::max(20.f,s.width*4+12);
         draw->AddText(ImGui::GetFont(),fs,ImVec2(a.x+1.5f,a.y+1.5f),shadow,s.text.c_str());
         draw->AddText(ImGui::GetFont(),fs,v(a),c,s.text.c_str());return;
     }
-    auto p=projected(s,size);polyline(draw,p,shadow,s.width+3);polyline(draw,p,c,s.width);
+    polyline(draw,p,shadow,s.width+3);polyline(draw,p,c,s.width);
     if(s.tool==Tool::Path){
         for(size_t i=0;i<p.size();++i){draw->AddCircleFilled(v(p[i]),5,shadow);draw->AddCircleFilled(v(p[i]),3, c);}
         if(!p.empty()){draw->AddCircle(v(p.front()),8,c,24,2);draw->AddCircle(v(p.back()),6,c,24,2);}
@@ -408,13 +416,12 @@ void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
 void erase_at(Point p,Point size) {
     auto &marks=page();
     marks.erase(std::remove_if(marks.begin(),marks.end(),[&](const auto&s){
+        auto points=projected(*s,size);if(points.empty())return false;
         if(s->tool==Tool::Text) {
-            Point a=pixel(s->points[0],size);ImVec2 measure=gui_text_size(s->text.c_str());float scale=std::max(20.f,s->width*4+12)/ImGui::GetFontSize();
+            Point a=points[0];ImVec2 measure=gui_text_size(s->text.c_str());float scale=std::max(20.f,s->width*4+12)/ImGui::GetFontSize();
             return p.x>=a.x-8&&p.y>=a.y-8&&p.x<=a.x+measure.x*scale+8&&p.y<=a.y+measure.y*scale+8;
         }
-        if(s->tool==Tool::Path){auto pts=projected(*s,size);if(pts.size()==1)return distance(pts[0],p)<=s->width*.5f+9;
-            for(size_t n=1;n<pts.size();++n)if(segment_distance(p,pts[n-1],pts[n])<=s->width*.5f+9)return true;return false;}
-        return hit(*s,p,size);
+        return projected_hit(points,p,s->width);
     }),marks.end());
 }
 void export_svg(Point size) {
@@ -460,6 +467,9 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     if(ImGui::Button(tr(Label::CameraToggle))){auto c=free_camera_bridge::snapshot();if(!free_camera_bridge::enable(!c.camera.enabled,camera_plane()))note(tr(Label::CameraUnavailable));}
     ImGui::TextUnformatted(tr(Label::Help));
     ImGui::TextUnformatted(tr(Label::KeyboardHelp));
+    if(grid_drawing)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.12f,.42f,.5f,1));
+    const bool toggle_grid=ImGui::Button(tr(Label::GridDrawing));if(grid_drawing)ImGui::PopStyleColor();
+    if(toggle_grid){commit();if(text_open)finish_text();cancel_ground_marking();finish_path();grid_drawing=!grid_drawing;drawing_preferences_changed();status();}
     ImGui::Text(tr(Label::Stats),doc.page+1,page().size(),dirty?tr(Label::Saving):tr(Label::Saved));
     if(selected==Tool::Path){
         if(ImGui::Button(tr(Label::NewPath)))finish_path();
@@ -546,6 +556,15 @@ void keys(effect_runtime*rt) {
         for(unsigned i=0;i<5;++i)if(rt->is_key_pressed('1'+i))selected_color=i;
     }
 }
+bool drawing_target(const Stroke &stroke,Point mouse,Point size,bool shift,Point &target){
+    if(stroke.lattice.ready){
+        if(!plane_point(stroke.lattice,camera,mouse,size,target))return false;
+        target=grid_shape_end(stroke.tool,stroke.points.front(),target,shift);
+        return std::abs(target.x)<=1000000&&std::abs(target.y)<=1000000;
+    }
+    if(shift)mouse=snapped(pixel(stroke.points.front(),size),mouse,stroke.tool==Tool::Rectangle||stroke.tool==Tool::Ellipse);
+    target=normal(mouse,size);return true;
+}
 void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     if(!text_open&&!over_ui&&!ImGui::IsAnyItemActive()&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y
        &&ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
@@ -564,15 +583,26 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     if(!text_open && !free_camera_bridge::snapshot().camera.enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !over_ui){undo();return;}
     if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         if(selected==Tool::Path){path_click(mouse,size);return;}
-        if(selected==Tool::Text){text_position=normal(mouse,size);text_buffer[0]=0;text_open=true;text_focus=true;return;}
         if(selected==Tool::Eraser){erase_before=page();erasing=true;}
-        else {pending=Stroke();pending.tool=selected;pending.color=selected_color;pending.width=width;pending.points.push_back(normal(mouse,size));if(selected!=Tool::Pen)pending.points.push_back(normal(mouse,size));dragging=true;}
+        else{
+            auto lattice=grid_drawing?doc.grids[doc.page]:grid::Lattice{};
+            if(grid_drawing&&(!lattice.ready||!camera.valid)){note(tr(!camera.valid?Label::NoCamera:Label::Detecting));return;}
+            Point point;if(!plane_point(lattice,camera,mouse,size,point)){note(tr(Label::NoPlane));return;}
+            if(selected==Tool::Text){text_position=point;text_lattice=lattice;text_color=selected_color;text_width=width;text_buffer[0]=0;text_open=true;text_focus=true;return;}
+            if(lattice.ready&&snaps_to_grid(selected))point=nearest_grid_point(point);
+            pending=Stroke();pending.tool=selected;pending.color=selected_color;pending.width=width;pending.lattice=lattice;pending.points={point};
+            if(selected!=Tool::Pen)pending.points.push_back(point);dragging=true;
+        }
     }
     if(erasing)erase_at(mouse,size);
-    if(dragging) {
-        Point p=mouse;
-        if(pending.tool==Tool::Pen){if(distance(pixel(pending.points.back(),size),p)>=1.4f&&pending.points.size()<10000)pending.points.push_back(normal(p,size));}
-        else {if(rt->is_key_down(VK_SHIFT))p=snapped(pixel(pending.points[0],size),p,pending.tool==Tool::Rectangle||pending.tool==Tool::Ellipse);pending.points[1]=normal(p,size);}
+    if(dragging&&!over_ui&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y){
+        if(pending.tool==Tool::Pen){
+            Point point,last;
+            if(plane_point(pending.lattice,camera,mouse,size,point)&&pending.points.size()<10000
+                &&(!screen_point(pending.lattice,pending.points.back(),camera,size,last)||distance(last,mouse)>=1.4f))pending.points.push_back(point);
+        }else{
+            Point target;if(drawing_target(pending,mouse,size,rt->is_key_down(VK_SHIFT),target))pending.points[1]=target;
+        }
     }
     if(!left&&(dragging||erasing))commit();
 }

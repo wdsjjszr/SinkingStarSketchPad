@@ -6,6 +6,7 @@ namespace sketch::grid {
 struct Preview {
     bool enabled=true,centers=true,intersections=false,borders=false,checker=false;
     int opacity=45;
+    constexpr int alpha()const{return (opacity*255+50)/100;}
 };
 struct PlaneHint {
     Lattice lattice;

@@ -40,6 +40,7 @@ struct Document {
     unsigned page = 0;
     bool cursor = true;
     std::array<grid::Lattice,3> grids;
+    unsigned format_version=3;
     size_t point_count() const {
         size_t n = 0;
         for (const auto &p : pages) for (const auto &s : p) n += s->points.size();
@@ -57,9 +58,9 @@ struct Document {
                     throw std::runtime_error("Invalid stroke");
                 if (s->tool == Tool::Text && s->points.size() != 1) throw std::runtime_error("Invalid text position");
                 if (s->tool != Tool::Text && s->tool != Tool::Pen && s->tool != Tool::Path && s->points.size() != 2) throw std::runtime_error("Invalid shape");
-                if(s->tool==Tool::Path&&(!s->lattice.ready||!s->lattice.valid()))throw std::runtime_error("Invalid path grid");
+                if(!s->lattice.valid()||(s->tool==Tool::Path&&!s->lattice.ready))throw std::runtime_error("Invalid stroke grid");
                 for (const auto &pt : s->points)
-                    if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || (s->tool==Tool::Path ? (std::abs(pt.x)>1000000||std::abs(pt.y)>1000000||std::round(pt.x)!=pt.x||std::round(pt.y)!=pt.y) : (pt.x < 0 || pt.x > 1 || pt.y < 0 || pt.y > 1)))
+                    if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || (s->lattice.ready ? (std::abs(pt.x)>1000000||std::abs(pt.y)>1000000||(s->tool==Tool::Path&&(std::round(pt.x)!=pt.x||std::round(pt.y)!=pt.y))) : (pt.x < 0 || pt.x > 1 || pt.y < 0 || pt.y > 1)))
                         throw std::runtime_error("Invalid coordinates");
                 total += s->points.size();
                 if (total > 120000) throw std::runtime_error("Too many points");
@@ -78,13 +79,13 @@ struct Document {
     }
     void write(std::ostream &out) const {
         validate();
-        out << "SINKING_STAR_SKETCH 2\n" << page << ' ' << cursor << '\n' << std::setprecision(17);
+        out << "SINKING_STAR_SKETCH 3\n" << page << ' ' << cursor << '\n' << std::setprecision(17);
         for(const auto &g:grids)write_grid(out,g);
         for (const auto &p : pages) {
             out << p.size() << '\n';
             for (const auto &s : p) {
                 out << unsigned(s->tool) << ' ' << s->color << ' ' << s->width << ' ' << s->points.size() << ' ' << std::quoted(s->text) << '\n';
-                if(s->tool==Tool::Path)write_grid(out,s->lattice);
+                write_grid(out,s->lattice);
                 for (const auto &pt : s->points) out << pt.x << ' ' << pt.y << '\n';
             }
         }
@@ -92,10 +93,11 @@ struct Document {
     }
     static Document read(std::istream &in) {
         Document d; std::string magic; unsigned version = 0, cursor = 0;
-        if (!(in >> magic >> version) || magic != "SINKING_STAR_SKETCH" || (version != 1 && version != 2))
+        if (!(in >> magic >> version) || magic != "SINKING_STAR_SKETCH" || version<1 || version>3)
             throw std::runtime_error("Unsupported draft file");
         if (!(in >> d.page >> cursor) || cursor > 1 || d.page > 2) throw std::runtime_error("Invalid draft header");
         d.cursor = cursor != 0;
+        d.format_version=version;
         if(version>=2)for(auto &g:d.grids)g=read_grid(in);
         size_t total = 0;
         for (auto &p : d.pages) {
@@ -107,7 +109,7 @@ struct Document {
                     throw std::runtime_error("Invalid stroke data");
                 total += count; if (total > 120000) throw std::runtime_error("Draft too large");
                 s->tool = Tool(tool); s->points.resize(count);
-                if(s->tool==Tool::Path)s->lattice=read_grid(in);
+                if(version>=3||s->tool==Tool::Path)s->lattice=read_grid(in);
                 for (auto &pt : s->points) if (!(in >> pt.x >> pt.y)) throw std::runtime_error("Truncated draft");
                 p.push_back(s);
             }

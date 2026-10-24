@@ -35,6 +35,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GridCenters,"Cell centers","中心点") X(GridIntersections,"Grid intersections","网格交点") \
  X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
  X(DrawingSettingsFailed,"Could not save drawing settings.","无法保存绘图设置。") \
+ X(GridDrawing,"Grid drawing","网格绘画") \
  X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \
  X(GroundMark,"Manual marking","手动标记") X(GroundFinish,"Cancel marking","取消标记") \
