@@ -42,4 +42,10 @@ inline bool projected_hit(const std::vector<Point> &points,Point mouse,float wid
     for(size_t n=1;n<points.size();++n)if(segment_distance(mouse,points[n-1],points[n])<=radius)return true;
     return false;
 }
+inline std::vector<Point> arrow_head(const std::vector<Point> &points,float width){
+    if(points.size()!=2)return {};
+    Point a=points.front(),b=points.back();float length=distance(a,b);if(length<2)return {};
+    float dx=(b.x-a.x)/length,dy=(b.y-a.y)/length,head=std::min(std::max(13.f,width*4),length*.6f);
+    return {{b.x-dx*head-dy*head*.5f,b.y-dy*head+dx*head*.5f},b,{b.x-dx*head+dy*head*.5f,b.y-dy*head-dx*head*.5f}};
+}
 }

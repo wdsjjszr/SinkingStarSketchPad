@@ -12,6 +12,7 @@
 #include "native_ground_bridge.hpp"
 #include "native_ground_pick.hpp"
 #include "input_policy.hpp"
+#include "shape_input.hpp"
 #include "free_camera_bridge.hpp"
 #include <chrono>
 #include <mutex>
@@ -46,6 +47,10 @@ Tool selected=Tool::Pen;
 unsigned selected_color=0;
 float width=3;
 Stroke pending;
+input::ShapeGesture shape_gesture;
+Point shape_press;
+bool suppress_right=false;
+void settle_drawing();
 grid::Camera camera;
 native_ground::CharacterSample ground_character;
 uintptr_t ground_scene=0;
@@ -77,7 +82,7 @@ double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.
 input::Focus input_focus;
 input::PlaneWheel plane_wheel;
 void finish_path(){path_active=false;}
-void select_tool(Tool t){cancel_ground_marking();selected=t;finish_path();}
+void select_tool(Tool t){settle_drawing();cancel_ground_marking();selected=t;finish_path();}
 Page erase_before;
 char text_buffer[2049]={};
 Point text_position;
@@ -130,7 +135,9 @@ void status() {
     f << "grid_drawing=" << grid_drawing << "\ngrid_preview=" << grid_preview.enabled << "\ngrid_preview_centers=" << grid_preview.centers
       << "\ngrid_preview_intersections=" << grid_preview.intersections << "\ngrid_preview_borders=" << grid_preview.borders
       << "\ngrid_preview_checker=" << grid_preview.checker << "\ngrid_preview_opacity=" << grid_preview.opacity
-      << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation) << '\n';
+      << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation)
+      << "\nshape_gesture=" << unsigned(shape_gesture.phase) << "\ndraft_format=" << doc.format_version
+      << "\nworld_strokes=" << std::count_if(page().begin(),page().end(),[](const auto &stroke){return stroke->lattice.ready;}) << '\n';
     f << "ground_marking=" << ground_marking << "\nground_request_pending=" << bool(ground_request.tag.id)
       << "\nground_scene_ready=" << ground_scene_ready << "\nground_generation=" << ground_generation
       << "\nground_ready=" << doc.grids[doc.page].ready << "\nground_z=" << camera_plane()
@@ -204,15 +211,16 @@ void load() {
     loaded=true; status(); log("SinkingStarSketchPad initialized; rendering inside the game swap chain.");
 }
 void commit() {
-    if(dragging) {
+    if(dragging&&shape_gesture.can_commit()) {
         if(page().size()<2000 && doc.point_count()+pending.points.size()<=120000) {
             history[doc.page].record(page()); page().push_back(std::make_shared<const Stroke>(std::move(pending))); changed();
         } else note(tr(Label::Full));
-        dragging=false;
+        dragging=false;shape_gesture.clear();
     }
     if(erasing) { if(page().size()!=erase_before.size()) { history[doc.page].record(erase_before); changed(); } erasing=false; erase_before.clear(); }
 }
-void cancel() { dragging=false; if(erasing) {page()=std::move(erase_before); erasing=false;} }
+void cancel() { dragging=false;shape_gesture.clear(); if(erasing) {page()=std::move(erase_before); erasing=false;} }
+void settle_drawing(){commit();if(dragging)cancel();}
 void finish_text() {
     if(text_buffer[0] && page().size()<2000 && doc.point_count()<120000) {
         Stroke s;s.tool=Tool::Text;s.color=text_color;s.width=text_width;s.lattice=text_lattice;s.points={text_position};s.text=text_buffer;
@@ -220,10 +228,10 @@ void finish_text() {
     }
     text_open=false; text_buffer[0]=0;
 }
-void set_edit(bool value) { commit(); if(text_open) finish_text(); editing=value;if(value)visible=true;else cancel_ground_marking();status();if(!value)save(); }
+void set_edit(bool value) { settle_drawing(); if(text_open) finish_text(); editing=value;if(value)visible=true;else cancel_ground_marking();status();if(!value)save(); }
 void undo() { finish_path(); cancel(); if(history[doc.page].back(page()))changed(); }
 void redo() { finish_path(); cancel(); if(history[doc.page].forward(page()))changed(); }
-void clear() { finish_path(); commit(); if(!page().empty()){history[doc.page].record(page());page().clear();changed();note(tr(Label::Cleared));} }
+void clear() { finish_path(); settle_drawing(); if(!page().empty()){history[doc.page].record(page());page().clear();changed();note(tr(Label::Cleared));} }
 ImVec2 v(Point p) {return ImVec2(p.x,p.y);}
 void polyline(ImDrawList *draw,const std::vector<Point>&p,ImU32 color,float w) {
     if(p.empty())return;
@@ -298,12 +306,12 @@ void draw_plane_hint(ImDrawList *draw,Point size){
 void set_ground(double z){
     auto &g=doc.grids[doc.page];
     bool different=!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1;
-    if(different){commit();g=native_ground::lattice(z);finish_path();}
+    if(different){settle_drawing();g=native_ground::lattice(z);finish_path();}
     ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation);
     if(different)changed();else status();
 }
 void request_ground(GroundAction action,Point mouse={},Point size={}){
-    cancel_ground_marking();plane_hint.clear();
+    settle_drawing();cancel_ground_marking();plane_hint.clear();
     if(action==GroundAction::Manual){select_tool(Tool::Path);ground_marking=true;}
     if(!ground_scene_ready){note(tr(Label::GroundLoading));status();return;}
     if(action==GroundAction::Quick&&!camera.valid){note(tr(Label::NoCamera));status();return;}
@@ -325,6 +333,7 @@ void anchor_ground(bool quick=false){
 void poll_ground(){
     auto state=native_ground_bridge::snapshot();ground_character=state.character;ground_scene_ready=state.scene.ready;
     if(state.generation!=ground_generation){
+        settle_drawing();plane_wheel.remainder=0;
         ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};plane_hint.clear();
         for(auto &g:doc.grids)g={};cancel_ground_marking();finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
     }
@@ -334,7 +343,7 @@ void poll_ground(){
     }
     const bool initialize_current=!ground_initialized&&!ground_user_set[doc.page];
     if(ground_scene_ready&&state.initialized&&native_ground::initialize_planes(doc.grids,ground_user_set,state.initial_z,ground_initialized)){
-        if(initialize_current)plane_hint.show(doc.grids[doc.page],GetTickCount64(),doc.page,ground_generation);
+        if(initialize_current){settle_drawing();plane_hint.show(doc.grids[doc.page],GetTickCount64(),doc.page,ground_generation);}
         finish_path();changed();
     }
     if(!ground_request.tag.matches(state.completed,ground_generation,doc.page))return;
@@ -394,7 +403,7 @@ void draw_native_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_
     }
 }
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
-    auto p=projected(s,size);if(p.empty())return;auto a=p.front(),b=p.back();
+    auto p=projected(s,size);if(p.empty())return;auto a=p.front();
     ImU32 c=colors[s.color],shadow=IM_COL32(9,14,23,210);
     if(s.tool==Tool::Text) {
         float fs=std::max(20.f,s.width*4+12);
@@ -406,12 +415,7 @@ void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
         for(size_t i=0;i<p.size();++i){draw->AddCircleFilled(v(p[i]),5,shadow);draw->AddCircleFilled(v(p[i]),3, c);}
         if(!p.empty()){draw->AddCircle(v(p.front()),8,c,24,2);draw->AddCircle(v(p.back()),6,c,24,2);}
     }
-    if(s.tool==Tool::Arrow) {
-        float length=distance(a,b);if(length<2)return;
-        float dx=(b.x-a.x)/length,dy=(b.y-a.y)/length,head=std::min(std::max(13.f,s.width*4),length*.6f);
-        std::vector<Point> tips={{b.x-dx*head-dy*head*.5f,b.y-dy*head+dx*head*.5f},b,{b.x-dx*head+dy*head*.5f,b.y-dy*head-dx*head*.5f}};
-        polyline(draw,tips,shadow,s.width+3);polyline(draw,tips,c,s.width);
-    }
+    if(s.tool==Tool::Arrow){auto head=arrow_head(p,s.width);polyline(draw,head,shadow,s.width+3);polyline(draw,head,c,s.width);}
 }
 void erase_at(Point p,Point size) {
     auto &marks=page();
@@ -421,7 +425,7 @@ void erase_at(Point p,Point size) {
             Point a=points[0];ImVec2 measure=gui_text_size(s->text.c_str());float scale=std::max(20.f,s->width*4+12)/ImGui::GetFontSize();
             return p.x>=a.x-8&&p.y>=a.y-8&&p.x<=a.x+measure.x*scale+8&&p.y<=a.y+measure.y*scale+8;
         }
-        return projected_hit(points,p,s->width);
+        return projected_hit(points,p,s->width)||(s->tool==Tool::Arrow&&projected_hit(arrow_head(points,s->width),p,s->width));
     }),marks.end());
 }
 void export_svg(Point size) {
@@ -438,7 +442,7 @@ void export_svg(Point size) {
             } else {
                 if(p.size()==1)out<<"<circle cx=\""<<p[0].x<<"\" cy=\""<<p[0].y<<"\" r=\""<<s->width*.5f<<"\" fill=\""<<c<<"\"/>\n";
                 else {out<<"<polyline fill=\"none\" stroke=\""<<c<<"\" stroke-width=\""<<s->width<<"\" stroke-linecap=\"round\" stroke-linejoin=\"round\" points=\"";for(auto pt:p)out<<pt.x<<','<<pt.y<<' ';out<<"\"/>\n";}
-                if(s->tool==Tool::Arrow&&p.size()==2){Point a=p[0],b=p[1];float len=distance(a,b);if(len>2){float dx=(b.x-a.x)/len,dy=(b.y-a.y)/len,head=std::min(std::max(13.f,s->width*4),len*.6f);out<<"<polyline fill=\"none\" stroke=\""<<c<<"\" stroke-width=\""<<s->width<<"\" points=\""<<b.x-dx*head-dy*head*.5f<<','<<b.y-dy*head+dx*head*.5f<<' '<<b.x<<','<<b.y<<' '<<b.x-dx*head+dy*head*.5f<<','<<b.y-dy*head-dx*head*.5f<<"\"/>\n";}}
+                if(s->tool==Tool::Arrow){auto head=arrow_head(p,s->width);if(!head.empty()){out<<"<polyline fill=\"none\" stroke=\""<<c<<"\" stroke-width=\""<<s->width<<"\" points=\"";for(auto pt:head)out<<pt.x<<','<<pt.y<<' ';out<<"\"/>\n";}}
             }
         }
         out<<"</svg>\n";out.flush();if(!out)throw std::runtime_error("Export failed");note(tr(Label::Exported));
@@ -460,7 +464,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     for(unsigned i=0;i<5;++i){if(i)ImGui::SameLine();ImGui::PushID(int(i));auto c=ImGui::ColorConvertU32ToFloat4(colors[i]);if(ImGui::ColorButton(tr(Label::Color),c,0,ImVec2(28,25)))selected_color=i;ImGui::PopID();}
     ImGui::SameLine();ImGui::SetNextItemWidth(145);ImGui::SliderFloat(tr(Label::Width),&width,1,16,"%.0f");
     ImGui::SameLine();if(ImGui::Button(tr(Label::Undo)))undo();ImGui::SameLine();if(ImGui::Button(tr(Label::Redo)))redo();ImGui::SameLine();if(ImGui::Button(tr(Label::Clear)))clear();
-    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){commit();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}}
+    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Save))){commit();if(save())note(tr(Label::Saved));}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Export))){commit();export_svg(size);}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Return)))set_edit(false);
@@ -469,7 +473,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     ImGui::TextUnformatted(tr(Label::KeyboardHelp));
     if(grid_drawing)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.12f,.42f,.5f,1));
     const bool toggle_grid=ImGui::Button(tr(Label::GridDrawing));if(grid_drawing)ImGui::PopStyleColor();
-    if(toggle_grid){commit();if(text_open)finish_text();cancel_ground_marking();finish_path();grid_drawing=!grid_drawing;drawing_preferences_changed();status();}
+    if(toggle_grid){settle_drawing();if(text_open)finish_text();cancel_ground_marking();finish_path();grid_drawing=!grid_drawing;drawing_preferences_changed();status();}
     ImGui::Text(tr(Label::Stats),doc.page+1,page().size(),dirty?tr(Label::Saving):tr(Label::Saved));
     if(selected==Tool::Path){
         if(ImGui::Button(tr(Label::NewPath)))finish_path();
@@ -533,6 +537,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
 void keys(effect_runtime*rt) {
     const bool ctrl=rt->is_key_down(VK_CONTROL),shift=rt->is_key_down(VK_SHIFT),alt=rt->is_key_down(VK_MENU);
     if((ground_marking||ground_request.tag.id)&&rt->is_key_pressed(VK_ESCAPE)){cancel_ground_marking();status();return;}
+    if(shape_gesture.active()&&rt->is_key_pressed(VK_ESCAPE)){cancel();status();return;}
     if(!text_open&&rt->is_key_pressed(VK_ESCAPE)&&free_camera_bridge::snapshot().camera.enabled){free_camera_bridge::enable(false,camera_plane());status();return;}
     // These single-letter shortcuts must never consume text or modifier chords.
     if(!text_open&&!ctrl&&!shift&&!alt) {
@@ -549,7 +554,7 @@ void keys(effect_runtime*rt) {
         if(rt->is_key_pressed('Y'))redo();
         if(rt->is_key_pressed('S')){commit();if(save())note(tr(Label::Saved));}
         if(shift&&rt->is_key_pressed(VK_DELETE))clear();
-        for(unsigned i=0;i<3;++i)if(rt->is_key_pressed('1'+i)){commit();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}
+        for(unsigned i=0;i<3;++i)if(rt->is_key_pressed('1'+i)){settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}
     }else if(input::tool_shortcuts(ctrl,shift,alt)){
         const int codes[]={'P','L','A','R','O','T','K','H'};
         for(unsigned i=0;i<8;++i)if(rt->is_key_pressed(codes[i])){commit();select_tool(Tool(i));}
@@ -580,8 +585,11 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     }
     if(ground_request.tag.id)return;
     bool left=ImGui::IsMouseDown(ImGuiMouseButton_Left);
-    if(!text_open && !free_camera_bridge::snapshot().camera.enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !over_ui){undo();return;}
-    if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+    if(!text_open && !suppress_right && !free_camera_bridge::snapshot().camera.enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !over_ui){undo();return;}
+    if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)&&shape_gesture.waiting()){
+        Point target;if(!drawing_target(pending,mouse,size,rt->is_key_down(VK_SHIFT),target)){note(tr(Label::NoPlane));return;}
+        pending.points[1]=target;shape_gesture.press();
+    }else if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         if(selected==Tool::Path){path_click(mouse,size);return;}
         if(selected==Tool::Eraser){erase_before=page();erasing=true;}
         else{
@@ -591,10 +599,11 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
             if(selected==Tool::Text){text_position=point;text_lattice=lattice;text_color=selected_color;text_width=width;text_buffer[0]=0;text_open=true;text_focus=true;return;}
             if(lattice.ready&&snaps_to_grid(selected))point=nearest_grid_point(point);
             pending=Stroke();pending.tool=selected;pending.color=selected_color;pending.width=width;pending.lattice=lattice;pending.points={point};
-            if(selected!=Tool::Pen)pending.points.push_back(point);dragging=true;
+            if(selected!=Tool::Pen){pending.points.push_back(point);shape_gesture.press();shape_press=mouse;}dragging=true;
         }
     }
     if(erasing)erase_at(mouse,size);
+    if(shape_gesture.active()&&left)shape_gesture.move(distance(shape_press,mouse)>=ImGui::GetIO().MouseDragThreshold);
     if(dragging&&!over_ui&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y){
         if(pending.tool==Tool::Pen){
             Point point,last;
@@ -604,7 +613,14 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
             Point target;if(drawing_target(pending,mouse,size,rt->is_key_down(VK_SHIFT),target))pending.points[1]=target;
         }
     }
-    if(!left&&(dragging||erasing))commit();
+    if(!left&&(dragging||erasing)){if(!shape_gesture.active()||shape_gesture.release())commit();}
+}
+void cancel_shape_right(Point mouse,Point size,bool over_ui){
+    if(!ImGui::IsMouseDown(ImGuiMouseButton_Right))suppress_right=false;
+    if(shape_gesture.active()&&editing&&input_focus.canvas_ready()&&!reshade_menu&&!text_open&&!over_ui
+        &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y&&ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
+        cancel();suppress_right=true;status();
+    }
 }
 void cursor(ImDrawList*draw,Point p) {
     const auto mode=!editing?cursor_style::Mode::Pointer:(selected==Tool::Eraser?cursor_style::Mode::Eraser:cursor_style::Mode::Drawing);
@@ -615,7 +631,7 @@ void shift_plane_wheel(Point mouse,Point size,bool over_ui){
     bool owns=editing&&input_focus.canvas_ready()&&!reshade_menu&&!over_ui&&!text_open&&!ImGui::IsAnyItemActive()
         &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y&&doc.grids[doc.page].ready;
     int steps=plane_wheel.consume(ImGui::GetIO().MouseWheel,owns);if(!steps)return;
-    commit();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps);
+    settle_drawing();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps);
 }
 void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
@@ -648,7 +664,7 @@ void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bo
         c.move((rt->is_key_down('D')?1:0)-(rt->is_key_down('A')?1:0),(rt->is_key_down('W')?1:0)-(rt->is_key_down('S')?1:0),
                (rt->is_key_down('Q')?1:0)-(rt->is_key_down('Z')?1:0),ImGui::GetIO().DeltaTime,rt->is_key_down(VK_SHIFT));
         if(!over_ui&&input_focus.canvas_ready()){
-            if(ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
+            if(!suppress_right&&!(shape_gesture.active()&&ImGui::IsMouseClicked(ImGuiMouseButton_Right))&&ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
             if(!editing)c.magnify(ImGui::GetIO().MouseWheel);
         }
     }
@@ -672,7 +688,7 @@ void overlay(effect_runtime*rt) {
         Point mouse={io.MousePos.x,io.MousePos.y};
         const bool mouse_down=ImGui::IsMouseDown(ImGuiMouseButton_Left)||ImGui::IsMouseDown(ImGuiMouseButton_Right)||ImGui::IsMouseDown(ImGuiMouseButton_Middle);
         const bool was_foreground=input_focus.active;
-        if(input_focus.update(foreground,mouse_down)&&editing){commit();save();status();}
+        if(input_focus.update(foreground,mouse_down)&&editing){settle_drawing();save();status();}
         if(foreground&&!was_foreground)status();
         // Ignore activation-frame keys (including an Alt+Tab chord), and keep
         // an unfinished text dialog intact while another application has focus.
@@ -681,7 +697,9 @@ void overlay(effect_runtime*rt) {
         if(editing&&foreground&&!reshade_menu) {
             controls(rt,size,mouse,over_ui);
         }
+        over_ui|=ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopup);
         if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
+        cancel_shape_right(mouse,size,over_ui);
         poll_ground();
         shift_plane_wheel(mouse,size,over_ui);
         if(ground_marking&&editing&&foreground&&!over_ui&&!reshade_menu&&input_focus.canvas_ready())update_ground_pick(mouse,size);
@@ -707,7 +725,7 @@ void overlay(effect_runtime*rt) {
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}
         if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}
-        if(dirty&&!dragging&&!erasing&&GetTickCount64()>=save_due)save();
+        if(dirty&&(!dragging||shape_gesture.waiting())&&!erasing&&GetTickCount64()>=save_due)save();
         if(camera_preferences_dirty&&GetTickCount64()>=camera_preferences_due)save_camera_preferences();
         if(drawing_preferences_dirty&&GetTickCount64()>=drawing_preferences_due)save_drawing_preferences();
     } catch(const std::exception&e) {log(std::string("Sketch disabled after error: ")+e.what());disabled=true;editing=false;}
@@ -721,7 +739,7 @@ void destroyed(effect_runtime*rt) {
     std::lock_guard<std::recursive_mutex> lock(state_mutex);
     // ResizeBuffers/fullscreen transitions also destroy this runtime. Retain
     // editing intent and the text buffer for the replacement swap chain.
-    if(rt==primary){commit();save();primary=nullptr;reshade_menu=false;input_focus={};if(text_open)text_focus=true;}
+    if(rt==primary){settle_drawing();save();primary=nullptr;reshade_menu=false;input_focus={};if(text_open)text_focus=true;}
 }
 }
 extern "C" __declspec(dllexport) const char *NAME="SinkingStarSketchPad";
@@ -750,7 +768,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     log("SinkingStarSketchPad 3.4.5 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
 }
 extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
-    {std::lock_guard<std::recursive_mutex> lock(state_mutex);commit();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();}
+    {std::lock_guard<std::recursive_mutex> lock(state_mutex);settle_drawing();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();}
     reshade::unregister_event<reshade::addon_event::init_pipeline_layout>(free_camera_bridge::layout_init);
     reshade::unregister_event<reshade::addon_event::destroy_pipeline_layout>(free_camera_bridge::layout_destroy);
     reshade::unregister_event<reshade::addon_event::update_descriptor_tables>(free_camera_bridge::updated);

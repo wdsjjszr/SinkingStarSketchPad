@@ -16,12 +16,12 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(Undo,"Undo","撤销") X(Redo,"Redo","重做") X(Clear,"Clear page","清空本页") X(Page,"Page ","草稿 ") \
  X(Save,"Save","保存") X(Saved,"Saved","已保存") X(Saving,"Saving...","正在保存") X(Export,"Export SVG","导出 SVG") \
  X(Return,"Return to game E","返回游戏 E") \
- X(Help,"Middle click: mark ground once | E / Esc: return | Shift: snap | Right click / Ctrl+Z: undo | Ctrl+Y: redo","中键：快速标记地面· E / Esc 返回游戏 · Shift 吸附 · 右键 / Ctrl+Z 撤销 · Ctrl+Y 重做") \
+ X(Help,"Shapes: drag or click start/end | Right click: cancel shape, otherwise undo | Wheel: plane height | Middle: mark ground","图形可拖绘或点击起终点 · 右键取消图形，否则撤销 · 滚轮改高 · 中键标记地面") \
  X(KeyboardHelp,"Keyboard: game | Alt+letter: tool | Alt+1-5: color | Alt+Tab: keep drawing mode","键盘操作游戏 · Alt+字母选工具 · Alt+1-5 选色 · 切出后保留绘图模式") \
  X(CameraToggle,"Free camera T","自由相机 T") \
  X(CameraTitle,"Free camera (experimental)###SketchFreeCamera","自由相机（实验功能）###SketchFreeCamera") \
  X(CameraUnavailable,"Game camera constants are not ready. Enter a level and wait.","尚未连接可控制的游戏相机，请进入关卡后稍候。") \
- X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag / wheel on canvas: rotate / zoom. E: drawing. Ctrl+Z: undo. Esc: restore game view.","WASD 平移 · Q/Z 升降 · Shift 加速 · 在画面空白处右键拖动旋转、滚轮缩放。E 绘图；Ctrl+Z 撤销；Esc 恢复游戏相机。") \
+ X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag: rotate (pending shapes cancel first). Wheel: plane height with drawing open, zoom with it closed. E: drawing. Esc: restore.","WASD 平移 · Q/Z 升降 · Shift 加速 · 右键拖动旋转（优先取消未完成图形）。滚轮：绘图打开时改平面高度，关闭时缩放。E 绘图；Esc 恢复。") \
  X(CameraLimits,"Experimental render camera: original game culling, shadows, reflections and mouse picking may not follow large view changes.","实验性渲染相机：大幅变换时，游戏原有裁剪、阴影、反射及鼠标选取可能不随视角更新。") \
  X(CameraSpeed,"Movement speed","移动速度") X(CameraYaw,"Yaw","旋转") X(CameraPitch,"Tilt","俯仰") X(CameraZoom,"Zoom","缩放") \
  X(CameraSensitivity,"Mouse sensitivity","鼠标灵敏度") X(CameraInvertX,"Invert mouse X","反转鼠标 X 轴") X(CameraInvertY,"Invert mouse Y","反转鼠标 Y 轴") \
@@ -44,7 +44,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GroundCharacterWait,"Could not read the controlled character. The target plane was kept.","无法读取当前控制角色，已保留原目标平面。") \
  X(GroundLoading,"Native ground / character data is loading or unavailable.","原生地面或角色数据正在读取，或暂不可用。") \
  X(GroundWall,"A wall blocks this position. Point at a visible ground cell.","此处被墙面遮挡，请指向可见的地面格。") \
- X(GroundShortcut,"Middle click on canvas: mark the ground under the pointer once and exit marking, including on failure.","画布中键：快速标记指针下地面所在平面，无论成功与否均结束标记。") \
+ X(GroundShortcut,"Canvas: middle click marks ground once; wheel raises / lowers the target plane by one cell.","画布中键快速标记地面；滚轮向上 / 向下将目标平面升高 / 降低一格。") \
  X(GroundLimits,"Occlusion checks native solid walls. Decorative models, platforms and lilies are not included.","遮挡仅检查原生实心墙体；暂不包含装饰模型、升降台和莲叶。") \
  X(GroundHover,"Ground height %.3g","地面高度 %.3g") \
  X(GroundLocked,"Target plane: height %.3g","目标平面：高度 %.3g") \
@@ -62,8 +62,8 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(NativeLegend,"Colors show height. Filled dots: voxel tops; rings: layer bases; crosses: floors. Hover a center for XYZ and source.","颜色表示高度；实心点为体素顶面，空心圈为基准底层，十字为地板格。悬停格心查看 XYZ 和来源。") \
  X(NativeLimits,"Debug draws through walls. Layer bases are logical reference planes; wall tops are candidates, not a walkability result. Platforms and lilies are not included yet.","Debug 透视显示；基准底层是逻辑参考平面，墙顶也属于候选，不代表可通行。暂未包含升降台和莲叶。") \
  X(CameraReady,"Game camera connected","游戏主相机已连接") \
- X(CameraWait,"Waiting for the game camera. Enter a level to show paths.","等待游戏主相机；请先进入关卡。路径暂不显示。") \
- X(Anchoring,"Pen/text: screen space. Path Alt+H: anchored to world cells.","画笔和文字固定在画面；路径 Alt+H 固定在游戏格子上。") \
+ X(CameraWait,"Waiting for the game camera. World marks are hidden until it is ready.","等待游戏主相机；连接后才显示世界笔迹。") \
+ X(Anchoring,"Grid drawing anchors new marks to the plane; turn it off for screen drawing. Paths always use world cells.","网格绘画将新笔迹固定在当前平面；关闭后使用屏幕绘画。路径始终固定在世界格子上。") \
  X(TextTitle,"Text annotation###SketchText","文字标注###SketchText") X(Done,"Done Ctrl+Enter","完成 Ctrl+Enter") X(Cancel,"Cancel Esc","取消 Esc") \
  X(Hud,"SinkingStarSketchPad  E Draw | G Cursor | B Marks | T Camera","SinkingStarSketchPad  E绘图 G指针 B草稿 T相机") \
  X(SaveFailed,"Save failed: ","保存失败：") X(SettingsFailed,"Could not save the language setting.","无法保存语言设置。") \

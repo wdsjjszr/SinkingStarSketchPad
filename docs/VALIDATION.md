@@ -1,7 +1,17 @@
 # Validation — 3.4.5 Beta
 
+## Grid drawing extension — 24 October 2026
+
+- The user confirmed ground marking now works; the additional preview/drawing behaviors still need in-game confirmation.
+- Static assertions cover preview defaults/opacity, clipping, solid interior versus top contact, last-hint timing/page/scene isolation, fractional wheel accumulation, center/intersection snapping, negative coordinates, Shift constraints and shape gesture transitions.
+- Compile-only fixtures cover mixed screen/world v3 serialization, v1/v2 reading including old paths, perspective outlines/text anchors, projected erasing/arrowheads, SVG call sites, captured planes, gesture completion/history/cancellation and the legacy-backup failure path. Their non-constexpr assertions are not executed.
+- Validation is C++17 syntax/static compilation, Clang static analysis and production add-on compilation/linking. No test executables or game sessions are run; no SHA checks are performed.
+- Runtime gaps: actual camera alignment, drawing feel, INI persistence and filesystem upgrade/recovery behavior. Far-plane hints are limited to 128×128 cells; restore `drafts.pre-v3.txt` before using an older add-on.
+
+## Ground marking revision
+
 - **Ground marking revision, 24 October 2026:** viewing rays now use the effective camera eye/forward direction, with ordinary/reverse-depth and voxel-top fixtures. Character Z initialization, one-shot marking, page/request invalidation and on-demand acquisition replace the previous follow modes. The duplicate backup GPU camera collector is disabled; primary effective-camera/free-camera handling remains active.
-- This revision received C++17 static compilation, compile-time assertions, Clang static analysis and add-on compilation/linking only. No test programs or game sessions were run. The user's report of every floor being blocked is not yet confirmed resolved in game. Historical runtime results below apply to the earlier builds they describe.
+- This revision received C++17 static compilation, compile-time assertions, Clang static analysis and add-on compilation/linking only. No test programs or game sessions were run. The user subsequently confirmed ground marking works. Historical runtime results below apply to the earlier builds they describe.
 
 - The 3.4.5 control changes pass core tests for independent X/Y inversion, gentler defaults, absolute tilt bounds, pitch-independent ground movement and preference retention. Actual-game feel of these new controls still needs user verification.
 - The hidden production-input fixture checks saved speed/sensitivity/X/Y settings reload correctly without changing the interface language.

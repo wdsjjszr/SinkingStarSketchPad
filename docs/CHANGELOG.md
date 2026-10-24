@@ -1,11 +1,20 @@
 # Changelog
 
-## Unreleased — ground marking revision (2026-10-24)
+## Unreleased — grid drawing and previews (2026-10-24)
+
+- Add independent center/intersection/border/checker layers, opacity and persisted grid drawing preferences.
+- Show a two-second plane checker hint after every successful mark; cut solid interiors only. Use the canvas wheel to change plane Z while drawing is open.
+- Anchor pen/shapes/text to each mark’s captured grid; share projected outlines and arrowheads across display, erasing and SVG export.
+- Support drag-release and click-start/click-end shapes with live previews, right-click cancellation and completed-only history/save/export.
+- Read draft v1/v2/v3, write v3 and preserve a non-overwriting `drafts.pre-v3.txt` before the first legacy overwrite. Saving stops if that backup fails.
+- The user confirmed ground marking now works. New features have static checks and compilation only, with no test programs or game sessions executed.
+
+## Ground marking revision (2026-10-24)
 
 - Show character-plane and manual-marking buttons together; initialize each level from logical character Z unchanged, and make middle-click a one-shot ground mark.
 - Orient picking rays using the effective camera view, independent of depth order; retain voxel-top contact and wall-before-floor checks.
 - Read characters/terrain on demand, invalidate cancelled or stale requests, and disable duplicate backup GPU camera collection while keeping free camera.
-- Validation is static checks, compile-time assertions, static analysis and compilation/linking only; actual-game picking remains unverified.
+- Validation is static checks, compile-time assertions, static analysis and compilation/linking only; ground marking was subsequently confirmed by the user.
 
 ## 3.4.5 — Camera controls and axis preferences (Beta)
 

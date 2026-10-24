@@ -14,22 +14,24 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - Three automatically saved scratch pages, undo/redo, and SVG export.
 - Each level initializes the target plane once from the controlled character logical Z, with a button to set it again.
 - [Ground marking](docs/MANUAL_GROUND.md): character-plane and manual-marking buttons share one panel; middle-click marks the ground under the pointer once, with native wall occlusion.
-- World-space path marks reprojected with the game camera.
+- World-space paths and optional grid drawing: plane pen/shapes and camera-following text anchors.
+- Layered grid previews, two-second plane hints and canvas-wheel plane height changes.
+- Drag shapes or click their start/end points; right-click cancels an unfinished shape.
 - Persistent System / English / Simplified Chinese language selection.
 
-**Beta:** the user confirmed native ground previews in the levels they checked. The revised viewing rays and on-demand marking have only received static checks and compilation; full alignment across actual game levels remains unverified. Inspect the cell-center preview in your level. Routes do not check obstacles, solve puzzles, or control the player. Ordinary drawing and text stay in screen space.
+**Beta:** the user confirmed native previews and ground marking in the levels they checked. The grid drawing extension has received static checks and compilation only. Inspect alignment in your level; routes do not check obstacles, solve puzzles, or control the player. See [grid drawing, previews and draft upgrades](docs/GRID_DRAWING.md).
 
 ## Use
 
 For a prebuilt manual release, exit the game and copy the contents of `game_files` beside `sinking_star.exe`, following `INSTALL_EN.txt`. For upgrades, preserve existing settings and drafts and set `[INPUT] InputProcessing=1` in `ReShade.ini`. No installation script is required. Do not copy a GitHub source ZIP into the game as if it were a prebuilt mod.
 
-Press **E** to open/close the toolbar, **G** for cursor visibility, and **B** for mark visibility. **E → Alt+H** selects cell paths. Keyboard movement and camera controls remain available while drawing. Alt+letter selects a tool; Alt+1-5 selects ink. Alt+Tab keeps drawing mode and commits the current stroke. Choose the interface language in **Language / 语言**. See the [full English guide](docs/README_EN.md) for installation, upgrades, existing ReShade setups, controls, and uninstalling.
+Press **E** to open/close the toolbar, **G** for cursor visibility, and **B** for mark visibility. **E → Alt+H** selects cell paths. Keyboard movement and camera controls remain available while drawing. Alt+letter selects a tool; Alt+1-5 selects ink. Alt+Tab keeps drawing mode, finishes actual drag strokes and cancels unfinished click shapes. Choose the interface language in **Language / 语言**. See the [full English guide](docs/README_EN.md) for installation, upgrades, existing ReShade setups, controls, and uninstalling.
 
 The compatible add-on filename and persistent data folder remain `SinkingStarSketch.addon64` and `SinkingStarSketch-data` so existing drafts and preferences continue to work.
 
 Version 3.4.5 adds gentler defaults, tilt limits, adjustable mouse sensitivity and separate **Invert mouse X/Y** settings, saved across restarts.
 
-Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt, wheel zoom, Esc restore. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
+Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt, wheel zoom with the drawing toolbar closed, Esc restore. With drawing open, the canvas wheel changes target-plane height instead. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
 
 ## Build from source
 
