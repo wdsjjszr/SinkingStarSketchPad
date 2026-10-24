@@ -45,6 +45,7 @@ inline bool decode(const float *p,double width,double height,grid::Camera &c){
     }
     if(error>.03)return false;
     for(unsigned i=0;i<16;++i){c.matrix[i]=p[i];c.inverse[i]=p[16+i];}
+    c.eye={p[208],p[209],p[210]};c.forward={p[212],p[213],p[214]};
     std::memcpy(&c.frame,p+225,4);c.valid=true;return true;
 }
 inline grid::Camera snapshot(double width,double height){

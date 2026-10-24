@@ -1,6 +1,15 @@
 #include "../src/native_ground_pick.hpp"
 #include <cassert>
 using namespace sketch::native_ground;
+constexpr bool viewing_ray_checks(){
+    sketch::grid::Ray a,b,c;
+    if(!sketch::grid::viewing_ray({0,0,9},{0,0,1},{0,0,10},{0,0,-1},a)
+       ||!sketch::grid::viewing_ray({0,0,1},{0,0,9},{0,0,10},{0,0,-1},b)
+       ||!sketch::grid::viewing_ray({2,3,9},{2,3,1},{0,0,10},{0,0,-1},c))return false;
+    return a.origin.z==10&&b.origin.z==10&&a.direction.z<0&&b.direction.z<0&&c.origin.x==2&&c.origin.y==3&&c.origin.z==10;
+}
+static_assert(viewing_ray_checks(),"Perspective/reverse-depth and parallel rays start on the eye plane and face forward");
+static_assert(!occludes(5,5)&&!occludes(5+1e-7,5)&&occludes(4,5),"A ground cell's own top is not an occluder; a wall in front is");
 static_assert(controlled(4,4)&&controlled(12,4)&&!controlled(0,4)&&!controlled(8,4),"ACTIVE is re-evaluated independently of other status flags");
 static_assert(precedes({-1,9,9},{0,0,0},20,1)&&precedes({0,-1,9},{0,0,0},20,1)
     &&precedes({0,0,-1},{0,0,0},20,1)&&precedes({0,0,0},{0,0,0},1,2),"Controlled characters sort by X, Y, Z, then entity ID");

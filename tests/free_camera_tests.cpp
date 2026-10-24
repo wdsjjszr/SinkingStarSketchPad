@@ -17,7 +17,7 @@ int main(){
     c.move(1,1,1,.1,false);assert(std::abs(grid::length(c.offset)-.3)<1e-6);c.rotate(31,42);c.magnify(4);p=original;assert(c.apply(p.data()));
     auto changed=decode(p.data());assert(changed.valid&&pair_valid(changed.vp,changed.inv));
     assert(grid::length(changed.eye-frame.eye)>1&&grid::length(changed.forward-frame.forward)>.1);
-    grid::Camera camera{changed.vp,changed.inv,0,true};grid::Lattice cells{true,{.5,.5,0},{1,0,0},{0,1,0}};
+    grid::Camera camera{changed.vp,changed.inv,0,true,changed.eye,changed.forward};grid::Lattice cells{true,{.5,.5,0},{1,0,0},{0,1,0}};
     native_ground::Scene terrain;terrain.bounds={-5,-5,11,11,false};native_ground::Snapshot ground;ground.set_geometry(terrain);
     double pick_x,pick_y;assert(camera.project({0,0,0},pick_x,pick_y));
     auto hit=native_ground::pick(ground,camera,pick_x,pick_y);

@@ -5,17 +5,25 @@
 
 namespace sketch::grid {
 struct V { double x=0,y=0,z=0; };
-inline V operator+(V a,V b){return {a.x+b.x,a.y+b.y,a.z+b.z};}
-inline V operator-(V a,V b){return {a.x-b.x,a.y-b.y,a.z-b.z};}
-inline V operator*(V a,double b){return {a.x*b,a.y*b,a.z*b};}
-inline double dot(V a,V b){return a.x*b.x+a.y*b.y+a.z*b.z;}
+constexpr V operator+(V a,V b){return {a.x+b.x,a.y+b.y,a.z+b.z};}
+constexpr V operator-(V a,V b){return {a.x-b.x,a.y-b.y,a.z-b.z};}
+constexpr V operator*(V a,double b){return {a.x*b,a.y*b,a.z*b};}
+constexpr double dot(V a,V b){return a.x*b.x+a.y*b.y+a.z*b.z;}
 inline double length(V a){return std::sqrt(dot(a,a));}
 inline bool finite(V a){return std::isfinite(a.x)&&std::isfinite(a.y)&&std::isfinite(a.z);}
 struct Ray {V origin,direction;};
+constexpr bool viewing_ray(V a,V b,V eye,V forward,Ray &ray){
+    auto direction=b-a;const double along=dot(direction,forward);
+    if(along>-1e-12&&along<1e-12)return false;
+    // Start on the eye plane and point into the view, independent of depth order.
+    ray.origin=a+direction*(dot(eye-a,forward)/along);
+    ray.direction=direction*(along>0?1:-1);return true;
+}
 struct Camera {
     std::array<double,16> matrix{},inverse{};
     unsigned frame=0;
     bool valid=false;
+    V eye{},forward{};
     bool project(V p,double &x,double &y) const {
         double w=matrix[12]*p.x+matrix[13]*p.y+matrix[14]*p.z+matrix[15];
         if(!valid||!std::isfinite(w)||w<=1e-8)return false;
@@ -33,9 +41,9 @@ struct Camera {
         return finite(out);
     }
     bool ray(double x,double y,Ray &r) const {
-        V far_point;if(!unproject(x,y,0,r.origin)||!unproject(x,y,1,far_point))return false;
-        r.direction=far_point-r.origin;double n=length(r.direction);if(n<1e-8)return false;
-        r.direction=r.direction*(1/n);return true;
+        V a,b;if(!unproject(x,y,.25,a)||!unproject(x,y,.75,b)||!viewing_ray(a,b,eye,forward,r))return false;
+        double n=length(r.direction);if(!std::isfinite(n)||n<1e-8)return false;
+        r.direction=r.direction*(1/n);return finite(r.origin);
     }
 };
 inline bool plane(Ray ray,double z,V &out){

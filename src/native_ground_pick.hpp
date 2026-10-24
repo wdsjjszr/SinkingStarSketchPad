@@ -5,6 +5,7 @@ namespace sketch::native_ground {
 enum class PickResult {None,Ground,Wall};
 struct Pick {PickResult result=PickResult::None;grid::V center;};
 constexpr bool keep_marking(bool quick,PickResult result){return !quick&&result!=PickResult::Ground;}
+constexpr bool occludes(double wall,double ground){return wall<ground-1e-6;}
 constexpr bool slab(double origin,double direction,double low,double high,double &enter,double &exit){
     if(direction==0)return origin>=low&&origin<=high;
     double a=(low-origin)/direction,b=(high-origin)/direction;
@@ -43,10 +44,10 @@ inline Pick pick(const Snapshot &ground,grid::Ray ray){
     const Cell *best=nullptr;double distance=std::numeric_limits<double>::infinity();
     if(ray.direction.z< -1e-8)for(double z:ground.heights){
         double t=(z-ray.origin.z)/ray.direction.z;if(t<0||t>=distance)continue;
-        auto point=ray.origin+ray.direction*t;
+        grid::V point;if(!grid::plane(ray,z,point))continue;
         if(auto cell=cell_at(ground,coordinate(point.x),coordinate(point.y),z)){best=cell;distance=t;}
     }
-    if(wall_distance(ground,ray,distance)<distance-1e-6)return {PickResult::Wall,{}};
+    if(occludes(wall_distance(ground,ray,distance),distance))return {PickResult::Wall,{}};
     return best?Pick{PickResult::Ground,best->center}:Pick{};
 }
 inline Pick pick(const Snapshot &ground,const grid::Camera &camera,double x,double y){

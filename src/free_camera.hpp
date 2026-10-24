@@ -41,7 +41,7 @@ inline Frame decode(const float*p){
     auto product=mul(f.proj,f.view);for(int i=0;i<16;++i)if(std::abs(product[i]-f.vp[i])>.02*(1+std::abs(f.vp[i])))return f;
     f.eye={p[208],p[209],p[210]};V forward{p[212],p[213],p[214]};if(grid::dot(forward,forward)<.98||grid::dot(forward,forward)>1.02)return f;f.forward=unit(forward);
     if(grid::length(f.forward)<.99||grid::length(f.eye-position(inv_view,{}))>.1)return f;
-    grid::Camera c{f.vp,f.inv,0,true};V center,x,y;
+    grid::Camera c{f.vp,f.inv,0,true,f.eye,f.forward};V center,x,y;
     if(!c.unproject(.5,.5,.5,center)||!c.unproject(.51,.5,.5,x)||!c.unproject(.5,.49,.5,y))return f;
     f.right=unit(x-center);f.up=unit(y-center);if(grid::length(f.right)<.99||grid::length(f.up)<.99)return f;
     f.width=uint32_t(std::round(1/p[216]));f.height=uint32_t(std::round(1/p[217]));std::memcpy(&f.frame,p+225,4);f.valid=true;return f;

@@ -4,9 +4,10 @@
 #include <sstream>
 using namespace sketch;
 void check(bool v,const char *name){if(!v)throw std::runtime_error(name);std::cout<<"PASS: "<<name<<'\n';}
-grid::Camera perspective(double cx,double cy,double height,double zoom){
-    grid::Camera c;c.valid=true;
+grid::Camera perspective(double cx,double cy,double height,double zoom,bool reverse=false){
+    grid::Camera c;c.valid=true;c.eye={cx,cy,height};c.forward={0,0,-1};
     c.matrix={zoom,0,0,-zoom*cx,0,zoom,0,-zoom*cy,0,0,-1000./999,1000*(height-1)/999,0,0,-1,height};
+    if(reverse)for(int i=0;i<4;++i)c.matrix[8+i]=c.matrix[12+i]-c.matrix[8+i];
     double a[4][8]{};
     for(int r=0;r<4;++r)for(int col=0;col<4;++col){a[r][col]=c.matrix[r*4+col];a[r][col+4]=r==col;}
     for(int col=0;col<4;++col){int pivot=col;for(int r=col+1;r<4;++r)if(std::abs(a[r][col])>std::abs(a[pivot][col]))pivot=r;
@@ -26,6 +27,11 @@ int main(int argc,char **argv){try{
     native_ground::Scene scene;scene.floors={{{0,0,0},native_ground::Source::Fence,1},{{0,0,3},native_ground::Source::Fence,2}};
     native_ground::Snapshot ground;ground.set_geometry(scene);
     const auto picking_camera=perspective(0,0,10,1);
+    for(auto c:{picking_camera,perspective(0,0,10,1,true)}){
+        grid::Ray ray;check(c.ray(.5,.5,ray)&&ray.direction.z<0&&grid::length(ray.origin-c.eye)<1e-6,"Ordinary and reverse depth rays point into the view from the eye");
+        auto picked=native_ground::pick(ground,c,.5,.5);
+        check(picked.result==native_ground::PickResult::Ground&&picked.center.z==3,"Depth order does not turn a visible floor into a blocked wall");
+    }
     auto hit=native_ground::pick(ground,picking_camera,.5,.5);
     check(hit.result==native_ground::PickResult::Ground&&hit.center.z==3,"Overlapping native floors select the closest visible surface");
     check(native_ground::pick(ground,picking_camera,.6,.5).result==native_ground::PickResult::None,"An infinite plane cannot be selected outside native ground cells");
