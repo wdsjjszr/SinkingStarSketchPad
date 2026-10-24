@@ -38,7 +38,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GroundHelp,"Left-click a visible ground cell to set the plane and finish. A wall or empty space keeps marking active. Esc cancels.","左键点击可见地面格，成功后自动结束标记；命中墙面或空处会保持标记。Esc 取消。") \
  X(GroundCharacter,"Set plane to character","设为角色所在平面") X(GroundCharacterSet,"Plane set to the character logical height.","已设为角色所在平面。") \
  X(GroundCharacterWait,"Could not read the controlled character. The target plane was kept.","无法读取当前控制角色，已保留原目标平面。") \
- X(GroundLoading,"Reading native ground / character data. Please wait.","正在读取原生地面或角色数据，请稍候。") \
+ X(GroundLoading,"Native ground / character data is loading or unavailable.","原生地面或角色数据正在读取，或暂不可用。") \
  X(GroundWall,"A wall blocks this position. Point at a visible ground cell.","此处被墙面遮挡，请指向可见的地面格。") \
  X(GroundShortcut,"Middle click on canvas: mark the ground under the pointer once and exit marking, including on failure.","画布中键：快速标记指针下地面所在平面，无论成功与否均结束标记。") \
  X(GroundLimits,"Occlusion checks native solid walls. Decorative models, platforms and lilies are not included.","遮挡仅检查原生实心墙体；暂不包含装饰模型、升降台和莲叶。") \

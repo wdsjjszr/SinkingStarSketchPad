@@ -7,7 +7,6 @@
 #include "model.hpp"
 #include "i18n.hpp"
 #include "cursor_style.hpp"
-#include "camera_bridge.hpp"
 #include "native_ground_bridge.hpp"
 #include "native_ground_pick.hpp"
 #include "input_policy.hpp"
@@ -273,7 +272,8 @@ void poll_ground(){
     if(!ground_request.tag.matches(state.completed,ground_generation,doc.page))return;
     const auto requested=ground_request;ground_request={};
     if(requested.action==GroundAction::Character){
-        if(ground_scene_ready&&ground_character.valid&&ground_character.scene_id==ground_scene){set_ground(ground_character.position.z);note(tr(Label::GroundCharacterSet),2500);}
+        const auto &character=state.character_reply;
+        if(ground_scene_ready&&character.valid&&character.scene_id==ground_scene){set_ground(character.position.z);note(tr(Label::GroundCharacterSet),2500);}
         else note(tr(Label::GroundCharacterWait));
     }else if(requested.action==GroundAction::Quick){
         ground_hit=ground_ready()?native_ground::pick(*native_ground_snapshot,requested.camera,requested.pointer.x,requested.pointer.y):native_ground::Pick{};
@@ -562,7 +562,7 @@ void overlay(effect_runtime*rt) {
         ++frame_count;if(frame_count==30)status();
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
-        camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));if(!camera.valid)camera=camera_bridge::snapshot(size.x,size.y);
+        camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));
         if(frame_count%120==0)status();
         HWND window=static_cast<HWND>(rt->get_hwnd());bool foreground=GetForegroundWindow()==window;
         // ReShade virtualizes Win32 GetCursorPos while it blocks game input.
@@ -639,7 +639,6 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     reshade::register_event<reshade::addon_event::execute_command_list>(free_camera_bridge::execute);
     reshade::register_event<reshade::addon_event::copy_resource>(free_camera_bridge::resource_copy);
     reshade::register_event<reshade::addon_event::copy_buffer_region>(free_camera_bridge::buffer_copy);
-    reshade::register_event<reshade::addon_event::update_descriptor_tables>(camera_bridge::updated);
     reshade::register_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::register_event<reshade::addon_event::reshade_open_overlay>(opened);
     reshade::register_event<reshade::addon_event::destroy_effect_runtime>(destroyed);
@@ -660,11 +659,9 @@ extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     reshade::unregister_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::unregister_event<reshade::addon_event::reshade_open_overlay>(opened);
     reshade::unregister_event<reshade::addon_event::destroy_effect_runtime>(destroyed);
-    reshade::unregister_event<reshade::addon_event::update_descriptor_tables>(camera_bridge::updated);
     reshade::unregister_event<reshade::addon_event::copy_resource>(free_camera_bridge::resource_copy);
     reshade::unregister_event<reshade::addon_event::copy_buffer_region>(free_camera_bridge::buffer_copy);
     native_ground_bridge::cleanup();
     free_camera_bridge::cleanup();
-    camera_bridge::cleanup();
     reshade::unregister_addon(addon);
 }

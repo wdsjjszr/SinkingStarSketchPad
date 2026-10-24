@@ -1,5 +1,8 @@
 # Validation — 3.4.5 Beta
 
+- **Ground marking revision, 24 October 2026:** viewing rays now use the effective camera eye/forward direction, with ordinary/reverse-depth and voxel-top fixtures. Character Z initialization, one-shot marking, page/request invalidation and on-demand acquisition replace the previous follow modes. The duplicate backup GPU camera collector is disabled; primary effective-camera/free-camera handling remains active.
+- This revision received C++17 static compilation, compile-time assertions, Clang static analysis and add-on compilation/linking only. No test programs or game sessions were run. The user's report of every floor being blocked is not yet confirmed resolved in game. Historical runtime results below apply to the earlier builds they describe.
+
 - The 3.4.5 control changes pass core tests for independent X/Y inversion, gentler defaults, absolute tilt bounds, pitch-independent ground movement and preference retention. Actual-game feel of these new controls still needs user verification.
 - The hidden production-input fixture checks saved speed/sensitivity/X/Y settings reload correctly without changing the interface language.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — ground marking revision (2026-10-24)
+
+- Show character-plane and manual-marking buttons together; initialize each level from logical character Z unchanged, and make middle-click a one-shot ground mark.
+- Orient picking rays using the effective camera view, independent of depth order; retain voxel-top contact and wall-before-floor checks.
+- Read characters/terrain on demand, invalidate cancelled or stale requests, and disable duplicate backup GPU camera collection while keeping free camera.
+- Validation is static checks, compile-time assertions, static analysis and compilation/linking only; actual-game picking remains unverified.
+
 ## 3.4.5 — Camera controls and axis preferences (Beta)
 
 - Add independent mouse X/Y inversion and an adjustable mouse sensitivity slider, in English and Chinese.

@@ -252,6 +252,7 @@ struct State {
     SceneIdentity scene;
     std::shared_ptr<const Snapshot> ground;
     CharacterSample character;
+    CharacterSample character_reply; // Initialization retries must not replace a completed button result.
     uint64_t generation=0,completed=0;
     bool initialized=false;
     double initial_z=0;
@@ -278,6 +279,7 @@ inline void start(){
                 const bool requested=request.id&&request.generation==next.generation;
                 if((!next.initialized&&(changed||now>=next_probe))||(requested&&request.kind==Read::Character)){
                     next.character=reader.sample_character(next.scene);
+                    if(requested&&request.kind==Read::Character)next.character_reply=next.character;
                     if(!next.initialized&&next.character.valid){next.initial_z=next.character.position.z;next.initialized=true;}
                 }
                 if(requested){
@@ -285,7 +287,7 @@ inline void start(){
                     next.completed=request.id;
                 }
             }else if(request.id&&request.generation==next.generation){
-                if(request.kind==Read::Character){next.character={};next.character.error=next.scene.error;}
+                if(request.kind==Read::Character){next.character={};next.character.error=next.scene.error;next.character_reply=next.character;}
                 else{auto failed=std::make_shared<Snapshot>();failed->error=next.scene.error;next.ground=std::move(failed);}
                 next.completed=request.id;
             }

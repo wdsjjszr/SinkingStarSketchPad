@@ -2,7 +2,7 @@
 
 In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
 
-**Release status: beta.** The user confirmed the native ground preview in the levels they checked. The new ground following and picking have only been checked statically and compiled. Full visual alignment across the game's levels has not been comprehensively verified. Check the cell-center preview in your level before relying on a route.
+**Release status: beta.** The user confirmed the native ground preview in the levels they checked. The revised viewing rays and on-demand marking have only been checked statically and compiled. Full visual alignment across the game's levels has not been comprehensively verified. Check the cell-center preview in your level before relying on a route.
 
 ## Requirements
 
@@ -73,7 +73,7 @@ Other accepted values are `zh-CN` and `auto`. The setting changes the mod interf
 | Save | Ctrl+S |
 | Clear this page, with undo | Ctrl+Shift+Delete |
 | Finish text entry | Ctrl+Enter |
-| Toggle character following (automatic ground) / mark once (manual ground) | Middle-click on canvas while drawing |
+| Mark the ground under the pointer once | Middle-click on canvas while drawing |
 
 E/G/B only trigger without Ctrl, Shift, or Alt, and pause while the text entry dialog is open. They were checked against the game's default keymaps; customized keymaps may conflict. While drawing, ordinary keyboard input continues to the game, including movement and camera controls. Use Alt+letter for tools and Alt+1-5 for colors to avoid triggering tools with game movement keys. The mod captures the keyboard while text entry is open or Ctrl/Alt is held for mod shortcuts. Custom game bindings may still overlap those chords. With the free camera disabled, mouse input is reserved for drawing; press E to use mouse controls in the game. Alt+Tab preserves drawing mode and text entry, commits and saves the current stroke, and pauses mouse interaction until the game is active again. Release held mouse buttons before drawing again.
 
@@ -103,14 +103,16 @@ The camera panel also offers X/Y/height offsets, yaw, tilt, zoom and reset-to-cu
 ## Cell paths that follow the camera
 
 1. Enter a level, press **E**, then **Alt+H** or click **Path**.
-2. Automatic marking initializes a unit-spaced plane from the controlled character. **Follow character** defaults off; enable it or middle-click on the canvas to follow. Wait for native ground and a valid game camera.
+2. The level initializes all three pages once from the controlled character logical Z, without requiring ground below. **Set plane to character** reads the character again for the current page. Targets stay fixed until another mark; wait for a valid game camera to draw paths.
 3. Enable **Cell-center preview** to inspect the snap points near your mouse.
 4. Click a cell center to start a path. Click another cell in the same row or column to connect the intermediate centers.
 5. Place a point at each corner. A diagonal target is rejected until you add the corner.
 6. Click **Finish / New path** to begin a separate route.
 7. Press **E** to return to the game. The path is stored using a world-space grid reference and is reprojected with the camera as it moves or zooms.
 
-Each page keeps its own ground mode, following preference and target for this session. In manual mode, click **Mark plane**, then left-click a ground cell. Success exits marking; a blocked wall or empty space shows a message and keeps marking active. Middle-click makes one attempt and exits even on failure, preserving the selected tool. The wheel remains available for free-camera zoom. Switching levels reinitializes automatic targets and clears manual targets, while retaining existing paths. See [ground marking](MANUAL_GROUND.md).
+Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click requests fresh terrain and marks once using the pointer and camera captured at the click, then exits even on failure. It preserves the selected tool and adds no path point. Esc, switching pages/tools and a newer marking request invalidate a pending result. The wheel remains available for free-camera zoom. Switching levels initializes all pages from one character sample and retains existing paths. See [ground marking](MANUAL_GROUND.md).
+
+The background reader only probes level identity about once per second while idle. Terrain refreshes on level entry and manual/middle-click requests; characters are sampled for initialization and the character-plane button. Initialization retries until a valid character is available, then stops. The duplicate backup GPU camera collector is disabled; effective-camera and free-camera processing remain active.
 
 With the free camera disabled, right-click/Ctrl+Z undoes the most recent path addition and ends the active path. Alt+K selects the whole-path/whole-mark eraser. A path retains its own grid reference, so a later change in automatic detection does not move existing marks.
 
@@ -148,7 +150,7 @@ To disable a manual install, exit the game and move this add-on out of the game 
 - Incorrect alignment: stop using that route and keep a screenshot plus a description of the level/camera view for a bug report. Do not treat the preview as an obstacle or walkability map.
 - Missing Chinese glyphs after an upgrade: keep your existing `ReShade.ini` and inspect its font setting. In ReShade settings, choose `SinkingStarSketch-assets/NotoSansCJKsc-Regular.otf` as the font and restart if needed.
 - Diagnostics: `ReShade.log` and `SinkingStarSketch-data/status.txt`. Review logs and remove personal paths before posting them publicly.
-- The native preview was confirmed by the user in tested levels. New character following and wall-aware picking have static checks and compilation only; no test programs or game sessions were run for this change.
+- The native preview was confirmed by the user in tested levels. Revised ray orientation, on-demand reads and wall-aware picking have static checks and compilation only; no test programs or game sessions were run for this change.
 
 ## Credits and third-party notices
 
