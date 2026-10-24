@@ -40,7 +40,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(HintSettings,"Plane change preview","平面变动预览") X(HintMode,"Show on plane changes","在平面变动时显示预览") \
  X(HintOn,"On","开") X(HintOff,"Off","关") X(HintWheelOnly,"Height adjustment only","仅微调") \
  X(HintDuration,"Preview duration (seconds)","预览时长（秒）") \
- X(HintHelp,"Initial level entry stays silent. Height adjustment only means wheel height changes. Ctrl+click the duration to enter a value; zero disables the preview.","进入关卡首次初始化不提示。仅微调指滚轮改高。Ctrl+点击时长可直接输入；0 秒不显示。") \
+ X(HintHelp,"Initial level entry stays silent. Height adjustment only means wheel height changes. Ctrl+click to enter the hold duration; an ease-out fade lasting another 30 percent follows. Zero disables the preview.","进入关卡首次初始化不提示。仅微调指滚轮改高。Ctrl+点击可输入保持时长，随后另有三成时长的缓出渐隐；0 秒不显示。") \
  X(WheelSettings,"Wheel behavior while drawing","绘图时滚轮行为") X(Wheel,"Wheel","滚轮") X(CtrlWheel,"Ctrl + wheel","Ctrl + 滚轮") \
  X(ShiftWheel,"Shift + wheel","Shift + 滚轮") X(AltWheel,"Alt + wheel","Alt + 滚轮") \
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \

@@ -8,6 +8,7 @@
 #include "drawing_math.hpp"
 #include "grid_preview.hpp"
 #include "grid_visibility.hpp"
+#include "preview_mesh.hpp"
 #include "i18n.hpp"
 #include "cursor_style.hpp"
 #include "native_ground_bridge.hpp"
@@ -53,6 +54,7 @@ input::ShapeGesture shape_gesture;
 Point shape_press;
 bool suppress_right=false;
 void settle_drawing();
+bool drawing_target(const Stroke &,Point,Point,bool,Point &);
 grid::Camera camera;
 native_ground::CharacterSample ground_character;
 uintptr_t ground_scene=0;
@@ -121,9 +123,9 @@ void load_drawing_preferences(){
     grid_preview.opacity=std::clamp(read(L"Opacity",45),0,100);
     auto &style=hint_preferences.style;
     style.centers=read(L"HintCenters",0)!=0;style.intersections=read(L"HintIntersections",0)!=0;
-    style.borders=read(L"HintBorders",1)!=0;style.checker=read(L"HintChecker",1)!=0;style.opacity=std::clamp(read(L"HintOpacity",25),0,100);
+    style.borders=read(L"HintBorders",1)!=0;style.checker=read(L"HintChecker",1)!=0;style.opacity=std::clamp(read(L"HintOpacity",45),0,100);
     int mode=read(L"HintMode",0);hint_preferences.mode=mode>=0&&mode<=2?grid::HintMode(mode):grid::HintMode::On;
-    hint_preferences.duration_ms=unsigned(std::clamp(read(L"HintDurationMs",1000),0,5000));
+    hint_preferences.duration_ms=unsigned(std::clamp(read(L"HintDurationMs",750),0,5000));
     const wchar_t *keys[]={L"Wheel",L"CtrlWheel",L"ShiftWheel",L"AltWheel"};
     for(unsigned i=0;i<4;++i){int value=read(keys[i],int(input::default_wheel[i]));wheel_actions[i]=value>=0&&value<=2?input::WheelAction(value):input::default_wheel[i];}
     drawing_wheel.reset();
@@ -286,45 +288,30 @@ void path_click(Point mouse,Point size){
     history[doc.page].record(page());if(append)page().back()=stroke;else page().push_back(stroke);
     path_active=true;changed();
 }
-ImVec2 clip_screen(grid::ClipPoint p,Point size){return {float((p.x/p.w+1)*.5*size.x),float((1-p.y/p.w)*.5*size.y)};}
-void fill_grid_cell(ImDrawList *draw,const grid::Lattice &g,double i,double j,Point size,ImU32 color){
-    auto p=grid::cell_polygon(camera,g,i,j);if(p.count<3)return;ImVec2 vertices[12];
-    for(unsigned n=0;n<p.count;++n)vertices[n]=clip_screen(p.points[n],size);
-    draw->AddConvexPolyFilled(vertices,int(p.count),color);
-}
-void grid_line(ImDrawList *draw,grid::V a,grid::V b,Point size,ImU32 color,float width=grid::border_width){
-    grid::ClipPoint first,last;if(grid::clip_line(camera,a,b,first,last))draw->AddLine(clip_screen(first,size),clip_screen(last,size),color,width);
-}
-void grid_dot(ImDrawList *draw,const grid::Lattice &g,double i,double j,Point size,ImU32 color){
-    double x,y;if(camera.project(g.world(i,j),x,y)&&x>=0&&x<=1&&y>=0&&y<=1)draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),2,color);
-}
-void draw_grid_layers(ImDrawList *draw,const grid::Preview &style,const grid::Lattice &g,const grid::CellMask &mask,Point size){
-    if(!style.visible())return;
-    const int alpha=style.alpha();const auto color=IM_COL32(grid::preview_gray,grid::preview_gray,grid::preview_gray,alpha);
-    if(style.checker||style.centers)for(int j=mask.y;j<mask.y+mask.height;++j)for(int i=mask.x;i<mask.x+mask.width;++i){
-        if(!mask.at(i,j))continue;
-        if(style.checker)fill_grid_cell(draw,g,i,j,size,IM_COL32(grid::preview_gray,grid::preview_gray,grid::preview_gray,(i+j)%2?alpha:alpha/2));
-        if(style.centers)grid_dot(draw,g,i,j,size,color);
-    }
-    for(int j=mask.y;j<=mask.y+mask.height;++j)for(int i=mask.x;i<=mask.x+mask.width;++i){
-        const auto vertex=g.world(i-.5,j-.5);
-        if(style.borders){
-            if(mask.horizontal(i,j))grid_line(draw,vertex,g.world(i+.5,j-.5),size,color);
-            if(mask.vertical(i,j))grid_line(draw,vertex,g.world(i-.5,j+.5),size,color);
-        }
-        if(style.intersections){
-            if(mask.horizontal(i,j))grid_line(draw,vertex,vertex+g.u*grid::cross_arm,size,color,grid::cross_width);
-            if(mask.horizontal(i-1,j))grid_line(draw,vertex,vertex-g.u*grid::cross_arm,size,color,grid::cross_width);
-            if(mask.vertical(i,j))grid_line(draw,vertex,vertex+g.v*grid::cross_arm,size,color,grid::cross_width);
-            if(mask.vertical(i,j-1))grid_line(draw,vertex,vertex-g.v*grid::cross_arm,size,color,grid::cross_width);
+void draw_preview_mesh(ImDrawList *draw,const grid::PreviewMesh &mesh){
+    auto uv=gui_vec2(imgui_function_table_instance()->GetFontTexUvWhitePixel);
+    for(size_t offset=0;offset<mesh.triangles.size();){
+        unsigned count=unsigned(std::min(size_t(grid::preview_batch_triangles),mesh.triangles.size()-offset));draw->PrimReserve(int(count*3),int(count*3));
+        for(unsigned n=0;n<count;++n){const auto &triangle=mesh.triangles[offset++];unsigned base=draw->_VtxCurrentIdx;
+            for(unsigned v=0;v<3;++v)draw->PrimWriteIdx(ImDrawIdx(base+v));
+            for(auto point:triangle.points){int alpha=int(std::lround(std::clamp(point.alpha,0.,1.)*255));draw->PrimWriteVtx(ImVec2(float(point.x),float(point.y)),uv,IM_COL32(triangle.shade,triangle.shade,triangle.shade,alpha));}
         }
     }
 }
-void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
+grid::PreviewMesh preview_mesh(const grid::Preview &style,const grid::Lattice &g,const grid::CellMask &mask,Point size,double fade=1,bool radial=false,double i=0,double j=0){
+    grid::PreviewPainter painter{camera,g,size.x,size.y,style.opacity*.01*fade,i,j,radial,{}};painter.layers(style,mask);return std::move(painter.mesh);
+}
+void draw_grid_preview(ImDrawList *draw,Point mouse,Point size,bool shift){
     if((selected!=Tool::Path&&!grid_drawing)||!camera.valid)return;
-    const auto &g=doc.grids[doc.page];double i,j;if(!g.snap(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
-    if(grid_preview.enabled)draw_grid_layers(draw,grid_preview,g,grid::CellMask(int(i)-5,int(j)-5,11,11),size);
-    double x,y;if(selected==Tool::Path&&camera.project(g.world(i,j),x,y))draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),9,colors[selected_color],24,2.5f);
+    const auto &g=doc.grids[doc.page];double i,j;if(!g.coordinates(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
+    if(grid_preview.enabled)draw_preview_mesh(draw,preview_mesh(grid_preview,g,grid::CellMask(int(std::round(i))-5,int(std::round(j))-5,11,11),size,1,true,i,j));
+    Point target;auto lattice=g;unsigned color=selected_color;
+    if(selected==Tool::Path)target={float(std::round(i)),float(std::round(j))};
+    else if(snaps_to_grid(selected)){
+        if(dragging){if(!drawing_target(pending,mouse,size,shift,target))return;lattice=pending.lattice;color=pending.color;}
+        else target=nearest_grid_point({float(i),float(j)});
+    }else return;
+    Point pixel;if(screen_point(lattice,target,camera,size,pixel))draw->AddCircle(v(pixel),9,colors[color],24,2.5f);
 }
 bool ground_ready(){
     return ground_scene_ready&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
@@ -334,7 +321,7 @@ void draw_plane_hint(ImDrawList *draw,Point size){
     const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return;
     int x=int(std::floor(i+.5)),y=int(std::floor(j+.5));
     plane_visibility.update(camera,g,ground_ready()?native_ground_snapshot:nullptr,x-64,y-64);
-    draw_grid_layers(draw,hint_preferences.style,g,plane_visibility.mask,size);
+    draw_preview_mesh(draw,preview_mesh(hint_preferences.style,g,plane_visibility.mask,size,grid::fade_weight(double(GetTickCount64()-plane_hint.started),hint_preferences.duration_ms)));
 }
 void set_ground(double z,grid::HintSource source=grid::HintSource::Mark){
     auto &g=doc.grids[doc.page];
@@ -786,7 +773,7 @@ void overlay(effect_runtime*rt) {
         ImDrawList *draw=ImGui::GetBackgroundDrawList();
         if(visible&&foreground&&!reshade_menu)draw_plane_hint(draw,size);
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
-        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
+        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size,rt->is_key_down(VK_SHIFT));}
         if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}

@@ -6,7 +6,7 @@
 namespace sketch::grid {
 constexpr int preview_gray=190;
 constexpr double cross_arm=.12;
-constexpr float border_width=1,cross_width=1.5f;
+constexpr float border_width=2,cross_width=3;
 struct CellMask {
     int x=0,y=0,width=0,height=0;
     std::vector<uint8_t> cells;

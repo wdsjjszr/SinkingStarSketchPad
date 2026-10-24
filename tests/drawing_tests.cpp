@@ -10,6 +10,8 @@ static_assert(!snaps_to_grid(Tool::Pen)&&!snaps_to_grid(Tool::Ellipse)&&snaps_to
 static_assert(grid_shape_end(Tool::Line,{-.5f,-.5f},{-3,-2},true).x==-2.5f&&grid_shape_end(Tool::Line,{-.5f,-.5f},{-3,-2},true).y==-2.5f,"Negative diagonal constraints snap to a legal intersection");
 static_assert(grid_shape_end(Tool::Ellipse,{0,0},{-2,3},true).x==-3&&grid_shape_end(Tool::Rectangle,{.5f,.5f},{2.7f,-1.3f},true).y==-1.5f,"Circle and square constraints use plane distances");
 int main(){
+    Stroke degenerate;degenerate.tool=Tool::Rectangle;degenerate.points={{0,0},{0,1}};assert(outline(degenerate,{1,1}).size()==2);
+    degenerate.points={{0,0},{1,0}};assert(outline(degenerate,{1,1}).size()==2);degenerate.points={{0,0},{0,0}};assert(outline(degenerate,{1,1}).size()==1);
     Document doc;grid::Lattice g{true,{0,0,3.25},{1,0,0},{0,-1,0}};
     for(auto tool:{Tool::Pen,Tool::Line,Tool::Arrow,Tool::Rectangle,Tool::Ellipse,Tool::Text,Tool::Path}){
         auto stroke=std::make_shared<Stroke>();stroke->tool=tool;stroke->lattice=g;stroke->points={{-2.5f,1.25f},{3.5f,2.75f}};

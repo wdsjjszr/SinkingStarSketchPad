@@ -137,7 +137,11 @@ inline Point snapped(Point a, Point b, bool square) {
 inline std::vector<Point> outline(const Stroke &s, Point size) {
     std::vector<Point> pts;
     Point a = pixel(s.points.front(),size), b = pixel(s.points.back(),size);
-    if (s.tool == Tool::Rectangle) return {a, {b.x,a.y}, b, {a.x,b.y}, a};
+    if (s.tool == Tool::Rectangle) {
+        if(a.x==b.x&&a.y==b.y)return {a};
+        if(a.x==b.x||a.y==b.y)return {a,b};
+        return {a, {b.x,a.y}, b, {a.x,b.y}, a};
+    }
     if (s.tool == Tool::Ellipse) {
         Point c{(a.x+b.x)/2, (a.y+b.y)/2};
         for (int i=0;i<=64;++i) { float angle=i*6.283185307f/64; pts.push_back({c.x+std::abs(b.x-a.x)*.5f*std::cos(angle),c.y+std::abs(b.y-a.y)*.5f*std::sin(angle)}); }

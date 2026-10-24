@@ -12,13 +12,20 @@ struct Preview {
 enum class HintMode {On,Off,WheelOnly};
 enum class HintSource {Initialize,Mark,Wheel};
 struct HintPreferences {
-    Preview style{true,false,false,true,true,25};
+    Preview style{true,false,false,true,true,45};
     HintMode mode=HintMode::On;
-    unsigned duration_ms=1000;
+    unsigned duration_ms=750;
     constexpr bool permits(HintSource source)const{
         return duration_ms&&source!=HintSource::Initialize&&mode!=HintMode::Off&&(mode!=HintMode::WheelOnly||source==HintSource::Wheel);
     }
 };
+constexpr double fade_weight(double elapsed,unsigned hold){
+    if(!hold||elapsed<0)return 0;
+    if(elapsed<=hold)return 1;
+    double remaining=1-(elapsed-hold)/(hold*.3);return remaining>0?remaining*remaining*remaining:0;
+}
+constexpr double radial_weight(double distance){double t=distance/5.5;return t>=1?0:t<=0?1:1-t*t*(3-2*t);}
+constexpr unsigned checker_shade(int i,int j){return (i+j)%2?255:0;}
 struct PlaneHint {
     Lattice lattice;
     uint64_t started=0,generation=0;
@@ -31,7 +38,7 @@ struct PlaneHint {
         lattice=plane;started=now;page=current_page;generation=scene;source=reason;showing=true;
     }
     constexpr bool active(uint64_t now,unsigned current_page,uint64_t scene,const HintPreferences &preferences)const{
-        return showing&&preferences.permits(source)&&page==current_page&&generation==scene&&now>=started&&now-started<preferences.duration_ms;
+        return showing&&preferences.permits(source)&&page==current_page&&generation==scene&&now>=started&&fade_weight(double(now-started),preferences.duration_ms)>0;
     }
     constexpr void expire(uint64_t now,unsigned current_page,uint64_t scene,const HintPreferences &preferences){if(!active(now,current_page,scene,preferences))clear();}
 };

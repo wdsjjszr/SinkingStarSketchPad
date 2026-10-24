@@ -1,23 +1,26 @@
 #include "../src/grid_visibility.hpp"
+#include "../src/preview_mesh.hpp"
 #include <cassert>
 using namespace sketch::grid;
 constexpr bool hints(){
-    HintPreferences preferences;PlaneHint hint;Lattice a{true,{0,0,2},{1,0,0},{0,-1,0}},b=a;b.origin.z=3;
+    HintPreferences preferences;preferences.duration_ms=1000;PlaneHint hint;Lattice a{true,{0,0,2},{1,0,0},{0,-1,0}},b=a;b.origin.z=3;
     hint.show(a,10,0,1,HintSource::Initialize,preferences);if(hint.showing)return false;
     hint.show(a,10,0,1,HintSource::Mark,preferences);
-    if(!hint.active(1009,0,1,preferences)||hint.active(1010,0,1,preferences)||hint.active(20,1,1,preferences))return false;
+    if(!hint.active(1309,0,1,preferences)||hint.active(1310,0,1,preferences)||hint.active(20,1,1,preferences))return false;
     hint.show(b,100,0,1,HintSource::Wheel,preferences);if(hint.lattice.origin.z!=3||!hint.active(1099,0,1,preferences))return false;
     hint.show(b,200,0,1,HintSource::Mark,preferences);if(!hint.active(1199,0,1,preferences)||hint.active(201,0,2,preferences))return false;
-    preferences.duration_ms=5000;if(!hint.active(5199,0,1,preferences)||hint.active(5200,0,1,preferences))return false;
+    preferences.duration_ms=5000;if(!hint.active(6699,0,1,preferences)||hint.active(6700,0,1,preferences))return false;
     preferences.mode=HintMode::WheelOnly;hint.expire(201,0,1,preferences);if(hint.showing)return false;
     preferences.mode=HintMode::On;if(hint.active(202,0,1,preferences))return false;
     hint.show(a,300,0,1,HintSource::Mark,preferences);preferences.duration_ms=0;hint.expire(301,0,1,preferences);
     preferences.duration_ms=1000;if(hint.active(302,0,1,preferences))return false;
-    hint.show(a,400,0,1,HintSource::Mark,preferences);hint.expire(1400,0,1,preferences);
-    preferences.duration_ms=5000;return !hint.active(1401,0,1,preferences);
+    hint.show(a,400,0,1,HintSource::Mark,preferences);hint.expire(1700,0,1,preferences);
+    preferences.duration_ms=5000;return !hint.active(1701,0,1,preferences);
 }
 static_assert(hints(),"Initialization stays silent; hints use the newest mark/page/scene, live duration and policy, without reviving expired hints");
-static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==25,"Hint defaults enable gray borders and checker at 25 percent opacity");
+static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==45&&HintPreferences{}.duration_ms==750&&Preview{}.enabled,"Hint defaults retain borders/checker and enable preview at 45 percent for a 750ms hold");
+static_assert(fade_weight(750,750)==1&&fade_weight(975,750)==0&&fade_weight(1150,1000)==.125&&fade_weight(0,0)==0,"Hold is followed by a 30 percent cubic ease-out fade");
+static_assert(radial_weight(0)==1&&radial_weight(2.75)==.5&&radial_weight(5.5)==0&&checker_shade(-1,0)==255&&checker_shade(-2,0)==0,"Smooth radial falloff and black/white parity are stable for negative cells");
 constexpr bool policies(){
     HintPreferences p;if(!p.permits(HintSource::Mark)||!p.permits(HintSource::Wheel)||p.permits(HintSource::Initialize))return false;
     p.mode=HintMode::WheelOnly;if(p.permits(HintSource::Mark)||!p.permits(HintSource::Wheel))return false;
@@ -58,4 +61,6 @@ int main(){
     plane.origin.z=2;assert(cache.update(camera,plane,terrain,-64,-64)&&cache.mask.at(0,0));
     assert(cache.update(camera,plane,nullptr,-64,-64)&&cache.mask.at(0,0));
     assert(cache.update(camera,plane,nullptr,-63,-64));
+    PreviewPainter painter{camera,plane,1000,1000,.45,0,0,true,{}};painter.layers(Preview{true,true,true,true,true,45},CellMask(-5,-5,11,11));
+    assert(!painter.mesh.triangles.empty());for(auto triangle:painter.mesh.triangles)for(auto vertex:triangle.points)assert(vertex.alpha>=0&&vertex.alpha<=.45);
 }
