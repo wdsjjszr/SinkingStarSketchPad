@@ -4,6 +4,7 @@
 namespace sketch::native_ground {
 enum class PickResult {None,Ground,Wall};
 struct Pick {PickResult result=PickResult::None;grid::V center;};
+constexpr bool keep_marking(bool quick,PickResult result){return !quick&&result!=PickResult::Ground;}
 constexpr bool slab(double origin,double direction,double low,double high,double &enter,double &exit){
     if(direction==0)return origin>=low&&origin<=high;
     double a=(low-origin)/direction,b=(high-origin)/direction;

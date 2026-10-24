@@ -16,7 +16,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(Undo,"Undo","撤销") X(Redo,"Redo","重做") X(Clear,"Clear page","清空本页") X(Page,"Page ","草稿 ") \
  X(Save,"Save","保存") X(Saved,"Saved","已保存") X(Saving,"Saving...","正在保存") X(Export,"Export SVG","导出 SVG") \
  X(Return,"Return to game E","返回游戏 E") \
- X(Help,"E / Esc: return | Shift: snap | Right click / Ctrl+Z: undo | Ctrl+Y: redo","E / Esc 返回游戏 · Shift 吸附 · 右键 / Ctrl+Z 撤销 · Ctrl+Y 重做") \
+ X(Help,"Middle click: follow (auto) / mark once (manual) | E / Esc: return | Shift: snap | Right click / Ctrl+Z: undo | Ctrl+Y: redo","中键：跟随（自动）/ 标定一次（手动）· E / Esc 返回游戏 · Shift 吸附 · 右键 / Ctrl+Z 撤销 · Ctrl+Y 重做") \
  X(KeyboardHelp,"Keyboard: game | Alt+letter: tool | Alt+1-5: color | Alt+Tab: keep drawing mode","键盘操作游戏 · Alt+字母选工具 · Alt+1-5 选色 · 切出后保留绘图模式") \
  X(CameraToggle,"Free camera T","自由相机 T") \
  X(CameraTitle,"Free camera (experimental)###SketchFreeCamera","自由相机（实验功能）###SketchFreeCamera") \
@@ -34,15 +34,21 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Cell-center preview","格心预览") \
  X(GridStats,"Auto grid: %.3g cell size | %u detected centers","自动格子：间距 %.3g · %u 个格心") \
  X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
- X(GridWait,"Detecting the grid from game instances. No calibration needed.","正在从游戏实例自动识别格子，无需手动校准。") \
- X(GroundMark,"Mark ground manually","手动标识地面") X(GroundFinish,"Finish ground marking","结束地面标识") \
- X(GroundHelp,"Hover a floor and left-click to anchor it. Use the wheel to switch overlapping layers. Esc finishes marking; then click to draw a path.","悬停地面预览，左键锚定；重叠处用滚轮切层。Esc 结束标识，随后点击可绘制路径。") \
+ X(GridWait,"Waiting for native ground. Automatic mode uses the controlled character; manual mode needs a marked plane.","等待原生地面。自动模式按当前角色选面；手动模式请先标记平面。") \
+ X(GroundMark,"Mark plane","标记平面") X(GroundFinish,"Cancel marking","取消标记") \
+ X(GroundHelp,"Left-click a visible ground cell to set the plane and finish. A wall or empty space keeps marking active. Esc cancels.","左键点击可见地面格，成功后自动结束标记；命中墙面或空处会保持标记。Esc 取消。") \
+ X(GroundManual,"Manual marking","手动标识") X(GroundFollow,"Follow character","随角色移动") \
+ X(GroundFollowing,"Following the controlled character.","已开启随角色移动。") X(GroundFrozen,"Target plane frozen.","目标平面已固定。") \
+ X(GroundCharacterWait,"Controlled character unavailable. Automatic updates are waiting.","当前控制角色暂不可用，自动选面等待恢复。") \
+ X(GroundLoading,"Native ground is loading or unavailable.","原生地面正在加载或暂不可用。") \
+ X(GroundWall,"A wall blocks this position. Point at a visible ground cell.","此处被墙面遮挡，请指向可见的地面格。") \
+ X(GroundShortcut,"Middle click on canvas: automatic mode toggles following; manual mode marks once and exits, including on failure.","画布中键：自动模式切换随角色移动；手动模式快速标定一次，无论成功与否均结束标记。") \
  X(GroundLayers,"Candidate height layers: %u","候选高度层：%u") \
- X(GroundLimits,"Experimental: selection uses inferred grid cells; wall occlusion is not checked.","实验版：按候选格子选层，暂不判断墙体遮挡。") \
- X(GroundHover,"Height %.3g | candidate %u/%u","高度 %.3g · 候选 %u/%u") \
- X(GroundLocked,"Ground locked at height %.3g","地面已锁定：高度 %.3g") X(GroundAuto,"Use automatic ground","恢复自动地面") \
- X(GroundNoHit,"No candidate ground here. Try a detected cell center or wait for grid detection.","此处没有候选地面，请靠近已识别格心，或等待网格识别。") \
- X(GroundAnchored,"Ground anchored. Keep clicking to switch floors; finish marking to draw a path.","地面已锚定；可继续点击切换高度，结束标识后绘制路径。") \
+ X(GroundLimits,"Occlusion checks native solid walls. Decorative models, platforms and lilies are not included.","遮挡仅检查原生实心墙体；暂不包含装饰模型、升降台和莲叶。") \
+ X(GroundHover,"Ground height %.3g","地面高度 %.3g") \
+ X(GroundLocked,"Target plane: height %.3g","目标平面：高度 %.3g") X(GroundAuto,"Automatic marking","自动标识") \
+ X(GroundNoHit,"No native ground cell under the pointer.","指针下没有原生地面格。") \
+ X(GroundAnchored,"Target plane set. Marking finished.","目标平面已设置，标记已结束。") \
  X(GroundDebug,"Debug: show detection input points","Debug：显示识别输入点") \
  X(GroundDebugStats,"Input points: %zu | on-screen: %u | candidate cells: %zu","输入点：%zu · 屏幕内：%u · 可选格心：%zu") \
  X(GroundDebugLegend,"Colors distinguish input heights; white rings mark selectable cells. Hover a point for XYZ. Points without a ring did not form a selectable grid cell.","彩色点按高度区分，白圈表示可选格心；悬停查看 XYZ。没有白圈的点未形成可选网格格心。") \
@@ -68,7 +74,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(Full,"Page or point limit reached. Switch pages or remove marks.","本页或点数已满，请换页或清理笔迹。") \
  X(Cleared,"Page cleared. Ctrl+Z restores it.","本页已清空，Ctrl+Z 可恢复。") \
  X(NoCamera,"Game camera unavailable. Enter a level and try again.","尚未读取到游戏主相机，请回到关卡后重试。") \
- X(Detecting,"Detecting the grid. Please wait before placing points.","正在自动识别关卡格子，稍候再点击。") \
+ X(Detecting,"No target plane. Wait for automatic ground or mark a plane manually.","尚未确定目标平面，请等待自动识别或手动标记平面。") \
  X(NoPlane,"Could not project this position onto the cell plane.","此处无法投影到格子平面。") \
  X(NeedCorner,"Add a point at the corner first: paths follow rows or columns.","请先点击转弯格：路径沿格子横向或纵向连接。") \
  X(TooFar,"Points are too far apart. Add intermediate points.","两点距离过远，请分段添加。") \

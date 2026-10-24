@@ -94,6 +94,12 @@ struct CharacterSample {
     bool valid=false;
     std::string error;
 };
+struct TargetState {
+    bool manual=false,follow=false,pending=true;
+    constexpr bool needs_update()const{return !manual&&(pending||follow);}
+    constexpr void mode(bool value){manual=value;if(!manual)pending=true;}
+    constexpr void scene_reset(){pending=true;}
+};
 constexpr bool controlled(uint16_t status,uint16_t active){return (status&active)!=0;}
 constexpr bool precedes(grid::V a,grid::V b,uint32_t a_id,uint32_t b_id){
     if(a.x!=b.x)return a.x<b.x;if(a.y!=b.y)return a.y<b.y;if(a.z!=b.z)return a.z<b.z;return a_id<b_id;

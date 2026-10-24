@@ -12,6 +12,20 @@ constexpr bool slab_checks(){
     enter=0;exit=100;return slab(6,-1,2,4,enter,exit)&&enter==2&&exit==4;
 }
 static_assert(slab_checks(),"Ray bounds support parallel rays and either travel direction");
+constexpr bool target_checks(){
+    TargetState pages[3];
+    if(pages[0].manual||pages[0].follow||!pages[0].needs_update())return false;
+    pages[0].pending=false;if(pages[0].needs_update())return false;
+    pages[0].follow=true;if(!pages[0].needs_update()||pages[1].follow)return false;
+    pages[0].mode(true);if(pages[0].needs_update()||!pages[0].follow)return false;
+    pages[0].scene_reset();if(!pages[0].manual||!pages[0].follow)return false;
+    pages[0].mode(false);if(!pages[0].needs_update())return false;
+    pages[0].follow=false;pages[0].pending=false;return !pages[0].needs_update()&&pages[1].needs_update();
+}
+static_assert(target_checks(),"Each page initializes automatically, freezes without following, retains preferences and resets on a new scene");
+static_assert(!keep_marking(false,PickResult::Ground)&&keep_marking(false,PickResult::Wall)&&keep_marking(false,PickResult::None)
+    &&!keep_marking(true,PickResult::Ground)&&!keep_marking(true,PickResult::Wall)&&!keep_marking(true,PickResult::None),
+    "Left-click failures keep marking; every middle-click attempt exits");
 int main(){
     Scene scene;scene.bounds={0,0,2,1,false};scene.underground_barrier=-4;scene.sky_barrier=10;
     add_wall(scene,{0,0,0},{1,1,2},{3},17);
