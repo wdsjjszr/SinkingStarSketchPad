@@ -47,6 +47,8 @@
 
 实现参考 ootss-cmd 的当前场景特征与 Jai 反射字段读取。只读取游戏内存，不修改游戏数据；读取失败或场景切换时丢弃旧候选并显示原因。当前零售版结构经过本机 EXE 与关卡文件静态核对，游戏更新改变场景代码特征时可能需要维护。
 
+原生地面从当前场景的完整实体 ID 表枚举对象，跳过空槽和已删除槽。用于寻找角色的对象列表不包含全部静态对象，不能用它查找 Settings 或完整地形。
+
 `status.txt` 新增 `native_ground_debug`、`native_ground_ready`、`native_ground_scene`、`native_ground_cells`、`native_ground_visible`、`native_ground_heights`、`native_ground_voxels` 和 `native_ground_error`。反馈缺失地面时，请同时提供场景名、预览高度、截图及该状态文件。
 
 本版本仅做静态检查与编译，没有运行测试程序或游戏。需人工确认体素顶面是否与实际站立格高度对齐，以及基准底层、水域和分层是否符合当前关卡。
@@ -74,5 +76,7 @@ Press E and enable **Debug: preview native ground cells**. Disable the older inp
 Cell spacing is one world unit. Colors distinguish world Z; **Preview height** can isolate a single height. Filled dots and cell outlines show exposed tops of solid `Wall_Set` voxels, including wall tops. Rings show the Settings ground / underground reference floor within the Settings grid, excluding occupied and water cells; they do not trace visible terrain. Crosses show blocking floor Fences. Hover a center for XYZ, source and entity ID (0 for an implicit floor). Multiple surfaces can share XY.
 
 This separate preview leaves existing detection, manual marking and paths unchanged. It draws through occluders and does not determine reachability. Elevator platforms, lilies and extra world-wrap render copies are not included. Reading uses the current-scene code signature and reflected Jai fields, with old candidates cleared on failure. It never writes game memory. The retail executable and level data were inspected statically; future game changes may require updating the scene signature.
+
+Entities are enumerated from the scene's complete entity-ID table, skipping empty and deleted slots. The object list used to find characters omits some static entities, including Settings.
 
 For missing surfaces, report the scene, selected height, screenshot and `native_ground_*` entries in `SinkingStarSketch-data/status.txt`. Only static checks and compilation were performed; no test programs or game sessions were run.

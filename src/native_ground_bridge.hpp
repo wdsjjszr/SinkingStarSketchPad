@@ -11,6 +11,13 @@
 namespace sketch::native_ground_bridge {
 using namespace native_ground;
 struct Array {int64_t count;uintptr_t data;};
+struct EntitySlot {
+    uint32_t hash,padding;
+    uintptr_t entity;
+    constexpr bool live()const{return hash>=2&&entity!=0;}
+};
+static_assert(sizeof(EntitySlot)==16&&offsetof(EntitySlot,entity)==8,"Entity ID table slots have a 16-byte stride");
+static_assert(!EntitySlot{0,0,1}.live()&&!EntitySlot{1,0,1}.live()&&EntitySlot{2,0,1}.live(),"Empty and deleted slots are not entities");
 struct Field {size_t offset;uintptr_t type;};
 class Reader {
     uintptr_t base=0,slot=0;
@@ -102,12 +109,15 @@ public:
         try{
             if(image.empty())initialize();
             if(!slot)throw std::runtime_error("Current-scene signature is unavailable for this game version.");
-            auto manager=read<uintptr_t>(slot);auto objects=read<Array>(manager+0x370);auto scene_name=read<Array>(manager);
-            if(objects.count<=0||objects.count>20000||scene_name.count<=0||scene_name.count>128)throw std::runtime_error("Current scene is not ready.");
+            // The ID table includes static entities that the character-oriented list at +0x370 omits.
+            auto manager=read<uintptr_t>(slot);auto objects=read<Array>(manager+0x3c0);auto scene_name=read<Array>(manager);
+            if(objects.count<=0||objects.count>262144||scene_name.count<=0||scene_name.count>128)throw std::runtime_error("Current scene is not ready.");
             out.scene.resize(size_t(scene_name.count));bytes(scene_name.data,out.scene.data(),out.scene.size());
-            std::vector<uintptr_t> entities(size_t(objects.count));bytes(objects.data,entities.data(),entities.size()*8);
+            std::vector<EntitySlot> entities(size_t(objects.count));bytes(objects.data,entities.data(),entities.size()*sizeof(EntitySlot));
             Scene scene;bool have_settings=false;
-            for(auto entity:entities){
+            for(auto entry:entities){
+                if(!entry.live())continue;
+                auto entity=entry.entity;
                 auto owner=read<uintptr_t>(entity+0xf0);if(owner!=manager)throw std::runtime_error("Scene changed while reading entities.");
                 auto type=read<uintptr_t>(entity+0x108);const auto &info=type_info(type);
                 if(info.name!="Wall_Set"&&info.name!="Settings"&&info.name!="Fence"&&info.name!="Ocean_Map")continue;
@@ -149,7 +159,7 @@ public:
                     ocean.values.resize(count);bytes(view.data,ocean.values.data(),count);scene.oceans.push_back(std::move(ocean));++out.oceans;
                 }
             }
-            auto after=read<Array>(manager+0x370);
+            auto after=read<Array>(manager+0x3c0);
             if(read<uintptr_t>(slot)!=manager||after.count!=objects.count||after.data!=objects.data)throw std::runtime_error("Scene changed while reading ground.");
             if(!have_settings)throw std::runtime_error("No Settings entity in this scene.");
             out.voxel_count=scene.voxels.size();out.cells=surfaces(scene);for(const auto &cell:out.cells)out.heights.insert(cell.center.z);out.ready=true;
