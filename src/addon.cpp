@@ -9,6 +9,7 @@
 #include "cursor_style.hpp"
 #include "camera_bridge.hpp"
 #include "grid_bridge.hpp"
+#include "native_ground_bridge.hpp"
 #include "grid_pick.hpp"
 #include "input_policy.hpp"
 #include "free_camera_bridge.hpp"
@@ -52,6 +53,10 @@ std::array<bool,3> ground_locked{};
 bool ground_marking=false;
 bool ground_debug=false;
 unsigned ground_debug_visible=0;
+bool native_ground_debug=false;
+unsigned native_ground_visible=0;
+std::shared_ptr<const native_ground::Snapshot> native_ground_snapshot;
+double native_ground_height=std::numeric_limits<double>::quiet_NaN();
 std::vector<grid::PlaneHit> ground_hits;
 size_t ground_choice=0;
 bool path_active=false, grid_preview=true;
@@ -91,6 +96,13 @@ void status() {
       << "\nground_z=" << camera_plane() << "\nground_layers=" << (ground_snapshot?ground_snapshot->layers.size():0)
       << "\nground_input_points=" << (ground_snapshot?ground_snapshot->input_count:0)
       << "\nground_debug=" << ground_debug << "\nground_debug_visible=" << ground_debug_visible << '\n';
+    f << "native_ground_debug=" << native_ground_debug << "\nnative_ground_visible=" << native_ground_visible
+      << "\nnative_ground_ready=" << (native_ground_snapshot&&native_ground_snapshot->ready)
+      << "\nnative_ground_scene=" << (native_ground_snapshot?native_ground_snapshot->scene:"")
+      << "\nnative_ground_cells=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0)
+      << "\nnative_ground_heights=" << (native_ground_snapshot?native_ground_snapshot->heights.size():0)
+      << "\nnative_ground_voxels=" << (native_ground_snapshot?native_ground_snapshot->voxel_count:0)
+      << "\nnative_ground_error=" << (native_ground_snapshot?native_ground_snapshot->error:"") << '\n';
 }
 void set_language(i18n::Language value){
     language=value;auto path=data_path.parent_path()/L"settings.ini";
@@ -251,6 +263,39 @@ void draw_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_ui){
     }
     if(found&&!over_ui)ImGui::SetTooltip(tr(Label::GroundDebugPoint),nearest.x,nearest.y,nearest.z);
 }
+const char *native_ground_source(native_ground::Source source){
+    return tr(source==native_ground::Source::Voxel?Label::NativeVoxel:source==native_ground::Source::Base?Label::NativeBase:Label::NativeFence);
+}
+bool native_ground_corners(grid::V center,Point size,ImVec2 (&corners)[4]){
+    const grid::V offsets[]={{-.5,-.5,0},{.5,-.5,0},{.5,.5,0},{-.5,.5,0}};
+    for(unsigned n=0;n<4;++n){double x,y;if(!camera.project(center+offsets[n],x,y))return false;corners[n]=ImVec2(float(x*size.x),float(y*size.y));}
+    return true;
+}
+void draw_native_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_ui){
+    native_ground_visible=0;if(!native_ground_snapshot||!native_ground_snapshot->ready||!camera.valid)return;
+    const native_ground::Cell *nearest=nullptr;double nearest_distance=100;
+    for(const auto &cell:native_ground_snapshot->cells){
+        if(!std::isnan(native_ground_height)&&cell.center.z!=native_ground_height)continue;
+        double x,y;if(!camera.project(cell.center,x,y)||x<0||x>=1||y<0||y>=1)continue;
+        const float px=float(x*size.x),py=float(y*size.y);float red,green,blue;
+        double hue=std::fmod(cell.center.z*.61803398875,1.);if(hue<0)hue+=1;
+        ImGui::ColorConvertHSVtoRGB(float(hue),.7f,1.f,red,green,blue);
+        const auto color=IM_COL32(int(red*255),int(green*255),int(blue*255),230);
+        ImVec2 corners[4];
+        if(native_ground_corners(cell.center,size,corners)&&std::hypot(corners[1].x-corners[0].x,corners[1].y-corners[0].y)>6)
+            draw->AddPolyline(corners,4,IM_COL32(int(red*255),int(green*255),int(blue*255),cell.source==native_ground::Source::Base?40:95),ImDrawFlags_Closed,1);
+        if(cell.source==native_ground::Source::Base)draw->AddCircle(ImVec2(px,py),3,color,8,1);
+        else if(cell.source==native_ground::Source::Fence){draw->AddLine(ImVec2(px-4,py),ImVec2(px+4,py),color,1.5f);draw->AddLine(ImVec2(px,py-4),ImVec2(px,py+4),color,1.5f);}
+        else draw->AddCircleFilled(ImVec2(px,py),3,color,8);
+        ++native_ground_visible;
+        const double distance=(px-mouse.x)*(px-mouse.x)+(py-mouse.y)*(py-mouse.y);
+        if(distance<nearest_distance){nearest_distance=distance;nearest=&cell;}
+    }
+    if(nearest&&!over_ui){
+        ImVec2 corners[4];if(native_ground_corners(nearest->center,size,corners))draw->AddPolyline(corners,4,IM_COL32(255,255,255,240),ImDrawFlags_Closed,2);
+        ImGui::SetTooltip(tr(Label::NativeHover),native_ground_source(nearest->source),nearest->entity_id,nearest->center.x,nearest->center.y,nearest->center.z);
+    }
+}
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
     auto a=pixel(s.points.front(),size),b=pixel(s.points.back(),size);
     ImU32 c=colors[s.color],shadow=IM_COL32(9,14,23,210);
@@ -357,6 +402,26 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
         size_t cells=0;if(ground_snapshot)for(const auto &layer:ground_snapshot->layers)cells+=layer.cells.size();
         ImGui::Text(tr(Label::GroundDebugStats),ground_snapshot?ground_snapshot->input_count:size_t(0),ground_debug_visible,cells);
         ImGui::TextWrapped("%s",tr(Label::GroundDebugLegend));
+    }
+    if(ImGui::Checkbox(tr(Label::NativeDebug),&native_ground_debug)){
+        native_ground_bridge::enable(native_ground_debug);native_ground_snapshot.reset();native_ground_height=std::numeric_limits<double>::quiet_NaN();status();
+    }
+    if(native_ground_debug){
+        if(!native_ground_snapshot)ImGui::TextWrapped("%s",tr(Label::NativeLoading));
+        else if(!native_ground_snapshot->ready)ImGui::TextWrapped(tr(Label::NativeError),native_ground_snapshot->error.c_str());
+        else{
+            const auto &native=*native_ground_snapshot;
+            ImGui::Text(tr(Label::NativeStats),native.scene.c_str(),native.cells.size(),native_ground_visible,native.heights.size());
+            ImGui::Text(tr(Label::NativeSources),native.wall_sets,native.voxel_count,native.fences,native.oceans);
+            char height[64];std::snprintf(height,sizeof(height),"Z %.4f",native_ground_height);
+            if(ImGui::BeginCombo(tr(Label::NativeHeight),std::isnan(native_ground_height)?tr(Label::NativeAll):height)){
+                if(ImGui::Selectable(tr(Label::NativeAll),std::isnan(native_ground_height)))native_ground_height=std::numeric_limits<double>::quiet_NaN();
+                for(double z:native.heights){std::snprintf(height,sizeof(height),"Z %.4f",z);if(ImGui::Selectable(height,native_ground_height==z))native_ground_height=z;}
+                ImGui::EndCombo();
+            }
+        }
+        ImGui::TextWrapped("%s",tr(Label::NativeLegend));
+        ImGui::TextWrapped("%s",tr(Label::NativeLimits));
     }
     auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
     toolbar_position=pos;toolbar_overflow=pos.y+extent.y-size.y+20;
@@ -470,6 +535,14 @@ void overlay(effect_runtime*rt) {
         camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));if(!camera.valid)camera=camera_bridge::snapshot(size.x,size.y);
         auto snapshot=grid_bridge::snapshot();
         if(snapshot!=ground_snapshot){ground_snapshot=std::move(snapshot);auto best=ground_snapshot?grid::best_detection(ground_snapshot->layers):nullptr;detected_grid=best?*best:grid::Detection{};}
+        if(native_ground_debug){
+            auto native=native_ground_bridge::snapshot();
+            if(native!=native_ground_snapshot){
+                if(!native||!native_ground_snapshot||native->scene!=native_ground_snapshot->scene||(!std::isnan(native_ground_height)&&!native->heights.count(native_ground_height)))
+                    native_ground_height=std::numeric_limits<double>::quiet_NaN();
+                native_ground_snapshot=std::move(native);
+            }
+        }
         if(!ground_locked[doc.page]&&camera.valid&&detected_grid.lattice.ready){
             auto &g=doc.grids[doc.page];const auto &found=detected_grid.lattice;
             if(!g.ready||grid::length(g.origin-found.origin)>.002||grid::length(g.u-found.u)>.002||grid::length(g.v-found.v)>.002){g=found;finish_path();changed();}
@@ -510,6 +583,7 @@ void overlay(effect_runtime*rt) {
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
         if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
         if(ground_debug&&visible&&foreground&&!reshade_menu)draw_ground_debug(draw,mouse,size,over_ui);else ground_debug_visible=0;
+        if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}
         if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}
@@ -537,6 +611,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     module_handle=addon;
     if(!reshade::register_addon(addon,reshade_module))return false;
     grid_bridge::start();
+    native_ground_bridge::start();
     reshade::register_event<reshade::addon_event::init_pipeline_layout>(free_camera_bridge::layout_init);
     reshade::register_event<reshade::addon_event::destroy_pipeline_layout>(free_camera_bridge::layout_destroy);
     reshade::register_event<reshade::addon_event::update_descriptor_tables>(free_camera_bridge::updated);
@@ -578,6 +653,7 @@ extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     reshade::unregister_event<reshade::addon_event::copy_buffer_region>(free_camera_bridge::buffer_copy);
     reshade::unregister_event<reshade::addon_event::copy_buffer_region>(grid_bridge::copied);
     grid_bridge::cleanup();
+    native_ground_bridge::cleanup();
     free_camera_bridge::cleanup();
     camera_bridge::cleanup();
     reshade::unregister_addon(addon);

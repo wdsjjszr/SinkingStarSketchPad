@@ -34,6 +34,23 @@
 
 `status.txt` 额外记录 `ground_input_points`、`ground_debug` 和 `ground_debug_visible`。点数较多时 Debug 绘制可能降低帧率，可随时取消勾选。
 
+### 原生地面格 Debug 预览
+
+按 E 打开菜单，勾选 **Debug：预览原生地面格**。建议先关闭旧的“显示识别输入点”，方便对照。无需启动 ootss-cmd。默认关闭；开启后约每秒读取一次当前场景，关闭后停止读取。
+
+- 格距固定为游戏中的一格，即 1 世界单位；颜色按世界 Z 区分，可在 **预览高度** 中只显示一个高度。
+- **实心点与格框**：当前 `Wall_Set.wall_data` 的实心体素顶面。位图按 X、Y、Z 顺序展开，加上 Wall_Set 的逻辑位置与体素 corner，再取上方一格作为候选站立高度。相邻体素间的内部顶面不显示；同一 XY 可以保留多个 Z。
+- **空心圈**：Settings 给出的地表 / 地下基准底层，在 Settings 网格范围内显示，剔除占用格与相应水域。它是游戏逻辑参考平面，不表示该处画出了地形，也不是地形轮廓。天空基准不生成隐式地面。
+- **十字**：同时具有 `blocking` 与 `is_floor` 的 Fence，在自身所在格形成的地板。
+- 悬停格心显示 XYZ、来源和实体 ID；隐式底层没有来源实体，ID 为 0。菜单同时显示场景名、候选格总数、屏幕内格数、高度数和原始来源数量。
+- 预览独立于现有的自动识别和手动锚定，暂不改变路径平面。点和格框会穿过遮挡物显示，墙顶也属于候选，不能据此判断角色可达性。升降台、莲叶和世界环绕的额外渲染副本暂不包含。
+
+实现参考 ootss-cmd 的当前场景特征与 Jai 反射字段读取。只读取游戏内存，不修改游戏数据；读取失败或场景切换时丢弃旧候选并显示原因。当前零售版结构经过本机 EXE 与关卡文件静态核对，游戏更新改变场景代码特征时可能需要维护。
+
+`status.txt` 新增 `native_ground_debug`、`native_ground_ready`、`native_ground_scene`、`native_ground_cells`、`native_ground_visible`、`native_ground_heights`、`native_ground_voxels` 和 `native_ground_error`。反馈缺失地面时，请同时提供场景名、预览高度、截图及该状态文件。
+
+本版本仅做静态检查与编译，没有运行测试程序或游戏。需人工确认体素顶面是否与实际站立格高度对齐，以及基准底层、水域和分层是否符合当前关卡。
+
 ## English
 
 This experimental build retains grid candidates at different heights and lets you lock one for new paths on the current scratch page.
@@ -49,3 +66,13 @@ Each scratch page has its own session-only lock. Switching floors finishes the c
 Selection uses observed grid cells, without scene-depth occlusion or entity classification. Walls can hide a selectable candidate. Each layer still needs at least six centers and the existing two-dimensional adjacency checks, so small or uncaptured platforms may be unavailable. Check alignment visually in the actual game. This build has only been checked statically and compiled; no runtime tests were executed.
 
 Enable **Debug: show detection input points** below the ground options to display every input coordinate from the existing capture pipeline, including points rejected by grid scoring. Colors distinguish heights; white rings show selectable candidate cells. Hover a colored point for XYZ. The toolbar reports total inputs, on-screen inputs and candidate cells, counting repeated inputs separately. Capture and detection share the same snapshot, refreshed about once per second. Debug adds no sampling limit, but it only shows points already accepted by the existing instance-matrix capture filters. It ignores wall occlusion, remains visible when the toolbar is closed, and may reduce frame rate with large point sets.
+
+### Native ground Debug preview
+
+Press E and enable **Debug: preview native ground cells**. Disable the older input-point display for a clearer comparison. ootss-cmd does not need to run. Reading starts only when enabled and refreshes about once per second.
+
+Cell spacing is one world unit. Colors distinguish world Z; **Preview height** can isolate a single height. Filled dots and cell outlines show exposed tops of solid `Wall_Set` voxels, including wall tops. Rings show the Settings ground / underground reference floor within the Settings grid, excluding occupied and water cells; they do not trace visible terrain. Crosses show blocking floor Fences. Hover a center for XYZ, source and entity ID (0 for an implicit floor). Multiple surfaces can share XY.
+
+This separate preview leaves existing detection, manual marking and paths unchanged. It draws through occluders and does not determine reachability. Elevator platforms, lilies and extra world-wrap render copies are not included. Reading uses the current-scene code signature and reflected Jai fields, with old candidates cleared on failure. It never writes game memory. The retail executable and level data were inspected statically; future game changes may require updating the scene signature.
+
+For missing surfaces, report the scene, selected height, screenshot and `native_ground_*` entries in `SinkingStarSketch-data/status.txt`. Only static checks and compilation were performed; no test programs or game sessions were run.

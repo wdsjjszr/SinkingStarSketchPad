@@ -47,6 +47,17 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GroundDebugStats,"Input points: %zu | on-screen: %u | candidate cells: %zu","输入点：%zu · 屏幕内：%u · 可选格心：%zu") \
  X(GroundDebugLegend,"Colors distinguish input heights; white rings mark selectable cells. Hover a point for XYZ. Points without a ring did not form a selectable grid cell.","彩色点按高度区分，白圈表示可选格心；悬停查看 XYZ。没有白圈的点未形成可选网格格心。") \
  X(GroundDebugPoint,"Input point: X %.4f  Y %.4f  Z %.4f","输入点：X %.4f  Y %.4f  Z %.4f") \
+ X(NativeDebug,"Debug: preview native ground cells","Debug：预览原生地面格") \
+ X(NativeLoading,"Reading the current scene's native ground...","正在读取当前场景的原生地面格……") \
+ X(NativeError,"Native ground unavailable: %s","原生地面格暂不可用：%s") \
+ X(NativeStats,"Scene: %s | cells: %zu | visible: %u | heights: %zu","关卡：%s · 格子：%zu · 屏幕内：%u · 高度：%zu") \
+ X(NativeSources,"Wall sets: %zu | solid voxels: %zu | floors: %zu | water maps: %zu","墙体组：%zu · 实心体素：%zu · 地板：%zu · 水域：%zu") \
+ X(NativeHeight,"Preview height","预览高度") \
+ X(NativeAll,"All heights","全部高度") \
+ X(NativeVoxel,"Voxel top","体素顶面") X(NativeBase,"Layer base","基准底层") X(NativeFence,"Floor fence","地板格") \
+ X(NativeHover,"%s | entity %u\nX %.4f  Y %.4f  Z %.4f\nCell spacing: 1 world unit","%s · 实体 %u\nX %.4f  Y %.4f  Z %.4f\n格距：1 世界单位") \
+ X(NativeLegend,"Colors show height. Filled dots: voxel tops; rings: layer bases; crosses: floors. Hover a center for XYZ and source.","颜色表示高度；实心点为体素顶面，空心圈为基准底层，十字为地板格。悬停格心查看 XYZ 和来源。") \
+ X(NativeLimits,"Debug draws through walls. Layer bases are logical reference planes; wall tops are candidates, not a walkability result. Platforms and lilies are not included yet.","Debug 透视显示；基准底层是逻辑参考平面，墙顶也属于候选，不代表可通行。暂未包含升降台和莲叶。") \
  X(CameraReady,"Game camera connected","游戏主相机已连接") \
  X(CameraWait,"Waiting for the game camera. Enter a level to show paths.","等待游戏主相机；请先进入关卡。路径暂不显示。") \
  X(Anchoring,"Pen/text: screen space. Path Alt+H: anchored to world cells.","画笔和文字固定在画面；路径 Alt+H 固定在游戏格子上。") \

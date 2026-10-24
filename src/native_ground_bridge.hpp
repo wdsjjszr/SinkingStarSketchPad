@@ -123,7 +123,7 @@ public:
                     scene.ground=value<float>(data,type,{"ground_z0"});scene.underground=value<float>(data,type,{"underground_z0"});
                     scene.underground_barrier=value<float>(data,type,{"underground_barrier"});scene.sky_barrier=value<float>(data,type,{"skyground_barrier"});
                     scene.lower=value<uint8_t>(data,type,{"has_lower_layer"})!=0;
-                    if(!std::isfinite(scene.ground)||!std::isfinite(scene.underground)||!std::isfinite(scene.underground_barrier)||!std::isfinite(scene.sky_barrier))throw std::runtime_error("Invalid native layer heights.");
+                    if(!std::isfinite(scene.ground)||std::abs(scene.ground)>1000000||!std::isfinite(scene.underground)||std::abs(scene.underground)>1000000||!std::isfinite(scene.underground_barrier)||!std::isfinite(scene.sky_barrier))throw std::runtime_error("Invalid native layer heights.");
                     have_settings=true;
                 }else if(info.name=="Wall_Set"){
                     if(value<uint8_t>(data,type,{"kind"})!=0)continue;
