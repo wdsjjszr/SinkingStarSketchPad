@@ -60,5 +60,4 @@ inline bool preview_focus(const Camera &camera,const Lattice &g,double &i,double
     }
     return found;
 }
-constexpr bool inside_height(double plane,int bottom){return plane>=bottom&&plane<bottom+1.;}
 }
