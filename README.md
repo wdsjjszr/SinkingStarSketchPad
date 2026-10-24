@@ -13,6 +13,7 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - Pen, lines, arrows, rectangles, ellipses, text, and whole-mark erasing.
 - Three automatically saved scratch pages, undo/redo, and SVG export.
 - Automatic grid inference and a cell-center preview, without manual calibration.
+- Experimental [manual ground marking](docs/MANUAL_GROUND.md): point at a detected floor, preview its height, and lock it for new paths; use the wheel to choose overlapping layers.
 - World-space path marks reprojected with the game camera.
 - Persistent System / English / Simplified Chinese language selection.
 

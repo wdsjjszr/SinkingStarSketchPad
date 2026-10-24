@@ -9,6 +9,7 @@
 #include "cursor_style.hpp"
 #include "camera_bridge.hpp"
 #include "grid_bridge.hpp"
+#include "grid_pick.hpp"
 #include "input_policy.hpp"
 #include "free_camera_bridge.hpp"
 #include <chrono>
@@ -46,11 +47,16 @@ float width=3;
 Stroke pending;
 grid::Camera camera;
 grid::Detection detected_grid;
+std::shared_ptr<const std::vector<grid::Detection>> detected_layers;
+std::array<bool,3> ground_locked{};
+bool ground_marking=false;
+std::vector<grid::PlaneHit> ground_hits;
+size_t ground_choice=0;
 bool path_active=false, grid_preview=true;
-double camera_plane(){return detected_grid.lattice.ready?detected_grid.lattice.origin.z:0.;}
+double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
 void finish_path(){path_active=false;}
-void select_tool(Tool t){selected=t;finish_path();}
+void select_tool(Tool t){ground_marking=false;ground_hits.clear();selected=t;finish_path();}
 Page erase_before;
 char text_buffer[2049]={};
 Point text_position;
@@ -79,6 +85,8 @@ void status() {
     f << "version=3.4.5\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << detected_grid.lattice.ready << "\ngrid_centers=" << detected_grid.centers << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
+    f << "ground_marking=" << ground_marking << "\nground_locked=" << ground_locked[doc.page]
+      << "\nground_z=" << camera_plane() << "\nground_layers=" << (detected_layers?detected_layers->size():0) << '\n';
 }
 void set_language(i18n::Language value){
     language=value;auto path=data_path.parent_path()/L"settings.ini";
@@ -143,7 +151,7 @@ void finish_text() {
     }
     text_open=false; text_buffer[0]=0;
 }
-void set_edit(bool value) { commit(); if(text_open) finish_text(); editing=value;if(value)visible=true;status();if(!value)save(); }
+void set_edit(bool value) { commit(); if(text_open) finish_text(); editing=value;if(value)visible=true;else{ground_marking=false;ground_hits.clear();}status();if(!value)save(); }
 void undo() { finish_path(); cancel(); if(history[doc.page].back(page()))changed(); }
 void redo() { finish_path(); cancel(); if(history[doc.page].forward(page()))changed(); }
 void clear() { finish_path(); commit(); if(!page().empty()){history[doc.page].record(page());page().clear();changed();note(tr(Label::Cleared));} }
@@ -164,7 +172,7 @@ void path_click(Point mouse,Point size){
     if(!camera.valid){note(tr(Label::NoCamera));return;}
     double x=mouse.x/size.x,y=mouse.y/size.y;
     auto &g=doc.grids[doc.page];
-    if(!detected_grid.lattice.ready){note(tr(Label::Detecting),6000);return;}
+    if(!g.ready){note(tr(Label::Detecting),6000);return;}
     double i,j;if(!g.snap(camera,x,y,i,j)){note(tr(Label::NoPlane));return;}
     Point target{float(i),float(j)};
     const bool append=path_active&&!page().empty()&&page().back()->tool==Tool::Path;
@@ -186,9 +194,38 @@ void path_click(Point mouse,Point size){
 }
 void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
     if(selected!=Tool::Path||!camera.valid)return;
-    if(!detected_grid.lattice.ready)return;const auto &g=doc.grids[doc.page];double i,j;if(!g.snap(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
+    const auto &g=doc.grids[doc.page];double i,j;if(!g.snap(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
     if(grid_preview)for(int a=-5;a<=5;++a)for(int b=-5;b<=5;++b){double x,y;if(camera.project(g.world(i+a,j+b),x,y))draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),2,IM_COL32(109,227,255,115));}
     double x,y;if(camera.project(g.world(i,j),x,y))draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),9,colors[selected_color],24,2.5f);
+}
+void update_ground_pick(Point mouse,Point size){
+    auto hits=detected_layers?grid::pick_planes(*detected_layers,camera,mouse.x/size.x,mouse.y/size.y):std::vector<grid::PlaneHit>{};
+    bool same=hits.size()==ground_hits.size();
+    if(same)for(size_t n=0;n<hits.size();++n)if(hits[n].center.z!=ground_hits[n].center.z){same=false;break;}
+    if(!same)ground_choice=0;
+    ground_hits=std::move(hits);
+    if(!ground_hits.empty()&&ImGui::GetIO().MouseWheel!=0)
+        ground_choice=(ground_choice+(ImGui::GetIO().MouseWheel>0?ground_hits.size()-1:1))%ground_hits.size();
+}
+void anchor_ground(){
+    if(ground_hits.empty()){note(tr(camera.valid?Label::GroundNoHit:Label::NoCamera));return;}
+    doc.grids[doc.page]=(*detected_layers)[ground_hits[ground_choice].layer].lattice;
+    ground_locked[doc.page]=true;finish_path();changed();note(tr(Label::GroundAnchored),2500);
+}
+void draw_ground_preview(ImDrawList *draw,Point size){
+    if(ground_hits.empty())return;
+    const auto &hit=ground_hits[ground_choice];const auto &layer=(*detected_layers)[hit.layer];const auto &g=layer.lattice;
+    const auto a=hit.center-g.u*.5-g.v*.5;
+    const grid::V world[]={a,a+g.u,a+g.u+g.v,a+g.v};ImVec2 corners[4];
+    for(unsigned n=0;n<4;++n){double x,y;if(!camera.project(world[n],x,y))return;corners[n]=ImVec2(float(x*size.x),float(y*size.y));}
+    draw->AddConvexPolyFilled(corners,4,IM_COL32(109,227,255,65));
+    draw->AddPolyline(corners,4,IM_COL32(109,227,255,240),ImDrawFlags_Closed,2);
+    for(int i=-4;i<=4;++i)for(int j=-4;j<=4;++j){
+        auto p=hit.center+g.u*i+g.v*j;double x,y;
+        if(layer.cells.count({int(std::round(p.x*1000)),int(std::round(p.y*1000))})&&camera.project(p,x,y))
+            draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),3,IM_COL32(109,227,255,190));
+    }
+    ImGui::SetTooltip(tr(Label::GroundHover),g.origin.z,unsigned(ground_choice+1),unsigned(ground_hits.size()));
 }
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
     auto a=pixel(s.points.front(),size),b=pixel(s.points.back(),size);
@@ -244,7 +281,10 @@ void export_svg(Point size) {
 }
 bool in_rect(Point p,ImVec2 a,ImVec2 b){return p.x>=a.x&&p.y>=a.y&&p.x<=b.x&&p.y<=b.y;}
 void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
-    ImGui::SetNextWindowPos(ImVec2(24,std::max(20.f,size.y-365)),ImGuiCond_FirstUseEver);
+    static ImVec2 toolbar_position;static float toolbar_overflow=0;
+    if(toolbar_overflow>0)ImGui::SetNextWindowPos(ImVec2(toolbar_position.x,std::max(20.f,toolbar_position.y-toolbar_overflow)),ImGuiCond_Always);
+    else ImGui::SetNextWindowPos(ImVec2(24,std::max(20.f,size.y-365)),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(0,0),ImVec2(size.x-40,size.y-40));
     ImGui::SetNextWindowBgAlpha(.96f);
     ImGui::Begin(tr(Label::Title),nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs);
     ImGui::SetNextItemWidth(195);int choice=static_cast<int>(language);
@@ -266,11 +306,31 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     if(selected==Tool::Path){
         if(ImGui::Button(tr(Label::NewPath)))finish_path();
         ImGui::SameLine();ImGui::Checkbox(tr(Label::GridPreview),&grid_preview);
-        if(detected_grid.lattice.ready){ImGui::Text(tr(Label::GridStats),detected_grid.lattice.u.x,detected_grid.centers);ImGui::TextUnformatted(tr(Label::PathHelp));}
+        if(doc.grids[doc.page].ready){if(!ground_locked[doc.page])ImGui::Text(tr(Label::GridStats),detected_grid.lattice.u.x,detected_grid.centers);ImGui::TextUnformatted(tr(Label::PathHelp));}
         else ImGui::TextUnformatted(tr(Label::GridWait));
         ImGui::TextDisabled("%s",camera.valid?tr(Label::CameraReady):tr(Label::CameraWait));
     }else ImGui::TextDisabled("%s",tr(Label::Anchoring));
-    auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);over_ui=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));
+    ImGui::Separator();
+    if(ground_marking)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.12f,.42f,.5f,1));
+    const bool toggle_ground=ImGui::Button(tr(ground_marking?Label::GroundFinish:Label::GroundMark));
+    if(ground_marking)ImGui::PopStyleColor();
+    if(toggle_ground){
+        commit();if(text_open)finish_text();
+        if(ground_marking)ground_marking=false;else{select_tool(Tool::Path);ground_marking=true;}
+        ground_hits.clear();ground_choice=0;status();
+    }
+    if(ground_marking){
+        ImGui::TextWrapped("%s",tr(Label::GroundHelp));
+        ImGui::Text(tr(Label::GroundLayers),unsigned(detected_layers?detected_layers->size():0));
+        ImGui::TextWrapped("%s",tr(Label::GroundLimits));
+    }
+    if(ground_locked[doc.page]){
+        ImGui::Text(tr(Label::GroundLocked),doc.grids[doc.page].origin.z);ImGui::SameLine();
+        if(ImGui::Button(tr(Label::GroundAuto))){ground_locked[doc.page]=false;ground_marking=false;ground_hits.clear();finish_path();status();}
+    }
+    auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
+    toolbar_position=pos;toolbar_overflow=pos.y+extent.y-size.y+20;
+    over_ui=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));
     ImGui::End();
     if(text_open) {
         ImGui::SetNextWindowPos(ImVec2(std::clamp(mouse.x,20.f,std::max(20.f,size.x-450)),std::clamp(mouse.y,20.f,std::max(20.f,size.y-250))),ImGuiCond_Appearing);
@@ -283,6 +343,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
 }
 void keys(effect_runtime*rt) {
     const bool ctrl=rt->is_key_down(VK_CONTROL),shift=rt->is_key_down(VK_SHIFT),alt=rt->is_key_down(VK_MENU);
+    if(ground_marking&&rt->is_key_pressed(VK_ESCAPE)){ground_marking=false;ground_hits.clear();status();return;}
     if(!text_open&&rt->is_key_pressed(VK_ESCAPE)&&free_camera_bridge::snapshot().camera.enabled){free_camera_bridge::enable(false,camera_plane());status();return;}
     // These single-letter shortcuts must never consume text or modifier chords.
     if(!text_open&&!ctrl&&!shift&&!alt) {
@@ -307,6 +368,7 @@ void keys(effect_runtime*rt) {
     }
 }
 void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
+    if(ground_marking){if(!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left))anchor_ground();return;}
     bool left=ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if(!text_open && !free_camera_bridge::snapshot().camera.enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !over_ui){undo();return;}
     if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
@@ -360,7 +422,7 @@ void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bo
                (rt->is_key_down('Q')?1:0)-(rt->is_key_down('Z')?1:0),ImGui::GetIO().DeltaTime,rt->is_key_down(VK_SHIFT));
         if(!over_ui&&input_focus.canvas_ready()){
             if(ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
-            c.magnify(ImGui::GetIO().MouseWheel);
+            if(!ground_marking)c.magnify(ImGui::GetIO().MouseWheel);
         }
     }
     free_camera_bridge::change(c);
@@ -375,8 +437,10 @@ void overlay(effect_runtime*rt) {
         ++frame_count;if(frame_count==30)status();
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
-        camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));if(!camera.valid)camera=camera_bridge::snapshot(size.x,size.y);detected_grid=grid_bridge::snapshot();
-        if(camera.valid&&detected_grid.lattice.ready){
+        camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));if(!camera.valid)camera=camera_bridge::snapshot(size.x,size.y);
+        auto layers=grid_bridge::snapshot();
+        if(layers!=detected_layers){detected_layers=std::move(layers);auto best=detected_layers?grid::best_detection(*detected_layers):nullptr;detected_grid=best?*best:grid::Detection{};}
+        if(!ground_locked[doc.page]&&camera.valid&&detected_grid.lattice.ready){
             auto &g=doc.grids[doc.page];const auto &found=detected_grid.lattice;
             if(!g.ready||grid::length(g.origin-found.origin)>.002||grid::length(g.u-found.u)>.002||grid::length(g.v-found.v)>.002){g=found;finish_path();changed();}
         }
@@ -397,6 +461,8 @@ void overlay(effect_runtime*rt) {
             controls(rt,size,mouse,over_ui);
         }
         if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
+        if(ground_marking&&editing&&foreground&&!over_ui&&!reshade_menu&&input_focus.canvas_ready())update_ground_pick(mouse,size);
+        else ground_hits.clear();
         if(editing&&foreground&&!reshade_menu&&input_focus.canvas_ready())canvas(rt,size,mouse,over_ui);
         if(!reshade_menu){
             const bool free=free_camera_bridge::snapshot().camera.enabled;
@@ -412,7 +478,7 @@ void overlay(effect_runtime*rt) {
         }
         ImDrawList *draw=ImGui::GetBackgroundDrawList();
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
-        if(editing&&foreground&&!over_ui&&!reshade_menu)draw_grid_preview(draw,mouse,size);
+        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}
         if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}
@@ -449,6 +515,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     reshade::register_event<reshade::addon_event::reset_command_list>(free_camera_bridge::reset);
     reshade::register_event<reshade::addon_event::destroy_command_list>(free_camera_bridge::reset);
     reshade::register_event<reshade::addon_event::destroy_resource>(free_camera_bridge::resource_destroy);
+    reshade::register_event<reshade::addon_event::destroy_resource>(grid_bridge::destroyed);
     reshade::register_event<reshade::addon_event::execute_command_list>(free_camera_bridge::execute);
     reshade::register_event<reshade::addon_event::copy_resource>(free_camera_bridge::resource_copy);
     reshade::register_event<reshade::addon_event::copy_buffer_region>(free_camera_bridge::buffer_copy);
@@ -470,6 +537,7 @@ extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     reshade::unregister_event<reshade::addon_event::reset_command_list>(free_camera_bridge::reset);
     reshade::unregister_event<reshade::addon_event::destroy_command_list>(free_camera_bridge::reset);
     reshade::unregister_event<reshade::addon_event::destroy_resource>(free_camera_bridge::resource_destroy);
+    reshade::unregister_event<reshade::addon_event::destroy_resource>(grid_bridge::destroyed);
     reshade::unregister_event<reshade::addon_event::execute_command_list>(free_camera_bridge::execute);
     reshade::unregister_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::unregister_event<reshade::addon_event::reshade_open_overlay>(opened);

@@ -35,6 +35,14 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GridStats,"Auto grid: %.3g cell size | %u detected centers","自动格子：间距 %.3g · %u 个格心") \
  X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
  X(GridWait,"Detecting the grid from game instances. No calibration needed.","正在从游戏实例自动识别格子，无需手动校准。") \
+ X(GroundMark,"Mark ground manually","手动标识地面") X(GroundFinish,"Finish ground marking","结束地面标识") \
+ X(GroundHelp,"Hover a floor and left-click to anchor it. Use the wheel to switch overlapping layers. Esc finishes marking; then click to draw a path.","悬停地面预览，左键锚定；重叠处用滚轮切层。Esc 结束标识，随后点击可绘制路径。") \
+ X(GroundLayers,"Candidate height layers: %u","候选高度层：%u") \
+ X(GroundLimits,"Experimental: selection uses inferred grid cells; wall occlusion is not checked.","实验版：按候选格子选层，暂不判断墙体遮挡。") \
+ X(GroundHover,"Height %.3g | candidate %u/%u","高度 %.3g · 候选 %u/%u") \
+ X(GroundLocked,"Ground locked at height %.3g","地面已锁定：高度 %.3g") X(GroundAuto,"Use automatic ground","恢复自动地面") \
+ X(GroundNoHit,"No candidate ground here. Try a detected cell center or wait for grid detection.","此处没有候选地面，请靠近已识别格心，或等待网格识别。") \
+ X(GroundAnchored,"Ground anchored. Keep clicking to switch floors; finish marking to draw a path.","地面已锚定；可继续点击切换高度，结束标识后绘制路径。") \
  X(CameraReady,"Game camera connected","游戏主相机已连接") \
  X(CameraWait,"Waiting for the game camera. Enter a level to show paths.","等待游戏主相机；请先进入关卡。路径暂不显示。") \
  X(Anchoring,"Pen/text: screen space. Path Alt+H: anchored to world cells.","画笔和文字固定在画面；路径 Alt+H 固定在游戏格子上。") \
