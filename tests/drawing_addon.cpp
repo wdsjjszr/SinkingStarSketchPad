@@ -22,11 +22,20 @@ void compile_plane_capture(){
     set_ground(camera_plane()+1);assert(camera_plane()==5.25);
 }
 void compile_legacy_backup_failure(const std::filesystem::path &draft){
-    assert(!std::filesystem::exists(draft.parent_path()/L"drafts.pre-v3.txt"));
+    assert(!std::filesystem::exists(draft.parent_path()/L"drafts.pre-v4.txt"));
     data_path=draft;doc={};doc.format_version=2;legacy_draft_source=draft.parent_path()/L"missing-legacy-source";dirty=true;
     assert(!save()&&dirty&&doc.format_version==2);
 }
 void compile_world_export(Point size){export_svg(size);}
+void compile_cross_height_shape(){
+    doc={};history={};data_path.clear();doc.grids[0]=native_ground::lattice(3.25);pending={};pending.tool=Tool::Line;pending.lattice=doc.grids[0];pending.points={{0,0},{2,2}};
+    dragging=true;shape_gesture.press();shape_gesture.release();set_ground(4.25,grid::HintSource::Wheel);
+    assert(dragging&&shape_gesture.waiting()&&page().empty()&&pending.lattice.origin.z==3.25);
+    camera.valid=true;camera.eye={0,0,10};camera.forward={0,0,-1};
+    camera.matrix={.1,0,0,0,0,.1,0,0,0,0,-.1,1,0,0,0,1};camera.inverse={10,0,0,0,0,10,0,0,0,0,-10,10,0,0,0,1};
+    Point target;assert(drawing_target(pending,{100,100},{1000,1000},false,target)&&target.z==1);
+    pending.points[1]=target;shape_gesture.press();shape_gesture.release();commit();assert(page().size()==1&&page()[0]->points[1].z==1);
+}
 void compile_settings_roundtrip(const std::filesystem::path &isolated_directory){
     data_path=isolated_directory/L"drafts.txt";auto ini=isolated_directory/L"settings.ini";
     WritePrivateProfileStringW(L"Interface",L"Language",L"en",ini.c_str());

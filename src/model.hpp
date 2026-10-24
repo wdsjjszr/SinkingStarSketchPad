@@ -14,7 +14,7 @@
 #include "grid_math.hpp"
 
 namespace sketch {
-struct Point { float x = 0, y = 0; };
+struct Point { float x = 0, y = 0, z = 0; };
 enum class Tool : unsigned { Pen, Line, Arrow, Rectangle, Ellipse, Text, Eraser, Path };
 struct Stroke {
     Tool tool = Tool::Pen;
@@ -40,7 +40,7 @@ struct Document {
     unsigned page = 0;
     bool cursor = true;
     std::array<grid::Lattice,3> grids;
-    unsigned format_version=3;
+    unsigned format_version=4;
     size_t point_count() const {
         size_t n = 0;
         for (const auto &p : pages) for (const auto &s : p) n += s->points.size();
@@ -60,7 +60,9 @@ struct Document {
                 if (s->tool != Tool::Text && s->tool != Tool::Pen && s->tool != Tool::Path && s->points.size() != 2) throw std::runtime_error("Invalid shape");
                 if(!s->lattice.valid()||(s->tool==Tool::Path&&!s->lattice.ready))throw std::runtime_error("Invalid stroke grid");
                 for (const auto &pt : s->points)
-                    if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || (s->lattice.ready ? (std::abs(pt.x)>1000000||std::abs(pt.y)>1000000||(s->tool==Tool::Path&&(std::round(pt.x)!=pt.x||std::round(pt.y)!=pt.y))) : (pt.x < 0 || pt.x > 1 || pt.y < 0 || pt.y > 1)))
+                    if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || !std::isfinite(pt.z) || std::abs(pt.z)>1000000
+                        || (pt.z!=0&&(!s->lattice.ready||(s->tool!=Tool::Line&&s->tool!=Tool::Arrow&&s->tool!=Tool::Path)))
+                        || (s->lattice.ready ? (std::abs(pt.x)>1000000||std::abs(pt.y)>1000000||(s->tool==Tool::Path&&(std::round(pt.x)!=pt.x||std::round(pt.y)!=pt.y||std::round(pt.z)!=pt.z))) : (pt.x < 0 || pt.x > 1 || pt.y < 0 || pt.y > 1)))
                         throw std::runtime_error("Invalid coordinates");
                 total += s->points.size();
                 if (total > 120000) throw std::runtime_error("Too many points");
@@ -79,21 +81,21 @@ struct Document {
     }
     void write(std::ostream &out) const {
         validate();
-        out << "SINKING_STAR_SKETCH 3\n" << page << ' ' << cursor << '\n' << std::setprecision(17);
+        out << "SINKING_STAR_SKETCH 4\n" << page << ' ' << cursor << '\n' << std::setprecision(17);
         for(const auto &g:grids)write_grid(out,g);
         for (const auto &p : pages) {
             out << p.size() << '\n';
             for (const auto &s : p) {
                 out << unsigned(s->tool) << ' ' << s->color << ' ' << s->width << ' ' << s->points.size() << ' ' << std::quoted(s->text) << '\n';
                 write_grid(out,s->lattice);
-                for (const auto &pt : s->points) out << pt.x << ' ' << pt.y << '\n';
+                for (const auto &pt : s->points) out << pt.x << ' ' << pt.y << ' ' << pt.z << '\n';
             }
         }
         if (!out) throw std::runtime_error("Draft write failed");
     }
     static Document read(std::istream &in) {
         Document d; std::string magic; unsigned version = 0, cursor = 0;
-        if (!(in >> magic >> version) || magic != "SINKING_STAR_SKETCH" || version<1 || version>3)
+        if (!(in >> magic >> version) || magic != "SINKING_STAR_SKETCH" || version<1 || version>4)
             throw std::runtime_error("Unsupported draft file");
         if (!(in >> d.page >> cursor) || cursor > 1 || d.page > 2) throw std::runtime_error("Invalid draft header");
         d.cursor = cursor != 0;
@@ -110,7 +112,7 @@ struct Document {
                 total += count; if (total > 120000) throw std::runtime_error("Draft too large");
                 s->tool = Tool(tool); s->points.resize(count);
                 if(version>=3||s->tool==Tool::Path)s->lattice=read_grid(in);
-                for (auto &pt : s->points) if (!(in >> pt.x >> pt.y)) throw std::runtime_error("Truncated draft");
+                for (auto &pt : s->points) if (!(in >> pt.x >> pt.y)||(version>=4&&!(in>>pt.z))) throw std::runtime_error("Truncated draft");
                 p.push_back(s);
             }
         }
@@ -119,7 +121,7 @@ struct Document {
         d.validate(); return d;
     }
 };
-inline Point pixel(Point p, Point size) { return { p.x * size.x, p.y * size.y }; }
+inline Point pixel(Point p, Point size) { return { p.x * size.x, p.y * size.y,p.z }; }
 inline Point normal(Point p, Point size) { return { std::clamp(p.x / std::max(1.f, size.x), 0.f, 1.f), std::clamp(p.y / std::max(1.f, size.y), 0.f, 1.f) }; }
 inline float distance(Point a, Point b) { return std::hypot(a.x - b.x, a.y - b.y); }
 inline float segment_distance(Point p, Point a, Point b) {

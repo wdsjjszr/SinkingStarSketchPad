@@ -2,6 +2,7 @@
 #include "model.hpp"
 
 namespace sketch {
+constexpr unsigned path_axes(Point a,Point b){return unsigned(a.x!=b.x)+unsigned(a.y!=b.y)+unsigned(a.z!=b.z);}
 constexpr double grid_round(double value){return value>=0?int(value+.5):int(value-.5);}
 constexpr double grid_floor(double value){int whole=int(value);return value<whole?whole-1:whole;}
 constexpr double magnitude(double value){return value<0?-value:value;}
@@ -24,7 +25,7 @@ constexpr Point grid_shape_end(Tool tool,Point a,Point b,bool shift){
 }
 inline bool screen_point(const grid::Lattice &g,Point p,const grid::Camera &camera,Point size,Point &out){
     if(!g.ready){out=pixel(p,size);return true;}
-    double x,y;if(!camera.project(g.world(p.x,p.y),x,y))return false;out={float(x*size.x),float(y*size.y)};return true;
+    double x,y;if(!camera.project(g.world(p.x,p.y)+grid::V{0,0,p.z},x,y))return false;out={float(x*size.x),float(y*size.y)};return true;
 }
 inline bool plane_point(const grid::Lattice &g,const grid::Camera &camera,Point mouse,Point size,Point &out){
     if(!g.ready){out=normal(mouse,size);return true;}

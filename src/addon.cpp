@@ -190,12 +190,12 @@ bool save() {
     if (!dirty) return true;
     try {
         if (protected_file) throw std::runtime_error("Old draft is unreadable and could not be backed up");
-        if(doc.format_version<3&&!legacy_draft_source.empty()){
-            const auto keep=data_path.parent_path()/L"drafts.pre-v3.txt";
+        if(doc.format_version<4&&!legacy_draft_source.empty()){
+            const auto keep=data_path.parent_path()/L"drafts.pre-v4.txt";
             if(!std::filesystem::exists(keep)){
                 auto temporary=keep.wstring()+L"."+std::to_wstring(GetTickCount64())+L".tmp";
                 std::filesystem::copy_file(legacy_draft_source,temporary,std::filesystem::copy_options::none);
-                if(!MoveFileExW(temporary.c_str(),keep.c_str(),MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Cannot preserve the pre-v3 draft backup");
+                if(!MoveFileExW(temporary.c_str(),keep.c_str(),MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Cannot preserve the pre-v4 draft backup");
             }
         }
         const auto temp=data_path.wstring()+L".tmp", backup=data_path.wstring()+L".bak";
@@ -208,7 +208,7 @@ bool save() {
         if(std::filesystem::exists(data_path)) ok=ReplaceFileW(data_path.c_str(),temp.c_str(),backup.c_str(),0,nullptr,nullptr);
         else ok=MoveFileExW(temp.c_str(),data_path.c_str(),MOVEFILE_WRITE_THROUGH);
         if(!ok) throw std::runtime_error("Cannot replace draft file: "+std::to_string(GetLastError()));
-        dirty=false;doc.format_version=3;legacy_draft_source.clear();return true;
+        dirty=false;doc.format_version=4;legacy_draft_source.clear();return true;
     } catch(const std::exception &e) { note(std::string(tr(Label::SaveFailed))+e.what(),15000); log(toast); save_due=GetTickCount64()+15000; return false; }
 }
 void load() {
@@ -219,7 +219,7 @@ void load() {
     auto read=[&](const std::filesystem::path &p) {
         if(std::filesystem::file_size(p)>16*1024*1024) throw std::runtime_error("Draft file too large");
         std::ifstream in(p,std::ios::binary);auto result=Document::read(in);
-        legacy_draft_source=result.format_version<3?p:std::filesystem::path{};return result;
+        legacy_draft_source=result.format_version<4?p:std::filesystem::path{};return result;
     };
     if(std::filesystem::exists(data_path)) {
         try { doc=read(data_path); }
@@ -277,13 +277,14 @@ void path_click(Point mouse,Point size){
     if(!append){stroke->tool=Tool::Path;stroke->color=selected_color;stroke->width=width;stroke->lattice=g;}
     size_t extra=1;
     if(append){
-        auto last=stroke->points.back();int dx=int(target.x-last.x),dy=int(target.y-last.y);
-        if(!dx&&!dy)return;
-        if(dx&&dy){note(tr(Label::NeedCorner));return;}
-        extra=size_t(std::abs(dx)+std::abs(dy));
+        target.z=float(std::round(g.origin.z-stroke->lattice.origin.z));
+        auto last=stroke->points.back();int dx=int(target.x-last.x),dy=int(target.y-last.y),dz=int(target.z-last.z);
+        if(!dx&&!dy&&!dz)return;
+        if(path_axes(last,target)>1){note(tr(Label::NeedCorner));return;}
+        extra=size_t(std::abs(dx)+std::abs(dy)+std::abs(dz));
         if(extra>1000){note(tr(Label::TooFar));return;}
         if(stroke->points.size()+extra>10000||doc.point_count()+extra>120000){note(tr(Label::PathFull));return;}
-        for(size_t n=1;n<=extra;++n)stroke->points.push_back({last.x+float((dx>0)-(dx<0))*float(n),last.y+float((dy>0)-(dy<0))*float(n)});
+        for(size_t n=1;n<=extra;++n)stroke->points.push_back({last.x+float((dx>0)-(dx<0))*float(n),last.y+float((dy>0)-(dy<0))*float(n),last.z+float((dz>0)-(dz<0))*float(n)});
     }else stroke->points.push_back(target);
     if((!append&&page().size()>=2000)||doc.point_count()+extra>120000){note(tr(Label::Full));return;}
     history[doc.page].record(page());if(append)page().back()=stroke;else page().push_back(stroke);
@@ -324,15 +325,16 @@ void draw_plane_hint(ImDrawList *draw,Point size){
     plane_visibility.update(camera,g,ground_ready()?native_ground_snapshot:nullptr,x-64,y-64,size.x,size.y,hint_preferences.style);
     draw_preview_mesh(draw,plane_visibility.mesh,hint_preferences.style.opacity*.01*grid::fade_weight(double(GetTickCount64()-plane_hint.started),hint_preferences.duration_ms));
 }
+bool preserve_z_shape(){return dragging&&pending.lattice.ready&&(pending.tool==Tool::Line||pending.tool==Tool::Arrow)&&shape_gesture.waiting();}
 void set_ground(double z,grid::HintSource source=grid::HintSource::Mark){
     auto &g=doc.grids[doc.page];
     bool different=!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1;
-    if(different){settle_drawing();g=native_ground::lattice(z);finish_path();}
+    if(different){if(source!=grid::HintSource::Wheel||!preserve_z_shape())settle_drawing();g=native_ground::lattice(z);if(source!=grid::HintSource::Wheel)finish_path();}
     ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation,source,hint_preferences);
     if(different)changed();else status();
 }
 void request_ground(GroundAction action,Point mouse={},Point size={}){
-    settle_drawing();cancel_ground_marking();plane_hint.clear();
+    settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();
     if(action==GroundAction::Manual){select_tool(Tool::Path);ground_marking=true;}
     if(!ground_scene_ready){note(tr(Label::GroundLoading));status();return;}
     if(action==GroundAction::Quick&&!camera.valid){note(tr(Label::NoCamera));status();return;}
@@ -611,8 +613,9 @@ void keys(effect_runtime*rt) {
 }
 bool drawing_target(const Stroke &stroke,Point mouse,Point size,bool shift,Point &target){
     if(stroke.lattice.ready){
-        if(!plane_point(stroke.lattice,camera,mouse,size,target))return false;
-        target=grid_shape_end(stroke.tool,stroke.points.front(),target,shift);
+        const auto &plane=(stroke.tool==Tool::Line||stroke.tool==Tool::Arrow)?doc.grids[doc.page]:stroke.lattice;
+        if(!plane.ready||!plane_point(plane,camera,mouse,size,target))return false;
+        target=grid_shape_end(stroke.tool,stroke.points.front(),target,shift);target.z=float(plane.origin.z-stroke.lattice.origin.z);
         return std::abs(target.x)<=1000000&&std::abs(target.y)<=1000000;
     }
     if(shift)mouse=snapped(pixel(stroke.points.front(),size),mouse,stroke.tool==Tool::Rectangle||stroke.tool==Tool::Ellipse);
@@ -683,7 +686,7 @@ void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui
     if(action==input::WheelAction::Plane&&!doc.grids[doc.page].ready)owns=false;
     int steps=drawing_wheel.consume(ImGui::GetIO().MouseWheel,binding,action,owns);if(!steps)return;
     if(action==input::WheelAction::Color){selected_color=input::cycle_color(selected_color,steps,std::size(colors));status();return;}
-    settle_drawing();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps,grid::HintSource::Wheel);
+    if(!preserve_z_shape())settle_drawing();cancel_ground_marking();plane_hint.clear();set_ground(camera_plane()+steps,grid::HintSource::Wheel);
 }
 void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;

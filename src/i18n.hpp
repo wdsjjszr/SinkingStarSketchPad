@@ -46,7 +46,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
  X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the next/previous color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择下一色 / 上一色。关闭绘图后滚轮用于相机缩放。") \
  X(GridDrawing,"Grid drawing","网格绘画") \
- X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
+ X(PathHelp,"Click centers along X, Y or Z. Add a point at each turn.","沿 X、Y、Z 点击格心加点，转弯处加点。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \
  X(GroundMark,"Manual marking","手动标记") X(GroundFinish,"Cancel marking","取消标记") \
  X(GroundHelp,"Left-click a visible ground cell to set the plane and finish. A wall or empty space keeps marking active. Esc cancels.","左键点击可见地面格，成功后自动结束标记；命中墙面或空处会保持标记。Esc 取消。") \
@@ -83,7 +83,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(NoCamera,"Game camera unavailable. Enter a level and try again.","尚未读取到游戏主相机，请回到关卡后重试。") \
  X(Detecting,"No target plane. Set the character plane or mark ground manually.","尚未确定目标平面，请设为角色所在平面或手动标记。") \
  X(NoPlane,"Could not project this position onto the cell plane.","此处无法投影到格子平面。") \
- X(NeedCorner,"Add a point at the corner first: paths follow rows or columns.","请先点击转弯格：路径沿格子横向或纵向连接。") \
+ X(NeedCorner,"Add a point at the corner first: paths change only one of X, Y or Z per segment.","请先点击转弯格：路径每段只沿 X、Y 或 Z 一个方向连接。") \
  X(TooFar,"Points are too far apart. Add intermediate points.","两点距离过远，请分段添加。") \
  X(PathFull,"Path point limit reached.","路径点数已满。") \
  X(Exported,"Exported to SinkingStarSketch-data/exports.","已导出到 SinkingStarSketch-data/exports。") X(ExportFailed,"Export failed: ","导出失败：")
