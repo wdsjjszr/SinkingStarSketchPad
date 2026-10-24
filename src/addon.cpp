@@ -9,6 +9,7 @@
 #include "grid_preview.hpp"
 #include "grid_visibility.hpp"
 #include "preview_mesh.hpp"
+#include "voxel_clip.hpp"
 #include "i18n.hpp"
 #include "cursor_style.hpp"
 #include "native_ground_bridge.hpp"
@@ -84,7 +85,7 @@ grid::Preview grid_preview;
 grid::PlaneHint plane_hint;
 grid::HintPreferences hint_preferences;
 auto wheel_actions=input::default_wheel;
-grid::VisibilityCache plane_visibility;
+grid::OcclusionCache plane_visibility;
 double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
 input::WheelState drawing_wheel;
@@ -288,13 +289,13 @@ void path_click(Point mouse,Point size){
     history[doc.page].record(page());if(append)page().back()=stroke;else page().push_back(stroke);
     path_active=true;changed();
 }
-void draw_preview_mesh(ImDrawList *draw,const grid::PreviewMesh &mesh){
+void draw_preview_mesh(ImDrawList *draw,const grid::PreviewMesh &mesh,double opacity=1){
     auto uv=gui_vec2(imgui_function_table_instance()->GetFontTexUvWhitePixel);
     for(size_t offset=0;offset<mesh.triangles.size();){
         unsigned count=unsigned(std::min(size_t(grid::preview_batch_triangles),mesh.triangles.size()-offset));draw->PrimReserve(int(count*3),int(count*3));
         for(unsigned n=0;n<count;++n){const auto &triangle=mesh.triangles[offset++];unsigned base=draw->_VtxCurrentIdx;
             for(unsigned v=0;v<3;++v)draw->PrimWriteIdx(ImDrawIdx(base+v));
-            for(auto point:triangle.points){int alpha=int(std::lround(std::clamp(point.alpha,0.,1.)*255));draw->PrimWriteVtx(ImVec2(float(point.x),float(point.y)),uv,IM_COL32(triangle.shade,triangle.shade,triangle.shade,alpha));}
+            for(auto point:triangle.points){int alpha=int(std::lround(std::clamp(point.alpha*opacity,0.,1.)*255));draw->PrimWriteVtx(ImVec2(float(point.x),float(point.y)),uv,IM_COL32(triangle.shade,triangle.shade,triangle.shade,alpha));}
         }
     }
 }
@@ -320,8 +321,8 @@ void draw_plane_hint(ImDrawList *draw,Point size){
     if(!camera.valid||!hint_preferences.style.visible()||!plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences))return;
     const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return;
     int x=int(std::floor(i+.5)),y=int(std::floor(j+.5));
-    plane_visibility.update(camera,g,ground_ready()?native_ground_snapshot:nullptr,x-64,y-64);
-    draw_preview_mesh(draw,preview_mesh(hint_preferences.style,g,plane_visibility.mask,size,grid::fade_weight(double(GetTickCount64()-plane_hint.started),hint_preferences.duration_ms)));
+    plane_visibility.update(camera,g,ground_ready()?native_ground_snapshot:nullptr,x-64,y-64,size.x,size.y,hint_preferences.style);
+    draw_preview_mesh(draw,plane_visibility.mesh,hint_preferences.style.opacity*.01*grid::fade_weight(double(GetTickCount64()-plane_hint.started),hint_preferences.duration_ms));
 }
 void set_ground(double z,grid::HintSource source=grid::HintSource::Mark){
     auto &g=doc.grids[doc.page];

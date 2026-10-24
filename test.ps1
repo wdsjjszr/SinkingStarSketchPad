@@ -1,6 +1,6 @@
 param([Parameter(Mandatory=$true)][string]$Compiler)
 $ErrorActionPreference = 'Stop'
-foreach ($test in @('model_tests','grid_tests','native_ground_tests','grid_preview_tests','drawing_tests','shape_input_tests','i18n_tests','input_tests','free_camera_tests')) {
+foreach ($test in @('model_tests','grid_tests','native_ground_tests','grid_preview_tests','voxel_clip_tests','drawing_tests','shape_input_tests','i18n_tests','input_tests','free_camera_tests')) {
     & $Compiler -std=c++17 -fsyntax-only (Join-Path $PSScriptRoot ('tests\' + $test + '.cpp'))
     if ($LASTEXITCODE -ne 0) { throw ('Static check failed: ' + $test) }
 }

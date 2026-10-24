@@ -47,20 +47,7 @@ int main(){
     Camera camera;camera.valid=true;camera.eye={0,0,10};camera.forward={0,0,-1};
     camera.matrix={.1,0,0,0,0,.1,0,0,0,0,-.1,1,0,0,0,1};
     camera.inverse={10,0,0,0,0,10,0,0,0,0,-10,10,0,0,0,1};
-    sketch::native_ground::Scene scene;sketch::native_ground::add_wall(scene,{0,0,0},{1,1,2},{3},1);
-    auto terrain=std::make_shared<sketch::native_ground::Snapshot>();terrain->set_geometry(scene);
-    assert(visible_from(*terrain,camera,{0,0,2})&&!visible_from(*terrain,camera,{0,0,0}));
-    assert(visible_from(*terrain,camera,{0,0,3})&&visible_from(*terrain,camera,{2,0,-.25}));
-    auto reverse=camera;reverse.matrix[10]=.1;reverse.matrix[11]=0;reverse.inverse[10]=10;reverse.inverse[11]=0;
-    assert(visible_from(*terrain,reverse,{0,0,2})&&!visible_from(*terrain,reverse,{0,0,0}));
-    Lattice plane{true,{0,0,0},{1,0,0},{0,-1,0}};VisibilityCache cache;
-    assert(cache.update(camera,plane,terrain,-64,-64)&&!cache.mask.at(0,0)&&cache.mask.at(2,0));
-    camera.frame++;assert(!cache.update(camera,plane,terrain,-64,-64));
-    camera.eye.z=11;assert(cache.update(camera,plane,terrain,-64,-64));
-    camera.matrix[3]=.1;camera.inverse[3]=-1;assert(cache.update(camera,plane,terrain,-64,-64));
-    plane.origin.z=2;assert(cache.update(camera,plane,terrain,-64,-64)&&cache.mask.at(0,0));
-    assert(cache.update(camera,plane,nullptr,-64,-64)&&cache.mask.at(0,0));
-    assert(cache.update(camera,plane,nullptr,-63,-64));
+    Lattice plane{true,{0,0,2},{1,0,0},{0,-1,0}};
     PreviewPainter painter{camera,plane,1000,1000,.45,0,0,true,{}};painter.layers(Preview{true,true,true,true,true,45},CellMask(-5,-5,11,11));
     assert(!painter.mesh.triangles.empty());for(auto triangle:painter.mesh.triangles)for(auto vertex:triangle.points)assert(vertex.alpha>=0&&vertex.alpha<=.45);
 }
