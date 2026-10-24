@@ -1,4 +1,5 @@
 #include "../src/model.hpp"
+#include "../src/grid_pick.hpp"
 #include <iostream>
 #include <sstream>
 using namespace sketch;
@@ -22,6 +23,12 @@ int main(int argc,char **argv){try{
     check(grid::length(g.origin-origin)<1e-6&&grid::length(g.u-grid::V{1,0,0})<1e-6,"Actual grid plane and spacing recovered");
     grid::Lattice rejected;
     check(!grid::calibrate(first,clicks,first,clicks[0][0],clicks[0][1],rejected),"No camera movement rejected");
+    grid::Detection floor{{true,{0,0,0},{1,0,0},{0,-1,0}},1,0,{{0,0}}};
+    auto upper=floor;upper.lattice.origin.z=3;
+    const auto picking_camera=perspective(0,0,10,1);
+    auto hits=grid::pick_planes({floor,upper},picking_camera,.5,.5);
+    check(hits.size()==2&&hits[0].layer==1&&hits[0].center.z==3&&hits[1].layer==0,"Overlapping floors are selectable in camera-distance order");
+    check(grid::pick_planes({floor},picking_camera,.6,.5).empty(),"An infinite plane cannot be selected outside its observed floor cells");
     for(auto c:{first,second,perspective(-12,13,320,80)}){
         auto world=g.world(-4,7);c.project(world,x,y);double i,j;
         check(g.snap(c,x,y,i,j)&&i==-4&&j==7,"Pan and zoom preserve lattice coordinates");

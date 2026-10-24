@@ -14,6 +14,11 @@ int main(int argc,char**argv){try{
     check(!grid::detect({{0,0,0},{1,0,0},{2,0,0},{3,0,0},{4,0,0},{5,0,0}}).lattice.ready,"Single line of instances cannot establish a grid");
     std::vector<grid::V> dense;for(int x=0;x<16;++x)for(int y=0;y<16;++y)dense.push_back({x+.5,y+.5,0});
     auto dense_grid=grid::detect(dense);check(dense_grid.centers==256&&dense_grid.lattice.u.x==1,"Dense grid sampling does not alias the cell spacing");
+    for(int x=0;x<3;++x)for(int y=0;y<2;++y)dense.push_back({x+.5,y+.5,3});
+    auto layers=grid::detect_layers(dense);
+    check(layers.size()==2&&layers[0].lattice.origin.z==0&&layers[1].lattice.origin.z==3,"Manual selection retains a smaller floor above the automatic winner");
+    check(layers[1].cells.size()==6&&layers[1].cells.count({500,500})&&!layers[1].cells.count({3500,500}),"Layer footprints contain actual occupied cells only");
+    check(grid::best_detection(layers)->lattice.origin.z==0,"Automatic mode keeps the highest-scoring layer");
     float matrix[12]={0,-1,0,5,1,0,0,7,0,0,1,0};grid::V p;
     check(grid::instance_center(matrix,p)&&p.x==5&&p.y==7,"Quarter-turn instance center decoded");
     matrix[2]=.3f;check(!grid::instance_center(matrix,p),"Non-grid animation matrix rejected");

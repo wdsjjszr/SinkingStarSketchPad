@@ -23,15 +23,16 @@ inline std::vector<V> instance_centers(const char *data,size_t bytes){
     for(size_t n=0;n<count;n+=step){float m[12];std::memcpy(m,data+n*48,48);V p;if(instance_center(m,p))points.push_back(p);}
     return points;
 }
-struct Detection {Lattice lattice;unsigned centers=0,edges=0;};
-inline Detection detect(const std::vector<V> &input){
+struct Detection {Lattice lattice;unsigned centers=0,edges=0;std::set<std::pair<int,int>> cells;};
+inline std::vector<Detection> detect_layers(const std::vector<V> &input){
     // Quantization removes repeated draw instances and tiny animation errors.
     std::map<int,std::set<std::pair<int,int>>> layers;
     for(V p:input)if(finite(p)&&std::abs(p.x)<1e5&&std::abs(p.y)<1e5&&std::abs(p.z)<1e5)
         layers[int(std::round(p.z*100))].insert({int(std::round(p.x*1000)),int(std::round(p.y*1000))});
-    Detection best;unsigned best_score=0;
+    std::vector<Detection> detected;
     for(const auto &[height,cells]:layers){
         if(cells.size()<6)continue;
+        Detection best;unsigned best_score=0;
         std::vector<std::pair<int,int>> sample;size_t index=0,step=std::max(size_t(1),(cells.size()+95)/96);
         for(auto p:cells)if(index++%step==0)sample.push_back(p);
         std::map<int,unsigned> intervals;
@@ -64,10 +65,20 @@ inline Detection detect(const std::vector<V> &input){
                 if(score<=best_score)continue;
                 double size=spacing/1000.;double x=origin.first/1000.,y=origin.second/1000.;
                 x-=std::round(x/size)*size;y-=std::round(y/size)*size;
-                best={{true,{x,y,height/100.},{size,0,0},{0,-size,0}},unsigned(inliers.size()),horizontal+vertical};best_score=score;
+                best={{true,{x,y,height/100.},{size,0,0},{0,-size,0}},unsigned(inliers.size()),horizontal+vertical,{}};best_score=score;
+                for(auto [i,j]:inliers)best.cells.emplace(origin.first+i*spacing,origin.second+j*spacing);
             }
         }
+        if(best.lattice.ready)detected.push_back(std::move(best));
     }
+    return detected;
+}
+inline const Detection *best_detection(const std::vector<Detection> &layers){
+    const Detection *best=nullptr;
+    for(const auto &layer:layers)if(!best||layer.centers+2*layer.edges>best->centers+2*best->edges)best=&layer;
     return best;
+}
+inline Detection detect(const std::vector<V> &input){
+    auto layers=detect_layers(input);auto best=best_detection(layers);return best?*best:Detection{};
 }
 }
