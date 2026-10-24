@@ -71,11 +71,15 @@ struct Lattice {
             &&std::abs(det)>a*b*.2&&std::abs(u.z)<.001*a&&std::abs(v.z)<.001*b;
     }
     V world(double i,double j) const {return origin+u*i+v*j;}
-    bool snap(const Camera &c,double x,double y,double &i,double &j) const {
+    bool coordinates(const Camera &c,double x,double y,double &i,double &j) const {
         Ray r;V p;if(!ready||!valid()||!c.ray(x,y,r)||!plane(r,origin.z,p))return false;
+        if(dot(p-r.origin,r.direction)<=0)return false;
         p=p-origin;double det=u.x*v.y-u.y*v.x;
-        i=std::round((p.x*v.y-p.y*v.x)/det);j=std::round((u.x*p.y-u.y*p.x)/det);
+        i=(p.x*v.y-p.y*v.x)/det;j=(u.x*p.y-u.y*p.x)/det;
         return std::isfinite(i)&&std::isfinite(j)&&std::abs(i)<=1000000&&std::abs(j)<=1000000;
+    }
+    bool snap(const Camera &c,double x,double y,double &i,double &j)const{
+        if(!coordinates(c,x,y,i,j))return false;i=std::round(i);j=std::round(j);return true;
     }
 };
 inline bool calibrate(const Camera &first,const std::array<std::array<double,2>,3>&clicks,

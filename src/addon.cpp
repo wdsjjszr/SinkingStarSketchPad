@@ -5,6 +5,7 @@
 #include <reshade.hpp>
 #include "imgui_abi.hpp"
 #include "model.hpp"
+#include "grid_preview.hpp"
 #include "i18n.hpp"
 #include "cursor_style.hpp"
 #include "native_ground_bridge.hpp"
@@ -68,7 +69,9 @@ void cancel_ground_marking(){
     if(ground_request.tag.id)native_ground_bridge::cancel(ground_request.tag.id);
     ground_marking=false;ground_hit={};ground_request={};
 }
-bool path_active=false, grid_preview=true;
+bool path_active=false,grid_drawing=false;
+grid::Preview grid_preview;
+grid::PlaneHint plane_hint;
 double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
 void finish_path(){path_active=false;}
@@ -79,6 +82,8 @@ Point text_position;
 ULONGLONG save_due=0, toast_until=0, frame_count=0;
 bool camera_preferences_dirty=false;
 ULONGLONG camera_preferences_due=0;
+bool drawing_preferences_dirty=false;
+ULONGLONG drawing_preferences_due=0;
 std::string toast;
 constexpr ImU32 colors[] = {IM_COL32(255,218,105,255),IM_COL32(109,227,255,255),IM_COL32(255,130,158,255),IM_COL32(152,237,172,255),IM_COL32(255,255,255,255)};
 Page &page() { return doc.pages[doc.page]; }
@@ -92,6 +97,22 @@ void save_camera_preferences(){
     write(L"SpeedMilli",int(std::lround(c.speed*1000)));write(L"SensitivityMilli",int(std::lround(c.sensitivity*1000)));write(L"InvertX",c.invert_x);write(L"InvertY",c.invert_y);
     if(ok)camera_preferences_dirty=false;else{note(tr(Label::CameraSettingsFailed));camera_preferences_due=GetTickCount64()+5000;}
 }
+void load_drawing_preferences(){
+    auto path=data_path.parent_path()/L"settings.ini";
+    auto read=[&](const wchar_t *key,int value){return int(GetPrivateProfileIntW(L"Drawing",key,value,path.c_str()));};
+    grid_drawing=read(L"GridMode",0)!=0;grid_preview.enabled=read(L"Preview",1)!=0;
+    grid_preview.centers=read(L"Centers",1)!=0;grid_preview.intersections=read(L"Intersections",0)!=0;
+    grid_preview.borders=read(L"Borders",0)!=0;grid_preview.checker=read(L"Checker",0)!=0;
+    grid_preview.opacity=std::clamp(read(L"Opacity",45),0,100);
+}
+void drawing_preferences_changed(){drawing_preferences_dirty=true;drawing_preferences_due=GetTickCount64()+500;}
+void save_drawing_preferences(){
+    if(!drawing_preferences_dirty||data_path.empty())return;auto path=data_path.parent_path()/L"settings.ini";bool ok=true;
+    auto write=[&](const wchar_t *key,int value){auto text=std::to_wstring(value);ok=WritePrivateProfileStringW(L"Drawing",key,text.c_str(),path.c_str())!=FALSE&&ok;};
+    write(L"GridMode",grid_drawing);write(L"Preview",grid_preview.enabled);write(L"Centers",grid_preview.centers);
+    write(L"Intersections",grid_preview.intersections);write(L"Borders",grid_preview.borders);write(L"Checker",grid_preview.checker);write(L"Opacity",grid_preview.opacity);
+    if(ok)drawing_preferences_dirty=false;else{note(tr(Label::DrawingSettingsFailed));drawing_preferences_due=GetTickCount64()+5000;}
+}
 void status() {
     if (data_path.empty()) return;
     std::ofstream f(data_path.parent_path()/L"status.txt");
@@ -101,6 +122,10 @@ void status() {
     f << "version=3.4.5\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << doc.grids[doc.page].ready << "\ngrid_centers=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0) << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
+    f << "grid_drawing=" << grid_drawing << "\ngrid_preview=" << grid_preview.enabled << "\ngrid_preview_centers=" << grid_preview.centers
+      << "\ngrid_preview_intersections=" << grid_preview.intersections << "\ngrid_preview_borders=" << grid_preview.borders
+      << "\ngrid_preview_checker=" << grid_preview.checker << "\ngrid_preview_opacity=" << grid_preview.opacity
+      << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation) << '\n';
     f << "ground_marking=" << ground_marking << "\nground_request_pending=" << bool(ground_request.tag.id)
       << "\nground_scene_ready=" << ground_scene_ready << "\nground_generation=" << ground_generation
       << "\nground_ready=" << doc.grids[doc.page].ready << "\nground_z=" << camera_plane()
@@ -145,7 +170,7 @@ void load() {
     wchar_t path[32768]; DWORD n=GetModuleFileNameW(module_handle,path,32768);
     if(!n || n>=32768) throw std::runtime_error("Cannot locate addon directory");
     auto dir=std::filesystem::path(path).parent_path()/L"SinkingStarSketch-data";
-    std::filesystem::create_directories(dir); data_path=dir/L"drafts.txt";load_language();load_camera_preferences();
+    std::filesystem::create_directories(dir); data_path=dir/L"drafts.txt";load_language();load_camera_preferences();load_drawing_preferences();
     auto read=[](const std::filesystem::path &p) {
         if(std::filesystem::file_size(p)>16*1024*1024) throw std::runtime_error("Draft file too large");
         std::ifstream in(p,std::ios::binary); return Document::read(in);
@@ -222,24 +247,54 @@ void path_click(Point mouse,Point size){
     history[doc.page].record(page());if(append)page().back()=stroke;else page().push_back(stroke);
     path_active=true;changed();
 }
+ImVec2 clip_screen(grid::ClipPoint p,Point size){return {float((p.x/p.w+1)*.5*size.x),float((1-p.y/p.w)*.5*size.y)};}
+void fill_grid_cell(ImDrawList *draw,const grid::Lattice &g,double i,double j,Point size,ImU32 color){
+    auto p=grid::cell_polygon(camera,g,i,j);if(p.count<3)return;ImVec2 vertices[12];
+    for(unsigned n=0;n<p.count;++n)vertices[n]=clip_screen(p.points[n],size);
+    draw->AddConvexPolyFilled(vertices,int(p.count),color);
+}
+void grid_line(ImDrawList *draw,grid::V a,grid::V b,Point size,ImU32 color){
+    grid::ClipPoint first,last;if(grid::clip_line(camera,a,b,first,last))draw->AddLine(clip_screen(first,size),clip_screen(last,size),color,1);
+}
+void grid_dot(ImDrawList *draw,const grid::Lattice &g,double i,double j,Point size,ImU32 color){
+    double x,y;if(camera.project(g.world(i,j),x,y)&&x>=0&&x<=1&&y>=0&&y<=1)draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),2,color);
+}
 void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
-    if(selected!=Tool::Path||!camera.valid)return;
+    if((selected!=Tool::Path&&!grid_drawing)||!camera.valid)return;
     const auto &g=doc.grids[doc.page];double i,j;if(!g.snap(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
-    if(grid_preview)for(int a=-5;a<=5;++a)for(int b=-5;b<=5;++b){double x,y;if(camera.project(g.world(i+a,j+b),x,y))draw->AddCircleFilled(ImVec2(float(x*size.x),float(y*size.y)),2,IM_COL32(109,227,255,115));}
-    double x,y;if(camera.project(g.world(i,j),x,y))draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),9,colors[selected_color],24,2.5f);
+    const int alpha=int(grid_preview.opacity*2.55);const auto color=IM_COL32(109,227,255,alpha);
+    if(grid_preview.enabled){
+        if(grid_preview.checker)for(int a=-5;a<=5;++a)for(int b=-5;b<=5;++b)fill_grid_cell(draw,g,i+a,j+b,size,IM_COL32(109,227,255,(int(i+j)+a+b)%2?alpha:alpha/2));
+        if(grid_preview.borders)for(int a=-5;a<=6;++a){grid_line(draw,g.world(i+a-.5,j-5.5),g.world(i+a-.5,j+5.5),size,color);grid_line(draw,g.world(i-5.5,j+a-.5),g.world(i+5.5,j+a-.5),size,color);}
+        if(grid_preview.centers)for(int a=-5;a<=5;++a)for(int b=-5;b<=5;++b)grid_dot(draw,g,i+a,j+b,size,color);
+        if(grid_preview.intersections)for(int a=-5;a<=6;++a)for(int b=-5;b<=6;++b)grid_dot(draw,g,i+a-.5,j+b-.5,size,color);
+    }
+    double x,y;if(selected==Tool::Path&&camera.project(g.world(i,j),x,y))draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),9,colors[selected_color],24,2.5f);
 }
 bool ground_ready(){
     return ground_scene_ready&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
 }
+void draw_plane_hint(ImDrawList *draw,Point size){
+    if(!camera.valid||!plane_hint.active(GetTickCount64(),doc.page,ground_generation))return;
+    const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return;
+    int x=int(std::floor(i+.5)),y=int(std::floor(j+.5));
+    for(int a=x-64;a<x+64;++a)for(int b=y-64;b<y+64;++b){
+        if(ground_ready()){
+            auto center=g.world(a,b);auto voxel=native_ground_snapshot->voxels.find({native_ground::coordinate(center.x),native_ground::coordinate(center.y),int(std::floor(center.z))});
+            if(voxel!=native_ground_snapshot->voxels.end()&&grid::inside_height(center.z,voxel->first.z))continue;
+        }
+        fill_grid_cell(draw,g,a,b,size,IM_COL32(109,227,255,(a+b)%2?64:32));
+    }
+}
 void set_ground(double z){
     auto &g=doc.grids[doc.page];
-    if(!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1){
-        g=native_ground::lattice(z);finish_path();changed();
-    }
-    ground_user_set[doc.page]=true;
+    bool different=!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1;
+    if(different){g=native_ground::lattice(z);finish_path();}
+    ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation);
+    if(different)changed();else status();
 }
 void request_ground(GroundAction action,Point mouse={},Point size={}){
-    cancel_ground_marking();
+    cancel_ground_marking();plane_hint.clear();
     if(action==GroundAction::Manual){select_tool(Tool::Path);ground_marking=true;}
     if(!ground_scene_ready){note(tr(Label::GroundLoading));status();return;}
     if(action==GroundAction::Quick&&!camera.valid){note(tr(Label::NoCamera));status();return;}
@@ -261,14 +316,18 @@ void anchor_ground(bool quick=false){
 void poll_ground(){
     auto state=native_ground_bridge::snapshot();ground_character=state.character;ground_scene_ready=state.scene.ready;
     if(state.generation!=ground_generation){
-        ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};
+        ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};plane_hint.clear();
         for(auto &g:doc.grids)g={};cancel_ground_marking();finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
     }
     if(state.ground!=native_ground_snapshot){
         if(!state.ground||(!std::isnan(native_ground_height)&&!state.ground->heights.count(native_ground_height)))native_ground_height=std::numeric_limits<double>::quiet_NaN();
         native_ground_snapshot=state.ground;
     }
-    if(ground_scene_ready&&state.initialized&&native_ground::initialize_planes(doc.grids,ground_user_set,state.initial_z,ground_initialized)){finish_path();changed();}
+    const bool initialize_current=!ground_initialized&&!ground_user_set[doc.page];
+    if(ground_scene_ready&&state.initialized&&native_ground::initialize_planes(doc.grids,ground_user_set,state.initial_z,ground_initialized)){
+        if(initialize_current)plane_hint.show(doc.grids[doc.page],GetTickCount64(),doc.page,ground_generation);
+        finish_path();changed();
+    }
     if(!ground_request.tag.matches(state.completed,ground_generation,doc.page))return;
     const auto requested=ground_request;ground_request={};
     if(requested.action==GroundAction::Character){
@@ -393,7 +452,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     for(unsigned i=0;i<5;++i){if(i)ImGui::SameLine();ImGui::PushID(int(i));auto c=ImGui::ColorConvertU32ToFloat4(colors[i]);if(ImGui::ColorButton(tr(Label::Color),c,0,ImVec2(28,25)))selected_color=i;ImGui::PopID();}
     ImGui::SameLine();ImGui::SetNextItemWidth(145);ImGui::SliderFloat(tr(Label::Width),&width,1,16,"%.0f");
     ImGui::SameLine();if(ImGui::Button(tr(Label::Undo)))undo();ImGui::SameLine();if(ImGui::Button(tr(Label::Redo)))redo();ImGui::SameLine();if(ImGui::Button(tr(Label::Clear)))clear();
-    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){commit();finish_path();cancel_ground_marking();doc.page=i;changed();}}
+    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){commit();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Save))){commit();if(save())note(tr(Label::Saved));}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Export))){commit();export_svg(size);}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Return)))set_edit(false);
@@ -403,12 +462,18 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     ImGui::Text(tr(Label::Stats),doc.page+1,page().size(),dirty?tr(Label::Saving):tr(Label::Saved));
     if(selected==Tool::Path){
         if(ImGui::Button(tr(Label::NewPath)))finish_path();
-        ImGui::SameLine();ImGui::Checkbox(tr(Label::GridPreview),&grid_preview);
         if(doc.grids[doc.page].ready)ImGui::TextUnformatted(tr(Label::PathHelp));
         else ImGui::TextUnformatted(tr(Label::GridWait));
         ImGui::TextDisabled("%s",camera.valid?tr(Label::CameraReady):tr(Label::CameraWait));
     }else ImGui::TextDisabled("%s",tr(Label::Anchoring));
     ImGui::Separator();
+    bool preview_changed=ImGui::Checkbox(tr(Label::GridPreview),&grid_preview.enabled);
+    if(grid_preview.enabled){
+        preview_changed|=ImGui::Checkbox(tr(Label::GridCenters),&grid_preview.centers);ImGui::SameLine();preview_changed|=ImGui::Checkbox(tr(Label::GridIntersections),&grid_preview.intersections);
+        preview_changed|=ImGui::Checkbox(tr(Label::GridBorders),&grid_preview.borders);ImGui::SameLine();preview_changed|=ImGui::Checkbox(tr(Label::GridChecker),&grid_preview.checker);
+        preview_changed|=ImGui::SliderInt(tr(Label::GridOpacity),&grid_preview.opacity,0,100,"%d%%");
+    }
+    if(preview_changed){drawing_preferences_changed();status();}
     if(ImGui::Button(tr(Label::GroundCharacter))){commit();if(text_open)finish_text();request_ground(GroundAction::Character);}
     ImGui::SameLine();
     if(ImGui::Button(tr(ground_marking?Label::GroundFinish:Label::GroundMark))){
@@ -473,7 +538,7 @@ void keys(effect_runtime*rt) {
         if(rt->is_key_pressed('Y'))redo();
         if(rt->is_key_pressed('S')){commit();if(save())note(tr(Label::Saved));}
         if(shift&&rt->is_key_pressed(VK_DELETE))clear();
-        for(unsigned i=0;i<3;++i)if(rt->is_key_pressed('1'+i)){commit();finish_path();cancel_ground_marking();doc.page=i;changed();}
+        for(unsigned i=0;i<3;++i)if(rt->is_key_pressed('1'+i)){commit();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}
     }else if(input::tool_shortcuts(ctrl,shift,alt)){
         const int codes[]={'P','L','A','R','O','T','K','H'};
         for(unsigned i=0;i<8;++i)if(rt->is_key_pressed(codes[i])){commit();select_tool(Tool(i));}
@@ -597,6 +662,7 @@ void overlay(effect_runtime*rt) {
             ImGui::SetNextFrameWantCaptureMouse(capture_mouse);ImGui::SetNextFrameWantCaptureKeyboard(capture_keys);
         }
         ImDrawList *draw=ImGui::GetBackgroundDrawList();
+        if(visible&&foreground&&!reshade_menu)draw_plane_hint(draw,size);
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
         if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
         if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
@@ -605,6 +671,7 @@ void overlay(effect_runtime*rt) {
         if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}
         if(dirty&&!dragging&&!erasing&&GetTickCount64()>=save_due)save();
         if(camera_preferences_dirty&&GetTickCount64()>=camera_preferences_due)save_camera_preferences();
+        if(drawing_preferences_dirty&&GetTickCount64()>=drawing_preferences_due)save_drawing_preferences();
     } catch(const std::exception&e) {log(std::string("Sketch disabled after error: ")+e.what());disabled=true;editing=false;}
     catch(...) {log("Sketch disabled after unexpected exception");disabled=true;editing=false;}
 }
@@ -645,7 +712,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     log("SinkingStarSketchPad 3.4.5 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
 }
 extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
-    {std::lock_guard<std::recursive_mutex> lock(state_mutex);commit();if(text_open)finish_text();save();save_camera_preferences();}
+    {std::lock_guard<std::recursive_mutex> lock(state_mutex);commit();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();}
     reshade::unregister_event<reshade::addon_event::init_pipeline_layout>(free_camera_bridge::layout_init);
     reshade::unregister_event<reshade::addon_event::destroy_pipeline_layout>(free_camera_bridge::layout_destroy);
     reshade::unregister_event<reshade::addon_event::update_descriptor_tables>(free_camera_bridge::updated);

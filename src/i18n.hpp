@@ -31,7 +31,10 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(CameraReset,"Reset to current game camera","重置到当前游戏相机") X(CameraOff,"Restore game view / disable","恢复游戏视角 / 关闭") \
  X(CameraLive,"Camera override connected","相机覆盖已连接") X(CameraWaiting,"Waiting for a fresh game camera frame","等待新的游戏相机帧") \
  X(Stats,"Page %u/3 | %zu marks | %s","草稿 %u/3 · %zu 条笔迹 · %s") \
- X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Cell-center preview","格心预览") \
+ X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Grid preview","网格预览") \
+ X(GridCenters,"Cell centers","中心点") X(GridIntersections,"Grid intersections","网格交点") \
+ X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
+ X(DrawingSettingsFailed,"Could not save drawing settings.","无法保存绘图设置。") \
  X(PathHelp,"Click centers in a row or column. Add a point at each turn.","点击格心加点，转弯处加点。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \
  X(GroundMark,"Manual marking","手动标记") X(GroundFinish,"Cancel marking","取消标记") \
