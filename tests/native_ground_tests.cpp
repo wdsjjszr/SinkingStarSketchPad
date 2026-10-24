@@ -13,7 +13,6 @@ static_assert(!occludes(5,5)&&!occludes(5+1e-7,5)&&occludes(4,5),"A ground cell'
 static_assert(controlled(4,4)&&controlled(12,4)&&!controlled(0,4)&&!controlled(8,4),"ACTIVE is re-evaluated independently of other status flags");
 static_assert(precedes({-1,9,9},{0,0,0},20,1)&&precedes({0,-1,9},{0,0,0},20,1)
     &&precedes({0,0,-1},{0,0,0},20,1)&&precedes({0,0,0},{0,0,0},1,2),"Controlled characters sort by X, Y, Z, then entity ID");
-static_assert(nearer(2,-2,2,2)&&!nearer(2,2,2,-2)&&nearer(1,8,2,0),"Distance wins first; equal distance prefers lower ground");
 constexpr bool slab_checks(){
     double enter=0,exit=100;
     if(!slab(0,1,2,4,enter,exit)||enter!=2||exit!=4)return false;
@@ -22,16 +21,18 @@ constexpr bool slab_checks(){
 }
 static_assert(slab_checks(),"Ray bounds support parallel rays and either travel direction");
 constexpr bool target_checks(){
-    TargetState pages[3];
-    if(pages[0].manual||pages[0].follow||!pages[0].needs_update())return false;
-    pages[0].pending=false;if(pages[0].needs_update())return false;
-    pages[0].follow=true;if(!pages[0].needs_update()||pages[1].follow)return false;
-    pages[0].mode(true);if(pages[0].needs_update()||!pages[0].follow)return false;
-    pages[0].scene_reset();if(!pages[0].manual||!pages[0].follow)return false;
-    pages[0].mode(false);if(!pages[0].needs_update())return false;
-    pages[0].follow=false;pages[0].pending=false;return !pages[0].needs_update()&&pages[1].needs_update();
+    std::array<sketch::grid::Lattice,3> planes{};std::array<bool,3> marked{};bool initialized=false;
+    if(!initialize_planes(planes,marked,3.25,initialized)||!initialized)return false;
+    for(auto plane:planes)if(!plane.ready||plane.origin.z!=3.25)return false;
+    if(initialize_planes(planes,marked,8,initialized)||planes[0].origin.z!=3.25)return false;
+    initialized=false;marked[1]=true;planes[1]=lattice(-2.125);
+    return initialize_planes(planes,marked,9.5,initialized)&&planes[0].origin.z==9.5&&planes[1].origin.z==-2.125&&planes[2].origin.z==9.5;
 }
-static_assert(target_checks(),"Each page initializes automatically, freezes without following, retains preferences and resets on a new scene");
+static_assert(target_checks(),"Initialize all pages once from raw character Z, without overwriting a manual choice while loading");
+static_assert(lattice(-2.125).origin.z==-2.125,"Character planes do not snap heights or require ground cells");
+constexpr RequestTag request_tag{7,3,1};
+static_assert(request_tag.matches(7,3,1)&&!request_tag.matches(6,3,1)&&!request_tag.matches(7,4,1)&&!request_tag.matches(7,3,2)
+    &&!RequestTag{}.matches(7,3,1),"Only the current request, scene and page may apply; cancellation invalidates its tag");
 static_assert(!keep_marking(false,PickResult::Ground)&&keep_marking(false,PickResult::Wall)&&keep_marking(false,PickResult::None)
     &&!keep_marking(true,PickResult::Ground)&&!keep_marking(true,PickResult::Wall)&&!keep_marking(true,PickResult::None),
     "Left-click failures keep marking; every middle-click attempt exits");
@@ -50,18 +51,6 @@ int main(){
     cells=surfaces(scene);assert(cells.size()==3&&cells.back().source==Source::Fence);
     assert(coordinate(-1.5)==-1&&coordinate(1.5)==2);
     Snapshot ground;ground.set_geometry(scene);
-    assert(nearest(ground,{0,0,3})->center.z==2);
-    assert(nearest(ground,{0,0,4.9})->center.z==5);
-    assert(nearest(ground,{1,0,0})->center.z==3);
-    assert(nearest(ground,{2,0,3})->center.x==1);
-    assert(!nearest(Snapshot{},{}));
-    Scene priorities;priorities.bounds={0,0,0,0,false};
-    priorities.floors={{{0,0,20},Source::Fence,1},{{1,0,0},Source::Fence,2}};
-    Snapshot column;column.set_geometry(priorities);
-    assert(nearest(column,{0,0,0})->center.z==20);
-    priorities.floors={{{-1,0,-1},Source::Fence,1},{{1,0,1},Source::Fence,2}};
-    column=Snapshot{};column.set_geometry(priorities);
-    assert(nearest(column,{0,0,0})->center.z==-1);
     assert(pick(ground,{{0,0,10},{0,0,-1}}).center.z==5);
     assert(pick(ground,{{0,0,3},{0,0,-1}}).center.z==2);
     assert(pick(ground,{{-2,0,1},{1,0,0}}).result==PickResult::Wall);

@@ -46,21 +46,34 @@ unsigned selected_color=0;
 float width=3;
 Stroke pending;
 grid::Camera camera;
-std::array<native_ground::TargetState,3> ground_state{};
 native_ground::CharacterSample ground_character;
 uintptr_t ground_scene=0;
-std::string ground_scene_name;
+uint64_t ground_generation=0;
+bool ground_scene_ready=false,ground_initialized=false;
+std::array<bool,3> ground_user_set{};
 bool ground_marking=false;
 bool native_ground_debug=false;
 unsigned native_ground_visible=0;
 std::shared_ptr<const native_ground::Snapshot> native_ground_snapshot;
 double native_ground_height=std::numeric_limits<double>::quiet_NaN();
 native_ground::Pick ground_hit;
+enum class GroundAction {None,Character,Manual,Quick};
+struct GroundRequest {
+    native_ground::RequestTag tag;
+    GroundAction action=GroundAction::None;
+    grid::Camera camera;
+    Point pointer;
+};
+GroundRequest ground_request;
+void cancel_ground_marking(){
+    if(ground_request.tag.id)native_ground_bridge::cancel(ground_request.tag.id);
+    ground_marking=false;ground_hit={};ground_request={};
+}
 bool path_active=false, grid_preview=true;
 double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
 void finish_path(){path_active=false;}
-void select_tool(Tool t){ground_marking=false;ground_hit={};selected=t;finish_path();}
+void select_tool(Tool t){cancel_ground_marking();selected=t;finish_path();}
 Page erase_before;
 char text_buffer[2049]={};
 Point text_position;
@@ -89,8 +102,8 @@ void status() {
     f << "version=3.4.5\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << doc.grids[doc.page].ready << "\ngrid_centers=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0) << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
-    f << "ground_marking=" << ground_marking << "\nground_mode=" << (ground_state[doc.page].manual?"manual":"auto")
-      << "\nground_follow=" << ground_state[doc.page].follow << "\nground_locked=" << (doc.grids[doc.page].ready&&!ground_state[doc.page].needs_update())
+    f << "ground_marking=" << ground_marking << "\nground_request_pending=" << bool(ground_request.tag.id)
+      << "\nground_scene_ready=" << ground_scene_ready << "\nground_generation=" << ground_generation
       << "\nground_ready=" << doc.grids[doc.page].ready << "\nground_z=" << camera_plane()
       << "\nground_layers=" << (native_ground_snapshot?native_ground_snapshot->heights.size():0)
       << "\nground_character_ready=" << ground_character.valid << "\nground_character_id=" << ground_character.entity_id
@@ -169,7 +182,7 @@ void finish_text() {
     }
     text_open=false; text_buffer[0]=0;
 }
-void set_edit(bool value) { commit(); if(text_open) finish_text(); editing=value;if(value)visible=true;else{ground_marking=false;ground_hit={};}status();if(!value)save(); }
+void set_edit(bool value) { commit(); if(text_open) finish_text(); editing=value;if(value)visible=true;else cancel_ground_marking();status();if(!value)save(); }
 void undo() { finish_path(); cancel(); if(history[doc.page].back(page()))changed(); }
 void redo() { finish_path(); cancel(); if(history[doc.page].forward(page()))changed(); }
 void clear() { finish_path(); commit(); if(!page().empty()){history[doc.page].record(page());page().clear();changed();note(tr(Label::Cleared));} }
@@ -217,34 +230,56 @@ void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
     double x,y;if(camera.project(g.world(i,j),x,y))draw->AddCircle(ImVec2(float(x*size.x),float(y*size.y)),9,colors[selected_color],24,2.5f);
 }
 bool ground_ready(){
-    return ground_scene&&ground_character.scene_id==ground_scene&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
+    return ground_scene_ready&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
 }
 void set_ground(double z){
     auto &g=doc.grids[doc.page];
     if(!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1){
         g=native_ground::lattice(z);finish_path();changed();
     }
-    ground_state[doc.page].pending=false;
+    ground_user_set[doc.page]=true;
 }
-bool update_automatic_ground(){
-    if(!ground_ready()||!ground_character.valid||ground_character.scene_id!=ground_scene)return false;
-    auto cell=native_ground::nearest(*native_ground_snapshot,ground_character.position);if(!cell)return false;
-    set_ground(cell->center.z);return true;
-}
-void toggle_ground_follow(){
-    auto &state=ground_state[doc.page];state.follow=!state.follow;
-    if(state.follow&&!update_automatic_ground())note(tr(Label::GroundCharacterWait));
-    else note(tr(state.follow?Label::GroundFollowing:Label::GroundFrozen),2500);
+void request_ground(GroundAction action,Point mouse={},Point size={}){
+    cancel_ground_marking();
+    if(action==GroundAction::Manual){select_tool(Tool::Path);ground_marking=true;}
+    if(!ground_scene_ready){note(tr(Label::GroundLoading));status();return;}
+    if(action==GroundAction::Quick&&!camera.valid){note(tr(Label::NoCamera));status();return;}
+    auto kind=action==GroundAction::Character?native_ground_bridge::Read::Character:native_ground_bridge::Read::Ground;
+    ground_request.tag={native_ground_bridge::request(kind,ground_generation),ground_generation,doc.page};
+    ground_request.action=action;
+    if(action==GroundAction::Quick){ground_request.camera=camera;ground_request.pointer={mouse.x/size.x,mouse.y/size.y};}
     status();
 }
 void update_ground_pick(Point mouse,Point size){
-    ground_hit=ground_ready()?native_ground::pick(*native_ground_snapshot,camera,mouse.x/size.x,mouse.y/size.y):native_ground::Pick{};
+    ground_hit=!ground_request.tag.id&&ground_ready()?native_ground::pick(*native_ground_snapshot,camera,mouse.x/size.x,mouse.y/size.y):native_ground::Pick{};
 }
 void anchor_ground(bool quick=false){
     if(ground_hit.result==native_ground::PickResult::Ground){set_ground(ground_hit.center.z);note(tr(Label::GroundAnchored),2500);}
     else note(tr(!camera.valid?Label::NoCamera:!ground_ready()?Label::GroundLoading:
         ground_hit.result==native_ground::PickResult::Wall?Label::GroundWall:Label::GroundNoHit));
     ground_marking=native_ground::keep_marking(quick,ground_hit.result);status();
+}
+void poll_ground(){
+    auto state=native_ground_bridge::snapshot();ground_character=state.character;ground_scene_ready=state.scene.ready;
+    if(state.generation!=ground_generation){
+        ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};
+        for(auto &g:doc.grids)g={};cancel_ground_marking();finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
+    }
+    if(state.ground!=native_ground_snapshot){
+        if(!state.ground||(!std::isnan(native_ground_height)&&!state.ground->heights.count(native_ground_height)))native_ground_height=std::numeric_limits<double>::quiet_NaN();
+        native_ground_snapshot=state.ground;
+    }
+    if(ground_scene_ready&&state.initialized&&native_ground::initialize_planes(doc.grids,ground_user_set,state.initial_z,ground_initialized)){finish_path();changed();}
+    if(!ground_request.tag.matches(state.completed,ground_generation,doc.page))return;
+    const auto requested=ground_request;ground_request={};
+    if(requested.action==GroundAction::Character){
+        if(ground_scene_ready&&ground_character.valid&&ground_character.scene_id==ground_scene){set_ground(ground_character.position.z);note(tr(Label::GroundCharacterSet),2500);}
+        else note(tr(Label::GroundCharacterWait));
+    }else if(requested.action==GroundAction::Quick){
+        ground_hit=ground_ready()?native_ground::pick(*native_ground_snapshot,requested.camera,requested.pointer.x,requested.pointer.y):native_ground::Pick{};
+        anchor_ground(true);
+    }else if(!ground_ready())note(tr(Label::GroundLoading));
+    status();
 }
 void draw_ground_preview(ImDrawList *draw,Point size){
     if(ground_hit.result==native_ground::PickResult::Wall){ImGui::SetTooltip("%s",tr(Label::GroundWall));return;}
@@ -358,7 +393,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     for(unsigned i=0;i<5;++i){if(i)ImGui::SameLine();ImGui::PushID(int(i));auto c=ImGui::ColorConvertU32ToFloat4(colors[i]);if(ImGui::ColorButton(tr(Label::Color),c,0,ImVec2(28,25)))selected_color=i;ImGui::PopID();}
     ImGui::SameLine();ImGui::SetNextItemWidth(145);ImGui::SliderFloat(tr(Label::Width),&width,1,16,"%.0f");
     ImGui::SameLine();if(ImGui::Button(tr(Label::Undo)))undo();ImGui::SameLine();if(ImGui::Button(tr(Label::Redo)))redo();ImGui::SameLine();if(ImGui::Button(tr(Label::Clear)))clear();
-    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){commit();finish_path();ground_marking=false;ground_hit={};doc.page=i;changed();}}
+    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){commit();finish_path();cancel_ground_marking();doc.page=i;changed();}}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Save))){commit();if(save())note(tr(Label::Saved));}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Export))){commit();export_svg(size);}
     ImGui::SameLine();if(ImGui::Button(tr(Label::Return)))set_edit(false);
@@ -374,25 +409,14 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
         ImGui::TextDisabled("%s",camera.valid?tr(Label::CameraReady):tr(Label::CameraWait));
     }else ImGui::TextDisabled("%s",tr(Label::Anchoring));
     ImGui::Separator();
-    auto &ground=ground_state[doc.page];
-    if(ImGui::RadioButton(tr(Label::GroundAuto),!ground.manual)){
-        commit();ground.mode(false);ground_marking=false;ground_hit={};finish_path();update_automatic_ground();status();
-    }
+    if(ImGui::Button(tr(Label::GroundCharacter))){commit();if(text_open)finish_text();request_ground(GroundAction::Character);}
     ImGui::SameLine();
-    if(ImGui::RadioButton(tr(Label::GroundManual),ground.manual)){
-        commit();ground.mode(true);ground_marking=false;ground_hit={};finish_path();status();
+    if(ImGui::Button(tr(ground_marking?Label::GroundFinish:Label::GroundMark))){
+        commit();if(text_open)finish_text();
+        if(ground_marking){cancel_ground_marking();status();}else request_ground(GroundAction::Manual);
     }
-    if(!ground.manual){
-        bool follow=ground.follow;if(ImGui::Checkbox(tr(Label::GroundFollow),&follow))toggle_ground_follow();
-        if(!ground_character.valid)ImGui::TextWrapped("%s",tr(Label::GroundCharacterWait));
-    }else{
-        if(ImGui::Button(tr(ground_marking?Label::GroundFinish:Label::GroundMark))){
-            commit();if(text_open)finish_text();
-            if(ground_marking)ground_marking=false;else{select_tool(Tool::Path);ground_marking=true;}
-            ground_hit={};status();
-        }
-        if(ground_marking)ImGui::TextWrapped("%s",tr(Label::GroundHelp));
-    }
+    if(ground_marking)ImGui::TextWrapped("%s",tr(Label::GroundHelp));
+    if(ground_request.tag.id)ImGui::TextWrapped("%s",tr(Label::GroundLoading));
     if(doc.grids[doc.page].ready)ImGui::Text(tr(Label::GroundLocked),doc.grids[doc.page].origin.z);
     if(!ground_ready())ImGui::TextWrapped("%s",tr(Label::GroundLoading));
     ImGui::TextWrapped("%s",tr(Label::GroundShortcut));
@@ -432,7 +456,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
 }
 void keys(effect_runtime*rt) {
     const bool ctrl=rt->is_key_down(VK_CONTROL),shift=rt->is_key_down(VK_SHIFT),alt=rt->is_key_down(VK_MENU);
-    if(ground_marking&&rt->is_key_pressed(VK_ESCAPE)){ground_marking=false;ground_hit={};status();return;}
+    if((ground_marking||ground_request.tag.id)&&rt->is_key_pressed(VK_ESCAPE)){cancel_ground_marking();status();return;}
     if(!text_open&&rt->is_key_pressed(VK_ESCAPE)&&free_camera_bridge::snapshot().camera.enabled){free_camera_bridge::enable(false,camera_plane());status();return;}
     // These single-letter shortcuts must never consume text or modifier chords.
     if(!text_open&&!ctrl&&!shift&&!alt) {
@@ -449,7 +473,7 @@ void keys(effect_runtime*rt) {
         if(rt->is_key_pressed('Y'))redo();
         if(rt->is_key_pressed('S')){commit();if(save())note(tr(Label::Saved));}
         if(shift&&rt->is_key_pressed(VK_DELETE))clear();
-        for(unsigned i=0;i<3;++i)if(rt->is_key_pressed('1'+i)){commit();finish_path();ground_marking=false;ground_hit={};doc.page=i;changed();}
+        for(unsigned i=0;i<3;++i)if(rt->is_key_pressed('1'+i)){commit();finish_path();cancel_ground_marking();doc.page=i;changed();}
     }else if(input::tool_shortcuts(ctrl,shift,alt)){
         const int codes[]={'P','L','A','R','O','T','K','H'};
         for(unsigned i=0;i<8;++i)if(rt->is_key_pressed(codes[i])){commit();select_tool(Tool(i));}
@@ -460,10 +484,16 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     if(!text_open&&!over_ui&&!ImGui::IsAnyItemActive()&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y
        &&ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
         commit();
-        if(ground_state[doc.page].manual){update_ground_pick(mouse,size);anchor_ground(true);}else toggle_ground_follow();
+        request_ground(GroundAction::Quick,mouse,size);
         return;
     }
-    if(ground_marking){if(!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left))anchor_ground();return;}
+    if(ground_marking){
+        if(!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)){
+            if(ground_request.tag.id)note(tr(Label::GroundLoading));else anchor_ground();
+        }
+        return;
+    }
+    if(ground_request.tag.id)return;
     bool left=ImGui::IsMouseDown(ImGuiMouseButton_Left);
     if(!text_open && !free_camera_bridge::snapshot().camera.enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !over_ui){undo();return;}
     if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
@@ -533,19 +563,6 @@ void overlay(effect_runtime*rt) {
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
         camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));if(!camera.valid)camera=camera_bridge::snapshot(size.x,size.y);
-        ground_character=native_ground_bridge::character_snapshot();
-        auto native=native_ground_bridge::snapshot();
-        const uintptr_t scene=ground_character.scene_id?ground_character.scene_id:(native?native->scene_id:0);
-        if(scene&&(scene!=ground_scene||(native&&native->scene_id==scene&&native->ready&&native->scene!=ground_scene_name))){
-            ground_scene=scene;ground_scene_name=native&&native->scene_id==scene&&native->ready?native->scene:"";
-            for(size_t n=0;n<ground_state.size();++n){ground_state[n].scene_reset();doc.grids[n]={};}
-            ground_marking=false;ground_hit={};finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
-        }
-        if(native!=native_ground_snapshot){
-            if(!native||(!std::isnan(native_ground_height)&&!native->heights.count(native_ground_height)))native_ground_height=std::numeric_limits<double>::quiet_NaN();
-            native_ground_snapshot=std::move(native);
-        }
-        if(ground_state[doc.page].needs_update())update_automatic_ground();
         if(frame_count%120==0)status();
         HWND window=static_cast<HWND>(rt->get_hwnd());bool foreground=GetForegroundWindow()==window;
         // ReShade virtualizes Win32 GetCursorPos while it blocks game input.
@@ -563,6 +580,7 @@ void overlay(effect_runtime*rt) {
             controls(rt,size,mouse,over_ui);
         }
         if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
+        poll_ground();
         if(ground_marking&&editing&&foreground&&!over_ui&&!reshade_menu&&input_focus.canvas_ready())update_ground_pick(mouse,size);
         else ground_hit={};
         if(editing&&foreground&&!reshade_menu&&input_focus.canvas_ready())canvas(rt,size,mouse,over_ui);

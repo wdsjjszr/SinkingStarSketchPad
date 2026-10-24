@@ -27,8 +27,12 @@ int main(int argc,char **argv){try{
     native_ground::Scene scene;scene.floors={{{0,0,0},native_ground::Source::Fence,1},{{0,0,3},native_ground::Source::Fence,2}};
     native_ground::Snapshot ground;ground.set_geometry(scene);
     const auto picking_camera=perspective(0,0,10,1);
+    native_ground::Scene solid_scene;native_ground::add_wall(solid_scene,{0,0,2},{1,1,1},{1},3);
+    native_ground::Snapshot solid_ground;solid_ground.set_geometry(solid_scene);
     for(auto c:{picking_camera,perspective(0,0,10,1,true)}){
         grid::Ray ray;check(c.ray(.5,.5,ray)&&ray.direction.z<0&&grid::length(ray.origin-c.eye)<1e-6,"Ordinary and reverse depth rays point into the view from the eye");
+        auto solid=native_ground::pick(solid_ground,c,.5,.5);
+        check(solid.result==native_ground::PickResult::Ground&&solid.center.z==3,"A voxel's visible top is selectable with either depth order");
         auto picked=native_ground::pick(ground,c,.5,.5);
         check(picked.result==native_ground::PickResult::Ground&&picked.center.z==3,"Depth order does not turn a visible floor into a blocked wall");
     }

@@ -8,7 +8,7 @@ constexpr bool held_middle_focus(){
     focus.update(false,true);focus.update(true,true);if(focus.canvas_ready())return false;
     focus.update(true,false);return focus.canvas_ready();
 }
-static_assert(held_middle_focus(),"A held mouse button, including middle, cannot mark or toggle following while reactivating the window");
+static_assert(held_middle_focus(),"A held mouse button, including middle, cannot mark while reactivating the window");
 int main(){
     Focus f;
     assert(!f.update(true,true)&&!f.canvas_ready()); // click to activate

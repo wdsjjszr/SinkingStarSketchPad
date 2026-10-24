@@ -94,18 +94,22 @@ struct CharacterSample {
     bool valid=false;
     std::string error;
 };
-struct TargetState {
-    bool manual=false,follow=false,pending=true;
-    constexpr bool needs_update()const{return !manual&&(pending||follow);}
-    constexpr void mode(bool value){manual=value;if(!manual)pending=true;}
-    constexpr void scene_reset(){pending=true;}
+struct SceneIdentity {
+    uintptr_t id=0;
+    std::string name,error;
+    bool ready=false;
+    bool same(const SceneIdentity &other)const{return id==other.id&&name==other.name;}
+};
+struct RequestTag {
+    uint64_t id=0,generation=0;
+    unsigned page=0;
+    constexpr bool matches(uint64_t completed,uint64_t scene,unsigned current_page)const{
+        return id&&id==completed&&generation==scene&&page==current_page;
+    }
 };
 constexpr bool controlled(uint16_t status,uint16_t active){return (status&active)!=0;}
 constexpr bool precedes(grid::V a,grid::V b,uint32_t a_id,uint32_t b_id){
     if(a.x!=b.x)return a.x<b.x;if(a.y!=b.y)return a.y<b.y;if(a.z!=b.z)return a.z<b.z;return a_id<b_id;
-}
-constexpr bool nearer(double distance,double z,double best_distance,double best_z){
-    return distance<best_distance||(distance==best_distance&&z<best_z);
 }
 inline const Cell *cell_at(const Snapshot &ground,int x,int y,double z){
     auto key=std::make_tuple(double(x),double(y),z);
@@ -114,20 +118,11 @@ inline const Cell *cell_at(const Snapshot &ground,int x,int y,double z){
     });
     return it!=ground.cells.end()&&std::tie(it->center.x,it->center.y,it->center.z)==key?&*it:nullptr;
 }
-inline const Cell *nearest(const Snapshot &ground,grid::V position){
-    if(!ground.ready||!grid::finite(position))return nullptr;
-    const int x=coordinate(position.x),y=coordinate(position.y);const Cell *best=nullptr;
-    double distance=std::numeric_limits<double>::infinity();
-    for(double z:ground.heights)if(auto cell=cell_at(ground,x,y,z)){
-        const double d=std::abs(z-position.z);
-        if(!best||nearer(d,z,distance,best->center.z)){best=cell;distance=d;}
-    }
-    if(best)return best;
-    for(const auto &cell:ground.cells){
-        auto delta=cell.center-position;const double d=grid::dot(delta,delta);
-        if(!best||nearer(d,cell.center.z,distance,best->center.z)){best=&cell;distance=d;}
-    }
-    return best;
+constexpr grid::Lattice lattice(double z){return {true,{0,0,z},{1,0,0},{0,-1,0}};}
+constexpr bool initialize_planes(std::array<grid::Lattice,3> &planes,const std::array<bool,3> &marked,double z,bool &initialized){
+    if(initialized)return false;
+    bool changed=false;
+    for(size_t n=0;n<planes.size();++n)if(!marked[n]){planes[n]=lattice(z);changed=true;}
+    initialized=true;return changed;
 }
-inline grid::Lattice lattice(double z){return {true,{0,0,z},{1,0,0},{0,-1,0}};}
 }

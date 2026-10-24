@@ -25,9 +25,6 @@ class Reader {
     struct Type {std::string name;size_t size;};
     std::map<uintptr_t,Type> types;
     struct Guy {uintptr_t entity,type;uint32_t id;Field position,status,flags,destroyed;uint16_t active,observed=0;};
-    std::vector<Guy> guys;
-    uintptr_t character_manager=0;
-    std::string character_error;
     static void bytes(uintptr_t at,void *out,size_t size){
         SIZE_T got=0;
         if(at<0x10000||!ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(at),out,size,&got)||got!=size)
@@ -131,14 +128,44 @@ class Reader {
         if(matches!=1||slot<base||slot-base>image.size()-8){slot=0;throw std::runtime_error("Current-scene signature is unavailable for this game version.");}
     }
 public:
-    CharacterSample sample_character(){
-        CharacterSample out;
+    SceneIdentity probe(){
+        SceneIdentity out;
         try{
             if(image.empty())initialize();
             if(!slot)throw std::runtime_error("Current-scene signature is unavailable for this game version.");
-            out.scene_id=read<uintptr_t>(slot);
-            if(!out.scene_id||out.scene_id!=character_manager)throw std::runtime_error("Waiting for current-scene characters.");
-            if(!character_error.empty())throw std::runtime_error(character_error);
+            out.id=read<uintptr_t>(slot);auto text=read<Array>(out.id);
+            if(text.count<=0||text.count>128)throw std::runtime_error("Current scene is not ready.");
+            out.name.resize(size_t(text.count));bytes(text.data,out.name.data(),out.name.size());
+            auto after=read<Array>(out.id);
+            if(read<uintptr_t>(slot)!=out.id||after.count!=text.count||after.data!=text.data)throw std::runtime_error("Scene changed while reading its name.");
+            out.ready=true;
+        }catch(const std::exception &e){out.error=e.what();}
+        return out;
+    }
+private:
+    void require_scene(const SceneIdentity &scene){
+        auto current=probe();if(!current.ready||!current.same(scene))throw std::runtime_error("Scene changed while reading native data.");
+    }
+    static std::vector<EntitySlot> entities(uintptr_t manager){
+        auto objects=read<Array>(manager+0x3c0);
+        if(objects.count<=0||objects.count>262144)throw std::runtime_error("Current scene entity table is not ready.");
+        std::vector<EntitySlot> out(size_t(objects.count));bytes(objects.data,out.data(),out.size()*sizeof(EntitySlot));
+        auto after=read<Array>(manager+0x3c0);
+        if(after.count!=objects.count||after.data!=objects.data)throw std::runtime_error("Scene entity table changed while reading.");
+        return out;
+    }
+public:
+    CharacterSample sample_character(const SceneIdentity &scene){
+        CharacterSample out;
+        out.scene_id=scene.id;
+        try{
+            require_scene(scene);std::vector<Guy> guys;
+            for(auto entry:entities(scene.id)){
+                if(!entry.live())continue;
+                if(read<uintptr_t>(entry.entity+0xf0)!=scene.id)throw std::runtime_error("Scene changed while reading characters.");
+                auto type=read<uintptr_t>(entry.entity+0x108);
+                if(type_info(type).name=="Guy")guys.push_back(character(entry.entity,type));
+            }
             for(auto &g:guys){
                 if(read<uintptr_t>(g.entity+0xf0)!=out.scene_id||read<uintptr_t>(g.entity+0x108)!=g.type||read<uint32_t>(g.entity+0x100)!=g.id)
                     throw std::runtime_error("Character identity changed; waiting for refresh.");
@@ -154,33 +181,23 @@ public:
             for(const auto &g:guys)if(read<uintptr_t>(g.entity+0xf0)!=out.scene_id||read<uintptr_t>(g.entity+0x108)!=g.type
                 ||read<uint32_t>(g.entity+0x100)!=g.id||controlled(read<uint16_t>(g.entity+g.status.offset),g.active)!=controlled(g.observed,g.active))
                 throw std::runtime_error("Character selection changed while reading.");
-            if(read<uintptr_t>(slot)!=out.scene_id)throw std::runtime_error("Scene changed while reading character selection.");
+            require_scene(scene);
             if(!out.controlled_count)throw std::runtime_error("No currently controlled character in this scene.");
             out.valid=true;
         }catch(const std::exception &e){out.error=e.what();}
         return out;
     }
-    Snapshot sample(){
-        Snapshot out;
+    Snapshot sample(const SceneIdentity &identity){
+        Snapshot out;out.scene_id=identity.id;out.scene=identity.name;
         try{
-            if(image.empty())initialize();
-            if(!slot)throw std::runtime_error("Current-scene signature is unavailable for this game version.");
+            require_scene(identity);
             // The ID table includes static entities that the character-oriented list at +0x370 omits.
-            auto manager=read<uintptr_t>(slot);auto objects=read<Array>(manager+0x3c0);auto scene_name=read<Array>(manager);
-            out.scene_id=manager;
-            if(objects.count<=0||objects.count>262144||scene_name.count<=0||scene_name.count>128)throw std::runtime_error("Current scene is not ready.");
-            out.scene.resize(size_t(scene_name.count));bytes(scene_name.data,out.scene.data(),out.scene.size());
-            std::vector<EntitySlot> entities(size_t(objects.count));bytes(objects.data,entities.data(),entities.size()*sizeof(EntitySlot));
-            Scene scene;bool have_settings=false;std::vector<Guy> next_guys;std::string next_character_error;
-            for(auto entry:entities){
+            const auto manager=identity.id;Scene scene;bool have_settings=false;
+            for(auto entry:entities(manager)){
                 if(!entry.live())continue;
                 auto entity=entry.entity;
                 auto owner=read<uintptr_t>(entity+0xf0);if(owner!=manager)throw std::runtime_error("Scene changed while reading entities.");
                 auto type=read<uintptr_t>(entity+0x108);const auto &info=type_info(type);
-                if(info.name=="Guy"){
-                    try{next_guys.push_back(character(entity,type));}catch(const std::exception &e){next_character_error=e.what();}
-                    continue;
-                }
                 if(info.name!="Wall_Set"&&info.name!="Settings"&&info.name!="Fence"&&info.name!="Ocean_Map")continue;
                 std::vector<uint8_t> data(info.size);bytes(entity,data.data(),data.size());
                 auto flags=value<uint64_t>(data,type,{"entity","undoable_data","entity_flags"});
@@ -220,12 +237,9 @@ public:
                     ocean.values.resize(count);bytes(view.data,ocean.values.data(),count);scene.oceans.push_back(std::move(ocean));++out.oceans;
                 }
             }
-            auto after=read<Array>(manager+0x3c0);
-            if(read<uintptr_t>(slot)!=manager||after.count!=objects.count||after.data!=objects.data)throw std::runtime_error("Scene changed while reading ground.");
             if(!have_settings)throw std::runtime_error("No Settings entity in this scene.");
-            guys=std::move(next_guys);character_manager=manager;character_error=std::move(next_character_error);
-            out.set_geometry(std::move(scene));
-        }catch(const std::exception &e){out.cells.clear();out.heights.clear();out.error=e.what();}
+            out.set_geometry(std::move(scene));require_scene(identity);
+        }catch(const std::exception &e){out.cells.clear();out.heights.clear();out.voxels.clear();out.ready=false;out.error=e.what();}
         return out;
     }
 };
@@ -233,26 +247,60 @@ inline std::mutex mutex;
 inline std::condition_variable wake;
 inline std::thread worker;
 inline bool running=false;
-inline std::shared_ptr<const Snapshot> result;
-inline CharacterSample character_result;
+enum class Read {None,Ground,Character};
+struct State {
+    SceneIdentity scene;
+    std::shared_ptr<const Snapshot> ground;
+    CharacterSample character;
+    uint64_t generation=0,completed=0;
+    bool initialized=false;
+    double initial_z=0;
+};
+struct Request {uint64_t id=0,generation=0;Read kind=Read::None;};
+inline State result;
+inline Request pending;
+inline uint64_t serial=0;
 inline void start(){
     std::lock_guard<std::mutex> lock(mutex);if(running)return;running=true;
     worker=std::thread([]{
-        Reader reader;std::unique_lock<std::mutex> lock(mutex);ULONGLONG next_ground=0;
+        Reader reader;std::unique_lock<std::mutex> lock(mutex);ULONGLONG next_probe=0;
         while(running){
-            auto previous=result;lock.unlock();auto character=reader.sample_character();std::shared_ptr<const Snapshot> next;
-            if(GetTickCount64()>=next_ground||(character.scene_id&&(!previous||character.scene_id!=previous->scene_id))){
-                next=std::make_shared<const Snapshot>(reader.sample());character=reader.sample_character();next_ground=GetTickCount64()+1000;
+            auto now=GetTickCount64();
+            if(now<next_probe&&pending.kind==Read::None){wake.wait_for(lock,std::chrono::milliseconds(next_probe-now),[]{return !running||pending.kind!=Read::None;});continue;}
+            auto request=pending;pending={};auto next=result;lock.unlock();
+            auto scene=reader.probe();const bool changed=scene.ready&&(!next.generation||!scene.same(next.scene));
+            if(changed){
+                auto generation=next.generation+1;next={};next.generation=generation;next.scene=scene;
+                next.ground=std::make_shared<const Snapshot>(reader.sample(scene));
+            }else if(scene.ready)next.scene=scene;
+            else{next.scene.ready=false;next.scene.error=scene.error;}
+            if(next.scene.ready){
+                const bool requested=request.id&&request.generation==next.generation;
+                if((!next.initialized&&(changed||now>=next_probe))||(requested&&request.kind==Read::Character)){
+                    next.character=reader.sample_character(next.scene);
+                    if(!next.initialized&&next.character.valid){next.initial_z=next.character.position.z;next.initialized=true;}
+                }
+                if(requested){
+                    if(request.kind==Read::Ground)next.ground=std::make_shared<const Snapshot>(reader.sample(next.scene));
+                    next.completed=request.id;
+                }
+            }else if(request.id&&request.generation==next.generation){
+                if(request.kind==Read::Character){next.character={};next.character.error=next.scene.error;}
+                else{auto failed=std::make_shared<Snapshot>();failed->error=next.scene.error;next.ground=std::move(failed);}
+                next.completed=request.id;
             }
-            lock.lock();if(next)result=std::move(next);character_result=std::move(character);
-            wake.wait_for(lock,std::chrono::milliseconds(33),[]{return !running;});
+            if(changed||now>=next_probe)next_probe=GetTickCount64()+1000;
+            lock.lock();result=std::move(next);
         }
     });
 }
-inline std::shared_ptr<const Snapshot> snapshot(){std::lock_guard<std::mutex> lock(mutex);return result;}
-inline CharacterSample character_snapshot(){std::lock_guard<std::mutex> lock(mutex);return character_result;}
+inline State snapshot(){std::lock_guard<std::mutex> lock(mutex);return result;}
+inline uint64_t request(Read kind,uint64_t generation){
+    uint64_t id;{std::lock_guard<std::mutex> lock(mutex);id=++serial;pending={id,generation,kind};}wake.notify_all();return id;
+}
+inline void cancel(uint64_t id){std::lock_guard<std::mutex> lock(mutex);if(pending.id==id)pending={};}
 inline void cleanup(){
     {std::lock_guard<std::mutex> lock(mutex);running=false;}wake.notify_all();if(worker.joinable())worker.join();
-    std::lock_guard<std::mutex> lock(mutex);result={};character_result={};
+    std::lock_guard<std::mutex> lock(mutex);result={};pending={};serial=0;
 }
 }
