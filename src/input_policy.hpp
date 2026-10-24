@@ -4,10 +4,16 @@
 namespace sketch::input {
 enum class WheelAction {None,Plane,Color};
 inline constexpr std::array<WheelAction,4> default_wheel={WheelAction::Plane,WheelAction::None,WheelAction::Color,WheelAction::None};
-struct PlaneWheel {
+constexpr int wheel_binding(bool ctrl,bool shift,bool alt){return int(ctrl)+int(shift)+int(alt)>1?-1:ctrl?1:shift?2:alt?3:0;}
+constexpr unsigned cycle_color(unsigned color,int steps,unsigned count){int next=(int(color)+steps)%int(count);return unsigned(next<0?next+int(count):next);}
+struct WheelState {
     double remainder=0;
-    constexpr int consume(double wheel,bool enabled){
-        if(!enabled){remainder=0;return 0;}
+    int binding=-1;
+    WheelAction action=WheelAction::None;
+    constexpr void reset(){remainder=0;binding=-1;action=WheelAction::None;}
+    constexpr int consume(double wheel,int selected_binding,WheelAction selected_action,bool enabled){
+        if(!enabled||selected_binding<0||selected_action==WheelAction::None){reset();return 0;}
+        if(binding!=selected_binding||action!=selected_action){reset();binding=selected_binding;action=selected_action;}
         remainder+=wheel;int steps=int(remainder);remainder-=steps;return steps;
     }
 };

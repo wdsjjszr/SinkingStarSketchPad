@@ -1,5 +1,6 @@
 #include "../src/free_camera.hpp"
 #include "../src/native_ground_pick.hpp"
+#include "../src/grid_visibility.hpp"
 #include <cassert>
 #include <iostream>
 using namespace sketch;
@@ -22,6 +23,7 @@ int main(){
     double pick_x,pick_y;assert(camera.project({0,0,0},pick_x,pick_y));
     auto hit=native_ground::pick(ground,camera,pick_x,pick_y);
     assert(hit.result==native_ground::PickResult::Ground&&grid::length(hit.center)<1e-6);
+    assert(grid::visible_from(ground,camera,{0,0,0}));
     for(int i=-3;i<=3;++i)for(int j=-3;j<=3;++j){double x,y,a,b;assert(camera.project(cells.world(i,j),x,y));assert(cells.snap(camera,x,y,a,b)&&a==i&&b==j);}
     auto moved_game=fixture(25);assert(c.apply(moved_game.data()));for(int i=0;i<32;++i)assert(std::abs(moved_game[i]-p[i])<.001); // remains independent of gameplay follow camera
     auto reflected=original;auto mirror=identity();mirror[10]=-1;auto reflected_vp=mul(frame.vp,mirror);Mat inv;assert(inverse(reflected_vp,inv));store(reflected.data()+32,reflected_vp);store(reflected.data()+96,inv);

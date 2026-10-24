@@ -15,11 +15,12 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - Each level initializes the target plane once from the controlled character logical Z, with a button to set it again.
 - [Ground marking](docs/MANUAL_GROUND.md): character-plane and manual-marking buttons share one panel; middle-click marks the ground under the pointer once, with native wall occlusion.
 - World-space paths and optional grid drawing: plane pen/shapes and camera-following text anchors.
-- Layered grid previews, two-second plane hints and canvas-wheel plane height changes.
+- Gray grid previews, camera-occluded plane hints and configurable wheel/Shift/Ctrl/Alt actions.
+- A live Settings window with persistent hint layers, duration and wheel bindings.
 - Drag shapes or click their start/end points; right-click cancels an unfinished shape.
 - Persistent System / English / Simplified Chinese language selection.
 
-**Beta:** the user confirmed native previews and ground marking in the levels they checked. The grid drawing extension has received static checks and compilation only. Inspect alignment in your level; routes do not check obstacles, solve puzzles, or control the player. See [grid drawing, previews and draft upgrades](docs/GRID_DRAWING.md).
+**Beta:** the user confirmed native previews and ground marking in the levels they checked. The user reported the preceding grid drawing extension works well. This settings/preview revision has received static checks and compilation only. Inspect alignment in your level; routes do not check obstacles, solve puzzles, or control the player. See [grid drawing, previews and draft upgrades](docs/GRID_DRAWING.md).
 
 ## Use
 
@@ -31,7 +32,7 @@ The compatible add-on filename and persistent data folder remain `SinkingStarSke
 
 Version 3.4.5 adds gentler defaults, tilt limits, adjustable mouse sensitivity and separate **Invert mouse X/Y** settings, saved across restarts.
 
-Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt, wheel zoom with the drawing toolbar closed, Esc restore. With drawing open, the canvas wheel changes target-plane height instead. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
+Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt, wheel zoom with the drawing toolbar closed, Esc restore. With drawing open, wheel actions follow Settings; defaults are height changes and Shift+wheel color cycling. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
 
 ## Build from source
 

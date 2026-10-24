@@ -18,7 +18,7 @@ void compile_plane_capture(){
     doc={};history={};data_path.clear();shape_gesture.clear();dragging=false;
     auto stroke=std::make_shared<Stroke>();stroke->lattice=native_ground::lattice(3.25);stroke->points={{-1.25f,2},{3.5f,4}};
     page().push_back(stroke);set_ground(4.25);assert(page()[0]->lattice.origin.z==3.25&&camera_plane()==4.25);
-    plane_wheel.remainder=0;assert(plane_wheel.consume(.5,true)==0&&plane_wheel.consume(.5,true)==1);
+    drawing_wheel.reset();assert(drawing_wheel.consume(.5,0,input::WheelAction::Plane,true)==0&&drawing_wheel.consume(.5,0,input::WheelAction::Plane,true)==1);
     set_ground(camera_plane()+1);assert(camera_plane()==5.25);
 }
 void compile_legacy_backup_failure(const std::filesystem::path &draft){

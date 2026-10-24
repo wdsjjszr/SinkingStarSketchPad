@@ -2,7 +2,7 @@
 
 In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
 
-**Release status: beta.** The user confirmed native ground previews and marking in the levels they checked. The new grid drawing, previews and shape gestures have static checks and compilation only; full alignment still needs in-game confirmation.
+**Release status: beta.** The user confirmed native ground previews and marking in the levels they checked. The user reported the preceding grid drawing revision works well. This settings/preview revision has static checks and compilation only; full alignment still needs in-game confirmation.
 
 ## Requirements
 
@@ -66,7 +66,8 @@ Other accepted values are `zh-CN` and `auto`. The setting changes the mod interf
 | Whole-mark eraser / cell path | Alt+K / Alt+H |
 | Draw a stroke or shape | Hold and drag the left mouse button |
 | Line / arrow / rectangle / ellipse | Also supports click start, then click end; right-click cancels |
-| Raise / lower target plane one cell | Wheel on canvas with drawing open |
+| Raise / lower target plane one cell | Default: wheel on drawing canvas; configurable in Settings |
+| Cycle ink color | Default: Shift+wheel on drawing canvas |
 | Choose one of five ink colors | Alt+1-5 |
 | Snap a line/arrow to 45 degrees; constrain rectangle/ellipse | Hold Shift |
 | Undo | Ctrl+Z; right-click when no shape is pending and free camera is off |
@@ -106,7 +107,7 @@ The camera panel also offers X/Y/height offsets, yaw, tilt, zoom and reset-to-cu
 
 Toggle **Grid drawing** to create new marks on the target plane. Pen/ellipse use continuous plane coordinates; line/arrow/rectangle endpoints snap to the nearest center or intersection, with Shift constraints calculated on that plane. Text anchors follow the world while letters stay upright and fixed in screen size. Erasing uses the current projection; paths retain their existing rules. Each mark keeps its own plane, ink and width.
 
-**Grid preview** layers (centers, intersections, borders, checkerboard) can be combined around the pointer over 11×11 cells, with adjustable opacity and no wall cutting. Successful plane marks show a separate two-second checker hint; it cuts only cells inside solid voxels and is capped at 128×128 cells. The canvas wheel raises/lowers the plane while drawing is open. See [the full behavior and draft-upgrade guide](GRID_DRAWING.md).
+**Grid preview** combines centers, perspective crosses, borders and checker fill over 11×11 cells, with adjustable opacity and no wall cutting. Both previews are gray. **Settings** configures the separate plane-change hint: default borders/checker, 25% opacity and 1 second, with On/Off/Height adjustment only and 0–5-second duration. Automatic level initialization is silent; hints hide cells blocked by native walls along the current camera view and remain capped at 128×128 cells. Settings apply immediately and persist automatically. See [the full behavior and draft-upgrade guide](GRID_DRAWING.md).
 
 ## Cell paths that follow the camera
 
@@ -118,7 +119,7 @@ Toggle **Grid drawing** to create new marks on the target plane. Pen/ellipse use
 6. Click **Finish / New path** to begin a separate route.
 7. Press **E** to return to the game. The path is stored using a world-space grid reference and is reprojected with the camera as it moves or zooms.
 
-Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click requests fresh terrain and marks once using the pointer and camera captured at the click, then exits even on failure. It preserves the selected tool and adds no path point. Esc, switching pages/tools and a newer marking request invalidate a pending result. With drawing open, the canvas wheel raises/lowers the target Z by one, preserving its fractional part; close drawing for free-camera zoom. Switching levels initializes all pages from one character sample and retains existing paths. See [ground marking](MANUAL_GROUND.md).
+Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click requests fresh terrain and marks once using the pointer and camera captured at the click, then exits even on failure. It preserves the selected tool and adds no path point. Esc, switching pages/tools and a newer marking request invalidate a pending result. With drawing open, the wheel follows four configurable bindings. Defaults are height adjustment for plain wheel and color cycling for Shift+wheel; Ctrl/Alt+wheel do nothing, as do multiple modifiers. Height changes preserve fractional Z; close drawing for free-camera zoom. Switching levels initializes all pages from one character sample and retains existing paths. See [ground marking](MANUAL_GROUND.md).
 
 The background reader only probes level identity about once per second while idle. Terrain refreshes on level entry and manual/middle-click requests; characters are sampled for initialization and the character-plane button. Initialization retries until a valid character is available, then stops. The duplicate backup GPU camera collector is disabled; effective-camera and free-camera processing remain active.
 
@@ -158,7 +159,7 @@ To disable a manual install, exit the game and move this add-on out of the game 
 - Incorrect alignment: stop using that route and keep a screenshot plus a description of the level/camera view for a bug report. Do not treat the preview as an obstacle or walkability map.
 - Missing Chinese glyphs after an upgrade: keep your existing `ReShade.ini` and inspect its font setting. In ReShade settings, choose `SinkingStarSketch-assets/NotoSansCJKsc-Regular.otf` as the font and restart if needed.
 - Diagnostics: `ReShade.log` and `SinkingStarSketch-data/status.txt`. Review logs and remove personal paths before posting them publicly.
-- Native preview and ground marking were confirmed by the user in tested levels. This grid drawing extension received static checks and compilation only; no test programs or game sessions were run.
+- Native preview and ground marking were confirmed by the user in tested levels. The preceding grid drawing revision was reported usable. This settings/preview revision received static checks and compilation only; no test programs or game sessions were run.
 
 ## Credits and third-party notices
 

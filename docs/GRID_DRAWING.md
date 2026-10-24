@@ -4,17 +4,40 @@
 
 按 **E** 打开绘图菜单。默认仍是普通屏幕绘画，点击 **网格绘画** 后，新笔迹绘制在当前标定的平面上，随游戏或自由相机重新投影。切换模式和重新标定都不会移动已有笔迹；每条笔迹保存创建时的平面、工具、颜色和笔宽。缺少有效相机或平面时，拒绝新建网格笔迹并提示原因。
 
-### 预览与改高
+### 预览与设置
 
-**网格预览** 的中心点、网格交点、格子边框、棋盘填充可以独立叠加，统一透明度为 0–100%，默认 45%，初始只显示中心点。范围为指针附近 **11×11 格**；交点相对格心偏移半格。普通绘画时仅路径工具显示，网格绘画时所有工具都可显示。常驻预览不检查墙体，不挖空。
+**网格预览** 的中心点、网格交点、格子边框、棋盘填充可以独立叠加，统一透明度为 0–100%，默认 45%，初始只显示中心点。范围为指针附近 **11×11 格**；普通绘画时仅路径工具显示，网格绘画时所有工具都可显示。常驻预览不检查墙体，不挖空。
 
-角色初始化、角色按钮、手动标记、中键标记或滚轮改高成功后，另行显示 **2 秒**、约 25% 透明度的棋盘平面提示；即使关闭网格预览也会显示。同高度重新标记会重新计时，新的标定意图立即清除旧提示，换页和换关卡也会清除。异步结果仍检查请求、页面和关卡，旧请求不会恢复旧提示。
+两种网格预览统一采用浅灰色 RGB(190,190,190)。交点位于半格偏移处，改成沿平面网格轴的小十字，每条臂长 0.12 格，随透视变化；边框为 1 像素，十字为 1.5 像素。
 
-提示围绕视口中心在平面上的落点生成；中心无交集时，选有效视口角点中距相机最近的落点，无可见交集则不画。使用视口裁剪，极远景最多 **128×128 格**。只挖去平面穿入原生实心体素内部的格子，体素顶面保留，不按视线挖掉墙后格子；无有效体素快照时完整显示。
+点击工具栏 **设置** 打开可移动、可调整大小的窗口，再次点击或使用关闭按钮可关闭。E 随绘图菜单隐藏 / 恢复窗口，保留本次会话的打开状态。修改即时生效并自动保存到 `settings.ini` 的 `[Drawing]`，无需点击保存，保留语言、相机及常驻预览偏好。
 
-菜单打开时在画布滚轮向上 / 向下，当前 Z 每格加 / 减 **1**，保留小数部分。高精度滚轮累计满一格才移动。改高会取消旧标定请求、结束当前路径并触发两秒提示，不读取角色或地形。文字输入、活动控件、面板、ReShade 菜单及失焦期间不触发；关闭绘图后，滚轮继续缩放自由相机。
+**平面变动预览** 的默认图层为边框和棋盘开启、中心点和交点关闭，透明度默认 25%。显示策略可选：
 
-网格绘画开关、预览总开关、四个图层与透明度保存到 `SinkingStarSketch-data/settings.ini` 的 `[Drawing]`，保留语言和相机设置。
+- **开**（默认）：角色按钮、手动标记、中键标记或滚轮改高成功后显示。
+- **关**：不显示。
+- **仅微调**：仅响应配置为调整高度的滚轮操作。
+
+进入关卡仍自动初始化平面，但首次初始化始终不提示。时长默认 **1 秒**，滑块范围 **0–5 秒**，Ctrl+点击可输入到 0.01 秒，0 秒不显示。已有提示中的图层和透明度立即更新，时长按原起始时间重新计算；关闭或到期的旧提示不会因调长时长而重新出现。同高度主动标定重新计时，新意图、换页、换关卡清除旧提示，异步旧结果不会恢复旧提示。
+
+短时提示按**当前有效相机的格心射线**判断遮挡，包括自由相机：原生实心墙体位于相机与格心之间则整格隐藏，自身顶面接触不算遮挡。四个图层共用可见格掩码，隐藏格不绘制填充和独立边线，交点十字只沿可见格相邻边绘制。不要求目标高度实际存在原生地面；没有有效同关卡体素快照时完整显示。只覆盖原生实心体素，墙边会呈格子状。
+
+提示围绕视口中心在平面上的落点生成；中心无交集时采用有效角点中距相机最近的落点，无可见交集则不画。视口裁剪后最多 **128×128 格**；相机实际投影、平面、区域与快照不变时复用遮挡结果。
+
+### 滚轮绑定
+
+设置提供四套独立下拉框，每套均可选“无／调整参考平面高度／切换画笔颜色”：
+
+| 输入 | 默认动作 |
+| --- | --- |
+| 滚轮 | 调整参考平面高度 |
+| Ctrl+滚轮 | 无 |
+| Shift+滚轮 | 切换画笔颜色 |
+| Alt+滚轮 | 无 |
+
+仅绘图打开且指针位于可用画布时生效；同时按多个修饰键不触发。文本、活动控件、面板、弹出菜单、ReShade 菜单及失焦时不触发。高精度滚轮满一格执行一次，切换组合、修改绑定或失去画布资格时清空余量。关闭绘图后仍用于自由相机缩放。
+
+调整高度每格将 Z 加 / 减 **1**，保留小数部分，取消旧标定请求并结束当前路径，不读取角色或地形，按显示策略触发提示。切色向上选择下一色、向下选择上一色，在现有五色中循环，不依赖相机或平面；正在绘制的笔迹和路径保留创建时颜色，切色不触发平面提示。
 
 ### 各工具
 
@@ -47,11 +70,17 @@ Shift 的 45 度、正方形和圆形约束在平面坐标计算；需要吸附�
 
 Press **E**, then toggle **Grid drawing** to anchor new marks to the target plane. Ordinary drawing remains the default. Every mark captures its own plane, tool, ink and width; later mode/plane changes leave it in place. Missing camera/plane data rejects new grid marks.
 
-**Grid preview** combines centers, half-cell intersections, borders and checker fill over 11×11 cells around the pointer. Opacity defaults to 45%; centers alone start enabled. Ordinary drawing previews paths; grid drawing previews all tools. It never cuts walls. Preferences persist under `[Drawing]` in `settings.ini`, preserving language and camera settings.
+**Grid preview** combines centers, intersections, borders and checker fill over 11×11 cells around the pointer. Opacity defaults to 45%; centers alone start enabled. Ordinary drawing previews paths; grid drawing previews all tools. It never cuts walls. Both previews use gray RGB(190,190,190); intersections are perspective-aligned crosses with 0.12-cell arms and 1.5-pixel width, against 1-pixel borders.
 
-Every successful plane mark, including same-height selection and wheel changes, displays a separate two-second checker hint at roughly 25% opacity. Only solid voxel interiors are cut; voxel tops and cells behind walls remain. Missing terrain shows an uncut hint. The viewport-clipped region is capped at 128×128 cells, using the center-plane hit or nearest valid corner hit. New intents, pages and levels clear the old hint; stale asynchronous replies cannot restore it.
+**Settings** opens a movable, resizable window. Close it with its X or the Settings button; E hides/restores it with drawing while retaining the session's open state. Changes apply immediately and save automatically under `[Drawing]` in `settings.ini`, preserving other preferences.
 
-With drawing open, the canvas wheel changes target Z by whole units while retaining its fraction. Precision-wheel fractions accumulate. This cancels pending marks, ends the active path and shows the hint without reading character/terrain data. Text, active widgets, panels, menus and lost focus suppress it. Close drawing to use free-camera wheel zoom.
+Plane-change hints default to borders plus checker, centers/intersections off, 25% opacity, **1 second**. Choose On, Off or Height adjustment only; the last option responds only to wheel height actions. Automatic level initialization stays silent. Duration is 0–5 seconds, with Ctrl+click numeric entry to 0.01 seconds; zero disables display. Existing hints update style immediately and duration relative to their original start. Disabled or expired hints never revive. Same-height marks restart the timer; new intents/pages/levels clear old hints and stale replies cannot restore them.
+
+The hint uses the current effective camera, including free camera, to cast through each cell center. A native solid wall strictly before the center hides the whole cell; contact with the target's own voxel top does not. All layers share the mask, including visible-cell borders/cross arms. It does not require an actual native floor at the target height. Missing terrain shows an uncut hint. The viewport-clipped region remains capped at 128×128 cells; unchanged view/plane/region/terrain reuses the mask.
+
+Four wheel bindings offer None, Adjust reference plane height or Cycle ink color. Defaults are plain wheel for height, Shift+wheel for color, Ctrl/Alt+wheel for None. Multiple modifiers do nothing. Bindings apply only on the available drawing canvas; text, widgets, panels, popups, menus and lost focus suppress them. Fractional steps accumulate only within the same binding/action and reset when ownership or binding changes. Close drawing for free-camera wheel zoom.
+
+Height actions change Z by whole units, preserve its fraction, cancel pending marks and end the active path without reading character/terrain data. Color actions cycle forward/up and backward/down through the five inks, work without camera/plane data, preserve existing stroke/path colors and never trigger hints.
 
 Pen/ellipse use continuous plane coordinates. Line/arrow/rectangle endpoints snap to the nearest center or intersection, preferring centers on ties; Shift constraints are calculated on the plane. Text follows its world anchor while remaining upright with fixed screen size. Stroke widths and arrowheads also remain pixel-sized. Erasing checks current projected outlines, including arrowheads; paths keep their existing integer-center/row/column behavior.
 

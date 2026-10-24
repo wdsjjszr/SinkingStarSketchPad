@@ -26,7 +26,7 @@
 
 Esc、换页、切换工具、退出绘图或新的标记请求会作废旧请求；尚未开始的后台请求也会取消。点击取消按钮可退出手动标记。中键只在绘图编辑状态、游戏前台且指针位于画布时生效；文本输入、活动控件、工具面板和 ReShade 菜单会阻止触发。切回游戏后先松开鼠标按键。
 
-点选使用当前有效相机，包括自由相机。射线根据相机世界位置和朝向定向，不固定假定深度 0 是近端、1 是远端。地面自身的体素顶面不算前方遮挡；先碰到实心墙侧面或底面时提示遮挡。绘图打开时，画布滚轮将当前平面 Z 每次升高 / 降低 1，保留原小数；高精度滚轮累计满一格再移动。它取消旧标记请求、结束当前路径，不读取角色或地形。关闭绘图后滚轮用于自由相机缩放。
+点选使用当前有效相机，包括自由相机。射线根据相机世界位置和朝向定向，不固定假定深度 0 是近端、1 是远端。地面自身的体素顶面不算前方遮挡；先碰到实心墙侧面或底面时提示遮挡。绘图打开时，滚轮行为可在设置中配置：默认无修饰键调高、Shift+滚轮循环切色，Ctrl／Alt 默认无，多修饰键无动作。调高每格将 Z 加 / 减 1、保留小数，取消旧请求并结束路径，不读取角色或地形。切色不依赖平面，也不改变已开始笔迹的颜色。高精度余量在切换组合或失去画布资格时清除。关闭绘图后滚轮用于自由相机缩放。
 
 ### 读取、页面和保存
 
@@ -34,7 +34,7 @@ Esc、换页、切换工具、退出绘图或新的标记请求会作废旧请�
 
 三个草稿页分别保存目标平面。换关卡会清除旧目标并使用新的初始角色高度；已有路径保留各自的格子基准和高度。真正改变平面时结束当前路径，已有世界笔迹继续使用各自基准。草稿 v3 为每条笔迹保存网格，兼容读取 v1/v2，升级前保留独立备份；详见[网格绘画说明](GRID_DRAWING.md)。
 
-角色初始化、角色按钮、手动 / 中键标记和滚轮改高成功后，显示独立的两秒半透明棋盘提示，同高度重新标记也会计时。只挖去平面穿入实心体素内部的格子，保留体素顶面，不按视线挖空墙后区域。没有有效快照则完整显示；范围最多 128×128 格。新意图清除旧提示，换页、换关卡也清除。常驻 11×11 网格预览始终不挖空。
+关卡首次自动初始化不显示提示。之后角色按钮、手动 / 中键标记与滚轮改高可显示独立提示，默认灰色边框加棋盘、透明度 25%、时长 1 秒。“设置”提供四图层、透明度、开／关／仅微调和 0–5 秒时长，即时生效并自动保存。同高度重新标记重新计时；关闭或到期的提示不复活。按当前相机的格心射线整格挖去墙体后方区域，自身顶面接触不算遮挡；没有有效同关卡快照则完整显示。范围最多 128×128 格，新意图、换页、换关卡清除提示；常驻 11×11 网格预览始终不挖空。
 
 旧 GPU 地面实例采集与评分仍已移除。备用 `camera_bridge` 的重复采集和回退读取暂时禁用，保留源码；当前有效相机和自由相机必需的 GPU 读取／覆盖继续运行。
 
@@ -44,9 +44,9 @@ Esc、换页、切换工具、退出绘图或新的标记请求会作废旧请�
 
 - 遮挡只检查原生实心墙体，不检查装饰模型和角色；升降台、莲叶、额外支撑与世界环绕渲染副本仍未纳入。
 - 基准底层是逻辑参考面，可能没有可见地形；墙顶可选不表示可达。本工具不复刻移动、技能或寻路规则。
-- 用户已反馈地面标记可正常使用；本次新增预览、滚轮和网格绘画仅做静态检查与编译，未执行测试程序或游戏。
+- 用户已反馈地面标记可正常使用；此前网格绘画已反馈整体可用；本次设置与预览调整仅做静态检查与编译，未执行测试程序或游戏。
 
-`SinkingStarSketch-data/status.txt` 保留 `ground_marking`、`ground_ready`、`ground_z`、`ground_layers`、`ground_request_pending`、`ground_scene_ready`、`ground_generation`、`ground_character_*`、`ground_controlled_count` 和 `native_ground_*`。角色坐标和错误代表最近一次读取结果，不是实时监视值；模式和跟随字段已移除。新增 `grid_drawing`、`grid_preview_*`、`plane_hint`、`shape_gesture`、`draft_format` 和 `world_strokes` 描述绘图与预览状态。历史实验见 [NATIVE_GROUND_EXPERIMENT.md](NATIVE_GROUND_EXPERIMENT.md)。
+`SinkingStarSketch-data/status.txt` 保留 `ground_marking`、`ground_ready`、`ground_z`、`ground_layers`、`ground_request_pending`、`ground_scene_ready`、`ground_generation`、`ground_character_*`、`ground_controlled_count` 和 `native_ground_*`。角色坐标和错误代表最近一次读取结果，不是实时监视值；模式和跟随字段已移除。`grid_drawing`、`grid_preview_*`、`plane_hint`、`shape_gesture`、`draft_format` 和 `world_strokes` 描述绘图与预览状态；`settings_open`、`hint_*`、`wheel_binding_0..3` 和 `ink_color` 描述新增设置。提示策略按开／关／仅微调编码为 0／1／2，来源按初始化／标记／滚轮编码为 0／1／2；滚轮动作按无／改高／切色编码为 0／1／2。历史实验见 [NATIVE_GROUND_EXPERIMENT.md](NATIVE_GROUND_EXPERIMENT.md)。
 
 ## English
 
@@ -58,12 +58,12 @@ On level entry, all three pages initialize once from one controlled-character sa
 
 **Middle-click on the canvas** always requests a one-shot ground mark and exits marking on success or failure. It preserves the tool and adds no path point. Pointer position, effective camera, page and level are captured at the click. While waiting, drawing pauses. Esc, switching page/tool, leaving drawing or a newer request invalidates the old result; queued work is cancelled when possible. Text, active widgets, panels, loss of focus and the ReShade menu suppress the shortcut. Release held mouse buttons after returning to the game.
 
-Rays use the effective camera position and forward direction, including free camera, instead of assuming depth 0-to-1 is forward. A floor's own voxel top is not an occluder; a solid wall before the floor blocks selection. The canvas wheel changes target Z by whole units while drawing is open, cancelling old requests and ending the active path without reading terrain/characters. Fractions accumulate; the original Z fraction remains. With drawing closed, the wheel zooms the free camera.
+Rays use the effective camera position and forward direction, including free camera, instead of assuming depth 0-to-1 is forward. A floor's own voxel top is not an occluder; a solid wall before the floor blocks selection. Four configurable wheel bindings apply while drawing is open. Defaults are plain wheel for whole-unit height changes, Shift for palette cycling, Ctrl/Alt for None; multiple modifiers do nothing. Height actions cancel old requests/end paths without reading terrain or characters and preserve fractional Z. Color changes affect future marks only and need no plane. Fractional wheel input resets when binding/ownership changes. Close drawing for camera zoom.
 
-Idle work only probes level identity about once per second. Terrain is read on level entry and manual/middle-click requests; characters are sampled for initialization and the character button. Targets then remain fixed. Each page stays independent; new levels reset targets but existing paths retain their own lattice and height. Draft v3 stores per-mark grids and reads v1/v2, preserving a separate non-overwriting legacy backup before upgrade. See [grid drawing](GRID_DRAWING.md). Successful plane marks show one two-second checker hint, capped at 128×128 cells; only solid voxel interiors are cut, never floors behind walls. Voxel tops stay visible. New intents/pages/levels clear old hints; same-height marks restart the timer. The separate 11×11 persistent preview never cuts walls.
+Idle work only probes level identity about once per second. Terrain is read on level entry and manual/middle-click requests; characters are sampled for initialization and the character button. Targets then remain fixed. Each page stays independent; new levels reset targets but existing paths retain their own lattice and height. Draft v3 stores per-mark grids and reads v1/v2, preserving a separate non-overwriting legacy backup before upgrade. See [grid drawing](GRID_DRAWING.md). Automatic initialization stays silent. Settings controls hint layers, opacity, On/Off/Wheel-only and 0–5-second duration (default: gray borders/checker, 25%, 1 second). Hints hide whole cells whose centers are blocked by native walls from the current camera; own-top contact stays visible. The 128×128 cap remains. New intents/pages/levels clear hints, and same-height marks restart them. The 11×11 persistent preview never cuts walls.
 
 GPU ground scoring remains removed. The duplicate backup camera collector is disabled with its source retained; effective-camera and free-camera GPU handling remains active. Native Debug displays the last snapshot and still draws through walls. Height filtering affects display only.
 
 Occlusion covers native solid voxels only. Decorative models, characters, platforms, lilies, extra supports and world-wrap render copies are not included. Logical bases need not have visible terrain; a selectable wall top is not a walkability result.
 
-The user confirmed ground marking now works. This grid drawing extension received static checks, compile-time assertions, static analysis and compilation/linking only; no test programs or game sessions were run. The `ground_*` / `native_ground_*` diagnostics describe the latest requested samples, not live character tracking.
+The user confirmed ground marking now works. The preceding grid drawing revision was reported usable. This settings/preview revision received static checks, compile-time assertions, static analysis and compilation/linking only; no test programs or game sessions were run. The `ground_*` / `native_ground_*` diagnostics describe the latest requested samples, not live character tracking.

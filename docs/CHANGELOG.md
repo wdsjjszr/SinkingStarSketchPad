@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — preview settings and wheel bindings (2026-10-25)
+
+- Hide hinted cells whose centers are behind native walls in the current camera view; keep own-top contact visible and cache unchanged view/plane/terrain masks. Initial level-plane setup stays silent.
+- Render both grid previews in gray, replacing intersection dots with thicker perspective-aligned crosses.
+- Add an automatically saved Settings window for hint layers, opacity, On/Off/Wheel-only and 0–5-second duration (default borders/checker, 25%, 1 second). Live edits never revive expired hints.
+- Configure plain/Ctrl/Shift/Alt wheel actions independently: None, plane height or palette color. Defaults are height/plain and color/Shift; multiple modifiers do nothing.
+- Static checks, analysis and compilation/linking only; no test programs, game sessions or SHA checks. Draft format remains v3.
+
 ## Unreleased — grid drawing and previews (2026-10-24)
 
 - Add independent center/intersection/border/checker layers, opacity and persisted grid drawing preferences.

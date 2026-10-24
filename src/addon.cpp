@@ -85,7 +85,7 @@ auto wheel_actions=input::default_wheel;
 grid::VisibilityCache plane_visibility;
 double camera_plane(){const auto &g=doc.grids[doc.page];return g.ready?g.origin.z:0.;}
 input::Focus input_focus;
-input::PlaneWheel plane_wheel;
+input::WheelState drawing_wheel;
 void finish_path(){path_active=false;}
 void select_tool(Tool t){settle_drawing();cancel_ground_marking();selected=t;finish_path();}
 Page erase_before;
@@ -126,6 +126,7 @@ void load_drawing_preferences(){
     hint_preferences.duration_ms=unsigned(std::clamp(read(L"HintDurationMs",1000),0,5000));
     const wchar_t *keys[]={L"Wheel",L"CtrlWheel",L"ShiftWheel",L"AltWheel"};
     for(unsigned i=0;i<4;++i){int value=read(keys[i],int(input::default_wheel[i]));wheel_actions[i]=value>=0&&value<=2?input::WheelAction(value):input::default_wheel[i];}
+    drawing_wheel.reset();
 }
 void drawing_preferences_changed(){drawing_preferences_dirty=true;drawing_preferences_due=GetTickCount64()+500;}
 void save_drawing_preferences(){
@@ -153,7 +154,7 @@ void status() {
       << "\ngrid_preview_checker=" << grid_preview.checker << "\ngrid_preview_opacity=" << grid_preview.opacity
       << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences)
       << "\nshape_gesture=" << unsigned(shape_gesture.phase) << "\ndraft_format=" << doc.format_version
-      << "\nworld_strokes=" << std::count_if(page().begin(),page().end(),[](const auto &stroke){return stroke->lattice.ready;}) << '\n';
+      << "\nink_color=" << selected_color << "\nworld_strokes=" << std::count_if(page().begin(),page().end(),[](const auto &stroke){return stroke->lattice.ready;}) << '\n';
     f << "settings_open=" << settings_open << "\nhint_mode=" << unsigned(hint_preferences.mode) << "\nhint_duration_ms=" << hint_preferences.duration_ms
       << "\nhint_centers=" << hint_preferences.style.centers << "\nhint_intersections=" << hint_preferences.style.intersections
       << "\nhint_borders=" << hint_preferences.style.borders << "\nhint_checker=" << hint_preferences.style.checker << "\nhint_opacity=" << hint_preferences.style.opacity
@@ -365,7 +366,7 @@ void anchor_ground(bool quick=false){
 void poll_ground(){
     auto state=native_ground_bridge::snapshot();ground_character=state.character;ground_scene_ready=state.scene.ready;
     if(state.generation!=ground_generation){
-        settle_drawing();plane_wheel.remainder=0;
+        settle_drawing();drawing_wheel.reset();
         ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};plane_hint.clear();plane_visibility={};
         for(auto &g:doc.grids)g={};cancel_ground_marking();finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
     }
@@ -499,7 +500,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
         ImGui::TextWrapped("%s",tr(Label::HintHelp));ImGui::SeparatorText(tr(Label::WheelSettings));
         const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};
         const Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
-        for(unsigned i=0;i<4;++i){int action=int(wheel_actions[i]);if(ImGui::Combo(tr(bindings[i]),&action,actions,3)){wheel_actions[i]=input::WheelAction(action);plane_wheel.remainder=0;changed=true;}}
+        for(unsigned i=0;i<4;++i){int action=int(wheel_actions[i]);if(ImGui::Combo(tr(bindings[i]),&action,actions,3)){wheel_actions[i]=input::WheelAction(action);drawing_wheel.reset();changed=true;}}
         ImGui::TextWrapped("%s",tr(Label::WheelHelp));
         if(changed){plane_hint.expire(GetTickCount64(),doc.page,ground_generation,hint_preferences);drawing_preferences_changed();status();}
     }
@@ -686,10 +687,14 @@ void cursor(ImDrawList*draw,Point p) {
     float scale=std::clamp(ImGui::GetIO().DisplaySize.y/1440.f,1.f,1.5f);
     cursor_style::draw(draw,v(p),mode,colors[selected_color],scale);
 }
-void shift_plane_wheel(Point mouse,Point size,bool over_ui){
+void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui){
+    int binding=input::wheel_binding(rt->is_key_down(VK_CONTROL),rt->is_key_down(VK_SHIFT),rt->is_key_down(VK_MENU));
+    auto action=binding>=0?wheel_actions[size_t(binding)]:input::WheelAction::None;
     bool owns=editing&&input_focus.canvas_ready()&&!reshade_menu&&!over_ui&&!text_open&&!ImGui::IsAnyItemActive()
-        &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y&&doc.grids[doc.page].ready;
-    int steps=plane_wheel.consume(ImGui::GetIO().MouseWheel,owns);if(!steps)return;
+        &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y;
+    if(action==input::WheelAction::Plane&&!doc.grids[doc.page].ready)owns=false;
+    int steps=drawing_wheel.consume(ImGui::GetIO().MouseWheel,binding,action,owns);if(!steps)return;
+    if(action==input::WheelAction::Color){selected_color=input::cycle_color(selected_color,steps,std::size(colors));status();return;}
     settle_drawing();cancel_ground_marking();plane_hint.clear();finish_path();set_ground(camera_plane()+steps,grid::HintSource::Wheel);
 }
 void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bool &over_ui){
@@ -762,7 +767,7 @@ void overlay(effect_runtime*rt) {
         if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
         cancel_shape_right(mouse,size,over_ui);
         poll_ground();
-        shift_plane_wheel(mouse,size,over_ui);
+        handle_drawing_wheel(rt,mouse,size,over_ui);
         if(ground_marking&&editing&&foreground&&!over_ui&&!reshade_menu&&input_focus.canvas_ready())update_ground_pick(mouse,size);
         else ground_hit={};
         if(editing&&foreground&&!reshade_menu&&input_focus.canvas_ready())canvas(rt,size,mouse,over_ui);

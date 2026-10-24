@@ -54,6 +54,7 @@ int main(){
     assert(cache.update(camera,plane,terrain,-64,-64)&&!cache.mask.at(0,0)&&cache.mask.at(2,0));
     camera.frame++;assert(!cache.update(camera,plane,terrain,-64,-64));
     camera.eye.z=11;assert(cache.update(camera,plane,terrain,-64,-64));
+    camera.matrix[3]=.1;camera.inverse[3]=-1;assert(cache.update(camera,plane,terrain,-64,-64));
     plane.origin.z=2;assert(cache.update(camera,plane,terrain,-64,-64)&&cache.mask.at(0,0));
     assert(cache.update(camera,plane,nullptr,-64,-64)&&cache.mask.at(0,0));
     assert(cache.update(camera,plane,nullptr,-63,-64));

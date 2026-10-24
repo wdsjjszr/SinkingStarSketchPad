@@ -1,5 +1,13 @@
 # Validation — 3.4.5 Beta
 
+## Preview settings revision — 25 October 2026
+
+- The user reported the preceding drawing revision works well. This revision receives static compilation/assertions, Clang static analysis and production compilation/linking only. No test programs or game sessions are run, and no SHA checks are performed.
+- Compile-time assertions cover silent initialization, On/Off/Wheel-only, 0/1/5-second timing, same-height restart, last-hint/page/scene isolation, live duration changes without revival, wheel defaults/modifiers/fraction resets and bidirectional palette wrapping.
+- Compile-only assertion fixtures cover wall-before-center versus own-top contact, reverse-depth rays, mask edge ownership/cache invalidation, mixed world marks and INI round-tripping while preserving language. Non-constexpr assertions are not executed.
+- Runtime gaps: native-wall-only blocky occlusion, actual camera alignment/cross appearance, UI/keyboard capture, persistence and frame cost while moving the camera. Hints remain capped at 128×128 cells.
+
+
 ## Grid drawing extension — 24 October 2026
 
 - The user confirmed ground marking now works; the additional preview/drawing behaviors still need in-game confirmation.

@@ -16,12 +16,12 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(Undo,"Undo","撤销") X(Redo,"Redo","重做") X(Clear,"Clear page","清空本页") X(Page,"Page ","草稿 ") \
  X(Save,"Save","保存") X(Saved,"Saved","已保存") X(Saving,"Saving...","正在保存") X(Export,"Export SVG","导出 SVG") \
  X(Return,"Return to game E","返回游戏 E") \
- X(Help,"Shapes: drag or click start/end | Right click: cancel shape, otherwise undo | Wheel: plane height | Middle: mark ground","图形可拖绘或点击起终点 · 右键取消图形，否则撤销 · 滚轮改高 · 中键标记地面") \
+ X(Help,"Shapes: drag or click start/end | Right click: cancel shape, otherwise undo | Wheel: configured action | Shift+wheel: color by default | Middle: mark ground","图形可拖绘或点击起终点 · 右键取消图形，否则撤销 · 滚轮按设置执行 · 默认 Shift+滚轮切色 · 中键标记地面") \
  X(KeyboardHelp,"Keyboard: game | Alt+letter: tool | Alt+1-5: color | Alt+Tab: keep drawing mode","键盘操作游戏 · Alt+字母选工具 · Alt+1-5 选色 · 切出后保留绘图模式") \
  X(CameraToggle,"Free camera T","自由相机 T") \
  X(CameraTitle,"Free camera (experimental)###SketchFreeCamera","自由相机（实验功能）###SketchFreeCamera") \
  X(CameraUnavailable,"Game camera constants are not ready. Enter a level and wait.","尚未连接可控制的游戏相机，请进入关卡后稍候。") \
- X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag: rotate (pending shapes cancel first). Wheel: plane height with drawing open, zoom with it closed. E: drawing. Esc: restore.","WASD 平移 · Q/Z 升降 · Shift 加速 · 右键拖动旋转（优先取消未完成图形）。滚轮：绘图打开时改平面高度，关闭时缩放。E 绘图；Esc 恢复。") \
+ X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag: rotate (pending shapes cancel first). Wheel: configured drawing action while open, zoom while closed. E: drawing. Esc: restore.","WASD 平移 · Q/Z 升降 · Shift 加速 · 右键拖动旋转（优先取消未完成图形）。滚轮：绘图打开时按设置执行，关闭时缩放。E 绘图；Esc 恢复。") \
  X(CameraLimits,"Experimental render camera: original game culling, shadows, reflections and mouse picking may not follow large view changes.","实验性渲染相机：大幅变换时，游戏原有裁剪、阴影、反射及鼠标选取可能不随视角更新。") \
  X(CameraSpeed,"Movement speed","移动速度") X(CameraYaw,"Yaw","旋转") X(CameraPitch,"Tilt","俯仰") X(CameraZoom,"Zoom","缩放") \
  X(CameraSensitivity,"Mouse sensitivity","鼠标灵敏度") X(CameraInvertX,"Invert mouse X","反转鼠标 X 轴") X(CameraInvertY,"Invert mouse Y","反转鼠标 Y 轴") \
@@ -54,7 +54,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GroundCharacterWait,"Could not read the controlled character. The target plane was kept.","无法读取当前控制角色，已保留原目标平面。") \
  X(GroundLoading,"Native ground / character data is loading or unavailable.","原生地面或角色数据正在读取，或暂不可用。") \
  X(GroundWall,"A wall blocks this position. Point at a visible ground cell.","此处被墙面遮挡，请指向可见的地面格。") \
- X(GroundShortcut,"Canvas: middle click marks ground once; wheel raises / lowers the target plane by one cell.","画布中键快速标记地面；滚轮向上 / 向下将目标平面升高 / 降低一格。") \
+ X(GroundShortcut,"Canvas: middle click marks ground; wheel bindings are configurable in Settings.","画布中键快速标记地面；滚轮及组合键行为可在设置中调整。") \
  X(GroundLimits,"Occlusion checks native solid walls. Decorative models, platforms and lilies are not included.","遮挡仅检查原生实心墙体；暂不包含装饰模型、升降台和莲叶。") \
  X(GroundHover,"Ground height %.3g","地面高度 %.3g") \
  X(GroundLocked,"Target plane: height %.3g","目标平面：高度 %.3g") \
