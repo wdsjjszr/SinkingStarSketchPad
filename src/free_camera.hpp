@@ -47,7 +47,7 @@ inline Frame decode(const float*p){
     f.width=uint32_t(std::round(1/p[216]));f.height=uint32_t(std::round(1/p[217]));std::memcpy(&f.frame,p+225,4);f.valid=true;return f;
 }
 struct Controller {
-    bool enabled=false,holding=false,keep_view=true;
+    bool enabled=false,holding=false;
     Frame base;
     V pivot{},offset{};
     double yaw=0,pitch=0,zoom=1,speed=5,sensitivity=.08;
@@ -58,7 +58,7 @@ struct Controller {
         if(!std::isfinite(distance)||distance<=0||distance>10000)distance=20;
         pivot=f.eye+f.forward*distance;enabled=true;holding=false;return true;
     }
-    constexpr void leave(){holding=enabled&&keep_view;enabled=false;}
+    constexpr void hold(){holding=enabled;enabled=false;}
     constexpr void restore(){enabled=false;holding=false;}
     constexpr bool active_view() const{return enabled||holding;}
     Mat orient() const {constexpr double rad=3.141592653589793/180;return mul(rotation({0,0,1},yaw*rad),rotation(base.right,pitch*rad));}

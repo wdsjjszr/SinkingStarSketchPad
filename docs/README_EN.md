@@ -94,7 +94,7 @@ Press the single key **T**, or the toolbar's **Free camera** button, after enter
 | Zoom the lens | Mouse wheel on canvas with drawing closed |
 | Show / hide drawing toolbar | E |
 | Undo an annotation while the camera is active | Ctrl+Z |
-| Leave camera controls (Keep view on by default) | Esc or T |
+| Leave camera controls and restore game view | Esc or T |
 | Restore the native game view | Restore game view button |
 
 The camera panel offers separate **Invert mouse X** and **Invert mouse Y** checkboxes. X reverses horizontal right-drag rotation; Y reverses vertical right-drag tilt. Neither changes WASD, height keys or the wheel. X defaults off and Y on; saved axis settings remain. Movement speed and mouse sensitivity are adjustable and are saved together with these checkboxes in `SinkingStarSketch-data/settings.ini`; reopening the camera or restarting the game retains them. Resetting the view keeps these preferences.
@@ -131,7 +131,7 @@ This tool marks routes only: it does not move the player, push boxes, check obst
 
 ## Cursor artwork
 
-Normal mode uses a pale gold crystal-blade pointer with a dark edge and a small engraved star. Drawing uses an open star-shaped crosshair with an ink-color indicator. The eraser uses an open gold rune ring. The pointer tip or crosshair center is the mouse hotspot. Vector artwork scales modestly at higher resolutions.
+Normal mode uses a pale gold crystal-blade pointer with a dark edge and a small engraved star. Drawing uses an open star-shaped crosshair whose arms, center and outer dots show the selected ink color. The eraser uses an open gold rune ring. The pointer tip or crosshair center is the mouse hotspot. Vector artwork scales modestly at higher resolutions.
 
 ## Drafts, export, and limits
 
@@ -188,4 +188,4 @@ Third-party components retain their original licenses.
 
 ## Upstream camera integration — 3.4.6
 
-New or missing camera settings default to speed 5, Y inversion on and Keep view on. Existing speed and axis preferences remain. T/Esc leaves controls and releases input while retaining the view when enabled; T resumes. Restore game view always restores the native view, with a button in the drawing toolbar while held. Retained views reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.
+New or missing camera settings default to speed 5 and Y inversion on; existing speed and axis preferences remain. T/Esc exits controls and restores the game view. Only the Hold camera button leaves the pose fixed while releasing input; T resumes adjustment, and Esc or Restore game view restores the native camera. Fixed poses reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.

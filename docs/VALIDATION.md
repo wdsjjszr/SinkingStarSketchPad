@@ -2,7 +2,8 @@
 
 ## Preview visibility and upstream integration — 25 October 2026
 
-- Compile-time assertions cover retained/explicitly restored camera states, upstream defaults, 17-cell/radial parameters, 15% missing-preference opacity and cross-height vertical snapping with same-plane compatibility.
+- Follow-up checks cover reversed palette cycling, bilingual compact HUD hints, the 2.5px white/5.5px black center dot and explicit hold/resume/restore bridge fixtures. Integration fixtures are compiled only.
+- Compile-time assertions cover explicit camera hold and restored exit states, upstream defaults, 17-cell/radial parameters, 15% missing-preference opacity and cross-height vertical snapping with same-plane compatibility.
 - Compile-only fixtures cover exterior line/dot outlines, large preview batches, Shift release/Z preservation, pointer-ray failure with a valid vertical target, invalid camera/plane and behind-camera rejection, marker/projected-endpoint agreement and existing preference retention. Non-constexpr assertions are not run.
 - Static source ordering checks verify preview < ink < snap marker. C++17 syntax, Clang analysis and add-on linking are used; the full packager is parsed without execution. Game/test binaries, runtime scripts and SHA checks are not run.
 - Actual appearance, performance and held-camera interaction still require game confirmation. Existing unstaged changes and untracked depth prototypes are preserved; full fonts/manual packaging remain.
@@ -81,4 +82,4 @@ Naming update: display strings now use SinkingStarSketchPad. Executable code, fi
 
 ## Upstream integration
 
-3.4.6 camera retention/defaults are integrated with native-scene resets, effective eye/forward projection and local drawing input. Full fonts/manual packaging are retained. Static compilation/analysis/linking only; no runtime test or packager is executed.
+3.4.6 explicit camera holding/defaults are integrated with native-scene resets, effective eye/forward projection and local drawing input. Full fonts/manual packaging are retained. Static compilation/analysis/linking only; no runtime test or packager is executed.

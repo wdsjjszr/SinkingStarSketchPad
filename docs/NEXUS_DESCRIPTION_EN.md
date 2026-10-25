@@ -22,7 +22,7 @@ Press **E** for the toolbar, **G** to toggle the cursor and **B** to show/hide a
 ## Compatibility and limitations
 This is a beta. Automated validation includes real game upload data, grid inference, both UI languages, draft compatibility, DX12 rendering and synthetic camera movement, zoom and resize. Full visual alignment across all actual levels has not been comprehensively verified. Check the preview in your level, especially with unusual terrain, floors, transitions or wrapping maps.
 
-Free camera is a render-constant override; original game culling, shadows, reflections, visibility and mouse picking may not follow large changes. Actual-game scene consistency is not yet verified. While enabled, WASD/Q/Z control the camera; with drawing closed right drag rotates and wheel zooms, T/Esc leaves controls according to Keep view; Restore game view always restores the native camera. E still toggles drawing and Ctrl+Z undoes marks.
+Free camera is a render-constant override; original game culling, shadows, reflections, visibility and mouse picking may not follow large changes. Actual-game scene consistency is not yet verified. While enabled, WASD/Q/Z control the camera; with drawing closed right drag rotates and wheel zooms, T/Esc restores the game view; only Hold camera fixes the pose. E still toggles drawing and Ctrl+Z undoes marks.
 
 Only path marks are world anchored. Ordinary drawing and text stay in screen space. Routes do not check obstacles, move the player, push boxes or solve puzzles. Pages are not automatically assigned to levels.
 
@@ -48,4 +48,4 @@ Third-party components retain their original licenses.
 
 ## Upstream camera integration — 3.4.6
 
-New or missing camera settings default to speed 5, Y inversion on and Keep view on. Existing speed and axis preferences remain. T/Esc leaves controls and releases input while retaining the view when enabled; T resumes. Restore game view always restores the native view, with a button in the drawing toolbar while held. Retained views reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.
+New or missing camera settings default to speed 5 and Y inversion on; existing speed and axis preferences remain. T/Esc exits controls and restores the game view. Only the Hold camera button leaves the pose fixed while releasing input; T resumes adjustment, and Esc or Restore game view restores the native camera. Fixed poses reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.

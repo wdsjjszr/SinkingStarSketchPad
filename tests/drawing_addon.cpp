@@ -1,6 +1,16 @@
 // Compile-only fixtures for the production gesture, history, plane and save paths.
 #include "../src/addon.cpp"
 #include <cassert>
+void compile_camera_explicit_hold_and_restore(){
+    using namespace free_camera_bridge;
+    control={};control.enabled=true;control.offset={1,2,3};hold();
+    assert(!control.enabled&&control.holding&&control.active_view());
+    source.valid=true;source_tick=GetTickCount64();assert(enable(true,0));
+    assert(control.enabled&&!control.holding&&control.offset.z==3);
+    assert(enable(false,0)&&!control.active_view());
+    control.enabled=true;hold();restore();assert(!control.active_view());
+    source={};source_tick=0;
+}
 void compile_shape_history(){
     doc={};history={};data_path.clear();dirty=false;
     pending={};pending.tool=Tool::Rectangle;pending.points={{.2f,.2f},{.4f,.4f}};

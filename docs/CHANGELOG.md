@@ -2,6 +2,7 @@
 
 ## Unreleased — upstream integration and preview visibility (2026-10-25)
 
+- T/Esc now restores the game camera; only the explicit Hold camera button fixes the pose. Remove the automatic Keep view option while retaining speed/sensitivity/axis preferences.
 - Keep the compact E/G/B/T HUD hints; wheel up selects the previous ink color and wheel down selects the next. Drawing crosshair arms now use the selected ink.
 - Reduce white grid-center dots to a 2.5px radius, retaining the black 5.5px outer radius.
 - Merge upstream 3.4.6 camera retention, speed/Y defaults and scene cleanup while retaining the full font-bearing package and all native-ground/v4/input extensions.

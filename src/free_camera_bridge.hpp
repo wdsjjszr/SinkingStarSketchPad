@@ -137,11 +137,12 @@ inline void execute(api::command_queue*queue,api::command_list*cmd){
 }
 struct State {free_camera::Controller camera;bool ready=false;ULONGLONG last_patch=0;uint64_t patches=0;};
 inline State snapshot(){std::lock_guard<std::recursive_mutex> lock(mutex);return {control,source.valid&&GetTickCount64()-source_tick<2000,patch_tick,patched};}
-inline bool enable(bool value,double plane_z){std::lock_guard<std::recursive_mutex> lock(mutex);if(!value){control.leave();return true;}if(!source.valid||GetTickCount64()-source_tick>=2000)return false;if(control.holding){control.enabled=true;control.holding=false;return true;}return control.enable(source,plane_z);}
+inline bool enable(bool value,double plane_z){std::lock_guard<std::recursive_mutex> lock(mutex);if(!value){control.restore();return true;}if(!source.valid||GetTickCount64()-source_tick>=2000)return false;if(control.holding){control.enabled=true;control.holding=false;return true;}return control.enable(source,plane_z);}
+inline void hold(){std::lock_guard<std::recursive_mutex> lock(mutex);control.hold();}
 inline void restore(){std::lock_guard<std::recursive_mutex> lock(mutex);control.restore();}
 inline bool reset_view(double plane_z){std::lock_guard<std::recursive_mutex> lock(mutex);if(!source.valid||GetTickCount64()-source_tick>=2000)return false;return control.enable(source,plane_z);}
 inline void change(const free_camera::Controller&value){std::lock_guard<std::recursive_mutex> lock(mutex);if(control.enabled)control=value;}
-inline void preferences(double speed,double sensitivity,bool invert_x,bool invert_y,bool keep_view=true){std::lock_guard<std::recursive_mutex> lock(mutex);control.speed=std::clamp(speed,.1,30.);control.sensitivity=std::clamp(sensitivity,.01,.3);control.invert_x=invert_x;control.invert_y=invert_y;control.keep_view=keep_view;}
+inline void preferences(double speed,double sensitivity,bool invert_x,bool invert_y){std::lock_guard<std::recursive_mutex> lock(mutex);control.speed=std::clamp(speed,.1,30.);control.sensitivity=std::clamp(sensitivity,.01,.3);control.invert_x=invert_x;control.invert_y=invert_y;}
 inline grid::Camera projection(uint32_t width,uint32_t height){std::lock_guard<std::recursive_mutex> lock(mutex);if(!effective.valid||effective.width!=width||effective.height!=height||GetTickCount64()-source_tick>=2000)return {};return {effective.vp,effective.inv,effective.frame,true,effective.eye,effective.forward};}
 inline void cleanup(){std::lock_guard<std::recursive_mutex> lock(mutex);commands.clear();command_tables.clear();command_copies.clear();source_rank=0;effective={};descriptors.clear();layouts.clear();stamps.clear();control={};source={};source_tick=patch_tick=patched=0;viewport_width=viewport_height=0;}
 }

@@ -36,18 +36,18 @@ void test_overlay(effect_runtime*rt){
     if(tick==89)before_blur=c;
     if(tick==100)require(grid::length(c.offset-before_blur.offset)<.0001,"Background key moved camera");
     if(tick==109)require(c.enabled,"Typing T disabled camera");
-    if(tick==115){require(!c.enabled&&c.holding,"T did not retain the view");require(!io.WantCaptureKeyboard,"Held view still captures game keyboard");}
-    if(tick==135){require(c.enabled&&!c.holding,"T did not resume camera after resize");require(grid::length(c.offset-before_blur.offset)<.0001,"Resume lost retained offset");}
-    if(tick==145)require(!c.enabled&&c.holding,"Esc did not retain camera view");
-    if(tick==150)std::ofstream("free-camera-input-result.txt")<<"PASS: T toggle, W over panel, right drag, wheel, blur, text entry, resize, T/Esc held view and keyboard release\n";
+    if(tick==115){require(!c.active_view(),"T did not restore the game view");require(!io.WantCaptureKeyboard,"Held view still captures game keyboard");}
+    if(tick==135){require(c.enabled&&!c.holding,"T did not enable camera after resize");require(grid::length(c.offset)<.0001,"New camera controls did not start from the game view");}
+    if(tick==145)require(!c.active_view(),"Esc did not restore camera view");
+    if(tick==150)std::ofstream("free-camera-input-result.txt")<<"PASS: T toggle, W over panel, right drag, wheel, blur, text entry, resize, T/Esc restored view and keyboard release\n";
     if(tick==155){
         set_language(i18n::Language::English);
-        free_camera_bridge::preferences(2,.12,true,false,false);camera_preferences_dirty=true;save_camera_preferences();
-        free_camera_bridge::preferences(5,.08,false,true,true);load_camera_preferences();load_language();
+        free_camera_bridge::preferences(2,.12,true,false);camera_preferences_dirty=true;save_camera_preferences();
+        free_camera_bridge::preferences(5,.08,false,true);load_camera_preferences();load_language();
         auto restored=free_camera_bridge::snapshot().camera;
-        require(restored.speed==2&&restored.sensitivity==.12&&restored.invert_x&&!restored.invert_y&&!restored.keep_view,"Camera preferences did not round-trip");
+        require(restored.speed==2&&restored.sensitivity==.12&&restored.invert_x&&!restored.invert_y,"Camera preferences did not round-trip");
         require(language==i18n::Language::English,"Camera settings overwrote language");
-        std::ofstream("free-camera-input-result.txt",std::ios::app)<<"PASS: speed/sensitivity/X/Y/keep-view settings persist independently of language\n";
+        std::ofstream("free-camera-input-result.txt",std::ios::app)<<"PASS: speed/sensitivity/X/Y settings persist independently of language\n";
     }
 }
 }

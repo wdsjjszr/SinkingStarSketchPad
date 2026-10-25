@@ -42,7 +42,7 @@ void load_camera_preferences(){
     auto path=data_path.parent_path()/L"settings.ini";
     free_camera_bridge::preferences(GetPrivateProfileIntW(L"Camera",L"SpeedMilli",5000,path.c_str())/1000.,
         GetPrivateProfileIntW(L"Camera",L"SensitivityMilli",80,path.c_str())/1000.,
-        GetPrivateProfileIntW(L"Camera",L"InvertX",0,path.c_str())!=0,GetPrivateProfileIntW(L"Camera",L"InvertY",1,path.c_str())!=0,GetPrivateProfileIntW(L"Camera",L"KeepView",1,path.c_str())!=0);
+        GetPrivateProfileIntW(L"Camera",L"InvertX",0,path.c_str())!=0,GetPrivateProfileIntW(L"Camera",L"InvertY",1,path.c_str())!=0);
 }
 bool loaded=false, editing=false, visible=true, dirty=false, disabled=false, reshade_menu=false;
 bool dragging=false, erasing=false, text_open=false, text_focus=false, protected_file=false;
@@ -112,7 +112,7 @@ void save_camera_preferences(){
     const auto c=free_camera_bridge::snapshot().camera;auto path=data_path.parent_path()/L"settings.ini";
     bool ok=true;
     auto write=[&](const wchar_t*key,int value){auto text=std::to_wstring(value);ok=WritePrivateProfileStringW(L"Camera",key,text.c_str(),path.c_str())!=FALSE&&ok;};
-    write(L"SpeedMilli",int(std::lround(c.speed*1000)));write(L"SensitivityMilli",int(std::lround(c.sensitivity*1000)));write(L"InvertX",c.invert_x);write(L"InvertY",c.invert_y);write(L"KeepView",c.keep_view);
+    write(L"SpeedMilli",int(std::lround(c.speed*1000)));write(L"SensitivityMilli",int(std::lround(c.sensitivity*1000)));write(L"InvertX",c.invert_x);write(L"InvertY",c.invert_y);
     if(ok)camera_preferences_dirty=false;else{note(tr(Label::CameraSettingsFailed));camera_preferences_due=GetTickCount64()+5000;}
 }
 void load_drawing_preferences(){
@@ -148,7 +148,7 @@ void status() {
     std::ofstream f(data_path.parent_path()/L"status.txt");
     auto free=free_camera_bridge::snapshot();
     f << "camera_offset=" << free.camera.offset.x << ',' << free.camera.offset.y << ',' << free.camera.offset.z
-      << "\ncamera_held=" << free.camera.holding << "\ncamera_keep_view=" << free.camera.keep_view << "\ncamera_angles=" << free.camera.yaw << ',' << free.camera.pitch << "\ncamera_zoom=" << free.camera.zoom << '\n';
+      << "\ncamera_held=" << free.camera.holding << "\ncamera_angles=" << free.camera.yaw << ',' << free.camera.pitch << "\ncamera_zoom=" << free.camera.zoom << '\n';
     f << "version=3.4.6\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << doc.grids[doc.page].ready << "\ngrid_centers=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0) << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
@@ -597,7 +597,7 @@ void keys(effect_runtime*rt) {
     const bool ctrl=rt->is_key_down(VK_CONTROL),shift=rt->is_key_down(VK_SHIFT),alt=rt->is_key_down(VK_MENU);
     if((ground_marking||ground_request.tag.id)&&rt->is_key_pressed(VK_ESCAPE)){cancel_ground_marking();status();return;}
     if(shape_gesture.active()&&rt->is_key_pressed(VK_ESCAPE)){cancel();status();return;}
-    if(!text_open&&rt->is_key_pressed(VK_ESCAPE)&&free_camera_bridge::snapshot().camera.enabled){free_camera_bridge::enable(false,camera_plane());status();return;}
+    if(!text_open&&rt->is_key_pressed(VK_ESCAPE)&&free_camera_bridge::snapshot().camera.active_view()){free_camera_bridge::enable(false,camera_plane());status();return;}
     // These single-letter shortcuts must never consume text or modifier chords.
     if(!text_open&&!ctrl&&!shift&&!alt) {
         if(rt->is_key_pressed('T')&&!ImGui::IsAnyItemActive()){auto c=free_camera_bridge::snapshot();if(!free_camera_bridge::enable(!c.camera.enabled,camera_plane()))note(tr(Label::CameraUnavailable));status();}
@@ -724,20 +724,20 @@ void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     preferences_changed|=slider(Label::CameraSensitivity,c.sensitivity,.01f,.3f);
     preferences_changed|=ImGui::Checkbox(tr(Label::CameraInvertX),&c.invert_x);
     preferences_changed|=ImGui::Checkbox(tr(Label::CameraInvertY),&c.invert_y);
-    preferences_changed|=ImGui::Checkbox(tr(Label::CameraKeepView),&c.keep_view);
     ImGui::TextWrapped("%s",tr(Label::CameraPrefsHelp));
     slider(Label::CameraX,c.offset.x,-1000,1000);slider(Label::CameraY,c.offset.y,-1000,1000);slider(Label::CameraZ,c.offset.z,-1000,1000);
     const auto limits=c.pitch_limits();
     slider(Label::CameraYaw,c.yaw,-180,180);slider(Label::CameraPitch,c.pitch,float(limits[0]),float(limits[1]));slider(Label::CameraZoom,c.zoom,.05f,20);c.limit_angles();
-    bool reset=ImGui::Button(tr(Label::CameraReset));bool off=ImGui::Button(tr(Label::CameraOff));
+    bool reset=ImGui::Button(tr(Label::CameraReset));bool hold=ImGui::Button(tr(Label::CameraHold));ImGui::SameLine();bool off=ImGui::Button(tr(Label::CameraOff));
     ImGui::TextUnformatted(state.last_patch&&GetTickCount64()-state.last_patch<1500?tr(Label::CameraLive):tr(Label::CameraWaiting));
     ImGui::TextWrapped("%s",tr(Label::CameraLimits));ImGui::PopTextWrapPos();
     auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
     over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
-    if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y,c.keep_view);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
+    if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
     if(off){free_camera_bridge::restore();status();return;}
     if(reset){free_camera_bridge::reset_view(camera_plane());return;}
     free_camera_bridge::change(c);
+    if(hold){free_camera_bridge::hold();status();}
 }
 void camera_navigation(effect_runtime*rt,bool foreground,bool over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
