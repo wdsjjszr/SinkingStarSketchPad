@@ -2,6 +2,10 @@
 #include <algorithm>
 
 namespace sketch::ui {
+struct TextStyle {float size;bool bold;};
+namespace typography {
+inline constexpr TextStyle title{13,true},section{11,true},body{12,false},note{11,false},caption{10.5f,false};
+}
 constexpr float pixel_round(float value){return float(value<0?int(value-.5f):int(value+.5f));}
 struct UIScale {
     int percent;

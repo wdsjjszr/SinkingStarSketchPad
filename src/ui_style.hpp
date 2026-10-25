@@ -83,7 +83,24 @@ inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
     case Icon::Chevron:line(9,6,15,12);line(15,12,9,18);break;
     }
 }
-inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink){ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),s.px(size),vec(pixel_round(p.x),pixel_round(p.y)),c,label,std::strstr(label,"###"));}
+inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink,bool bold=false){
+    auto *draw=ImGui::GetWindowDrawList();p=vec(pixel_round(p.x),pixel_round(p.y));const char *end=std::strstr(label,"###");
+    draw->AddText(ImGui::GetFont(),s.px(size),p,c,label,end);
+    // shortcut: emphasize the shared regular font with one pixel; use a real bold face when exact weights are required.
+    if(bold)draw->AddText(ImGui::GetFont(),s.px(size),vec(p.x+1,p.y),c,label,end);
+}
+inline void label(const char *value,UIScale s,TextStyle style=typography::body,ImU32 color=ink,bool wrap=false){
+    FontScope font(s.px(style.size)/ImGui::GetFontSize());auto p=gui_vec2(imgui_function_table_instance()->GetCursorScreenPos);
+    float wrap_width=wrap?gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x:0;
+    ImGui::PushStyleColor(ImGuiCol_Text,color);if(wrap)ImGui::PushTextWrapPos(0);ImGui::TextUnformatted(value);if(wrap)ImGui::PopTextWrapPos();
+    if(style.bold)ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),ImGui::GetFontSize(),vec(pixel_round(p.x)+1,pixel_round(p.y)),ImGui::GetColorU32(ImGuiCol_Text),value,nullptr,wrap_width);
+    ImGui::PopStyleColor();
+}
+inline void bold_item_label(const char *value){
+    auto r=item_rect();auto size=gui_text_size(value);
+    ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),ImGui::GetFontSize(),vec(std::floor(r.x+(r.w-size.x)*.5f)+1,std::floor(r.y+(r.h-size.y)*.5f)),ImGui::GetColorU32(ImGuiCol_Text),value);
+}
+inline void percent_value(int value,UIScale s){FontScope font(s.px(typography::note.size)/ImGui::GetFontSize());ImGui::TextDisabled("%d%%",value);}
 inline void hint(const char *label,const char *keys=nullptr){
     if(!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))return;
     ImGui::BeginTooltip();ImGui::TextUnformatted(label);if(keys&&*keys)ImGui::TextDisabled("%s",keys);ImGui::EndTooltip();
@@ -102,8 +119,8 @@ inline bool button(const char *id,Icon glyph,const char *label,float w,float h,U
     float sz=s.px(18);const char *caption=label;
     float ix=r.x+(r.w-sz)*.5f,iy=r.y+(r.h-sz)*.5f;
     if(caption){
-        if(stacked){iy=r.y+s.px(7);auto m=gui_text_size(caption);float k=s.px(11)/ImGui::GetFontSize();text(vec(r.x+(r.w-m.x*k)*.5f,r.y+r.h-s.px(17)),caption,s,11,fg);}
-        else{ix=r.x+s.px(8);auto m=gui_text_size(caption);text(vec(ix+sz+s.px(6),r.y+(r.h-m.y*s.px(11)/ImGui::GetFontSize())*.5f),caption,s,11,fg);}
+        if(stacked){iy=r.y+s.px(7);auto m=gui_text_size(caption);float k=s.px(11)/ImGui::GetFontSize();text(vec(r.x+(r.w-m.x*k-(active?1:0))*.5f,r.y+r.h-s.px(17)),caption,s,11,fg,active);}
+        else{ix=r.x+s.px(8);float size=glyph==Icon::Grid||glyph==Icon::Eye?12.f:11.5f;auto m=gui_text_size(caption);text(vec(ix+sz+s.px(6),r.y+(r.h-m.y*s.px(size)/ImGui::GetFontSize())*.5f),caption,s,size,fg,true);}
     }
     icon(glyph,vec(ix,iy),sz,active&&tone==Tone::Teal?teal:fg);return clicked;
 }
@@ -150,7 +167,7 @@ inline bool slider(const char *id,float &value,float lo,float hi,float width,UIS
 }
 inline void header(const char *title,bool *open,UIScale s){
     float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
-    ImGui::InvisibleButton("##title",vec(std::max(s.px(1),available-(open?s.px(34):0)),s.px(28)));auto r=item_rect();text(vec(r.x,r.y+s.px(6)),title,s,13);
+    ImGui::InvisibleButton("##title",vec(std::max(s.px(1),available-(open?s.px(34):0)),s.px(28)));auto r=item_rect();text(vec(r.x,r.y+s.px(6)),title,s,typography::title.size,ink,typography::title.bold);
     if(ImGui::IsItemActive()&&ImGui::IsMouseDragging(ImGuiMouseButton_Left)){auto w=window_rect();auto delta=ImGui::GetIO().MouseDelta;ImGui::SetWindowPos(vec(w.x+delta.x,w.y+delta.y));}
     if(open){ImGui::SameLine();if(button("##close",Icon::Close,nullptr,s.px(28),s.px(28),s))*open=false;}
     ImGui::Separator();

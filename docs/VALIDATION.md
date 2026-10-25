@@ -1,5 +1,11 @@
 # Validation — 3.4.6 Beta
 
+## Annotated copy and typography — 25 October 2026
+
+- Applied the five submitted EditHere annotations: removed the settings/save/apply paragraph and plane-hint explanation; removed palette direction and camera pitch-limit prose; replaced the help footer with the requested short movement sentence. English copy follows the same edits.
+- Reference typography uses logical 13px emphasized titles, 12px body, 11px emphasized section labels, 11px muted notes and 10.5px status text. Tool selections, page/language/mode selections and primary actions receive emphasis. The shared regular font uses an extra whole-pixel text stroke for emphasis; exact font-weight matching would require a separate bold face.
+- Compile-time assertions verify title/body/note hierarchy across every supported scale from 75% through 200%. Validation is static compilation of core/production fixtures, Clang analysis and add-on compilation/linking. No rendered UI, game, test executable or SHA validation is run; actual appearance still needs user confirmation.
+
 ## UI feedback fixes — 25 October 2026
 
 - Custom checkboxes/toggles use an 8-unit inset and suppress the native Button border; icon-only buttons also suppress that extra border. Help uses a Bezier question mark. Drawing crosshairs no longer contain gold highlight strokes.

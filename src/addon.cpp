@@ -497,7 +497,7 @@ void export_svg(Point size) {
     }catch(const std::exception&e){note(std::string(tr(Label::ExportFailed))+e.what());}
 }
 template<size_t N> void help_section(Label title,const i18n::ShortcutEntry (&rows)[N],ui::UIScale s){
-    ImGui::PushID(int(title));ImGui::TextDisabled("%s",tr(title));
+    ImGui::PushID(int(title));ui::label(tr(title),s,ui::typography::section,ui::muted);
     float width=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
     if(ImGui::BeginTable("##keys",2,ImGuiTableFlags_NoSavedSettings|ImGuiTableFlags_SizingStretchProp)){
         ImGui::TableSetupColumn("",ImGuiTableColumnFlags_WidthFixed,std::min(s.px(115),width*.42f));
@@ -514,7 +514,7 @@ template<size_t N> void help_section(Label title,const i18n::ShortcutEntry (&row
                 draw->AddText(ImGui::GetFont(),ImGui::GetFontSize(),ui::vec(ui::pixel_round(p.x+s.px(5)),ui::pixel_round(p.y+s.px(2))),ui::ink,key,nullptr,wrap);
                 ImGui::Dummy(ui::vec(available,measure.y+s.px(4)));
             }
-            ImGui::TableNextColumn();ImGui::TextWrapped("%s",i18n::get(row,chinese()));
+            ImGui::TableNextColumn();ui::label(i18n::get(row,chinese()),s,ui::typography::body,IM_COL32(201,207,219,255),true);
         }
         ImGui::EndTable();
     }
@@ -531,12 +531,12 @@ void shortcut_help(Point size,Point mouse,bool &over_ui) {
             if(ImGui::BeginTable("##columns",2,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchSame|ImGuiTableFlags_NoSavedSettings)){
                 ImGui::TableNextRow();ImGui::TableNextColumn();
                 help_section(Label::ShortcutGeneralTitle,i18n::general_shortcuts,s);ImGui::Spacing();ImGui::Separator();
-                help_section(Label::ShortcutCameraTitle,i18n::camera_shortcuts,s);ImGui::TextWrapped("%s",tr(Label::CameraPrefsHelp));
+                help_section(Label::ShortcutCameraTitle,i18n::camera_shortcuts,s);ui::label(tr(Label::CameraPrefsHelp),s,ui::typography::note,ui::muted,true);
                 ImGui::TableNextColumn();help_section(Label::ShortcutToolsTitle,i18n::tool_shortcuts,s);ImGui::Spacing();ImGui::Separator();
-                help_section(Label::ShortcutDrawingTitle,i18n::drawing_shortcuts,s);ImGui::TextWrapped("%s",tr(Label::DrawingGestures));
+                help_section(Label::ShortcutDrawingTitle,i18n::drawing_shortcuts,s);ui::label(tr(Label::DrawingGestures),s,ui::typography::note,ui::muted,true);
                 ImGui::EndTable();
             }
-            ImGui::Separator();ImGui::TextWrapped("%s",tr(Label::KeyboardHelp));ImGui::TextDisabled("%s",tr(Label::WindowMoveHelp));
+            ImGui::Separator();ui::label(tr(Label::KeyboardHelp),s,ui::typography::note,ui::muted,true);ui::label(tr(Label::WindowMoveHelp),s,ui::typography::caption,ui::muted,true);
         }
         ImGui::EndChild();
     }
@@ -548,6 +548,7 @@ bool segmented(const char *id,const char *const *labels,int count,int &selected,
         if(i)ImGui::SameLine(0,s.px(2));ImGui::PushID(i);bool active=selected==i;
         ImGui::PushStyleColor(ImGuiCol_Button,active?ui::gold:IM_COL32(18,20,26,255));ImGui::PushStyleColor(ImGuiCol_Text,active?IM_COL32(26,20,5,255):ui::ink);
         if(ImGui::Button(labels[i])){changed=selected!=i;selected=i;}
+        if(active)ui::bold_item_label(labels[i]);
         ImGui::PopStyleColor(2);ImGui::PopID();
     }
     ImGui::PopStyleVar(2);ImGui::PopID();return changed;
@@ -558,7 +559,7 @@ bool setting_rows(const char *id){
 }
 void setting_label(Label label){ImGui::TableNextRow();ImGui::TableNextColumn();ImGui::AlignTextToFramePadding();ImGui::TextWrapped("%s",tr(label));ImGui::TableNextColumn();}
 void native_debug_settings(){
-    auto s=frame_ui;ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::DebugTitle));ImGui::SameLine();ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(ui::gold),"%s",tr(Label::DeveloperOnly));
+    auto s=frame_ui;ImGui::Separator();ui::label(tr(Label::DebugTitle),s,ui::typography::section,ui::muted);ImGui::SameLine();ui::label(tr(Label::DeveloperOnly),s,ui::typography::section,ui::gold);
     if(ui::toggle(tr(Label::NativeDebug),native_ground_debug,s)){native_ground_height=std::numeric_limits<double>::quiet_NaN();status();}
     if(!native_ground_debug)return;
     if(!native_ground_snapshot)ImGui::TextWrapped("%s",tr(Label::NativeLoading));
@@ -574,10 +575,11 @@ void native_debug_settings(){
             }
             ImGui::EndTable();
         }
+        ui::FontScope note(s.px(ui::typography::note.size)/ImGui::GetFontSize());ImGui::PushStyleColor(ImGuiCol_Text,ui::muted);
         ImGui::TextWrapped(tr(Label::NativeStats),native.scene.c_str(),native.cells.size(),native_ground_visible,native.heights.size());
-        ImGui::TextWrapped(tr(Label::NativeSources),native.wall_sets,native.voxel_count,native.fences,native.oceans);
+        ImGui::TextWrapped(tr(Label::NativeSources),native.wall_sets,native.voxel_count,native.fences,native.oceans);ImGui::PopStyleColor();
     }
-    ImGui::TextWrapped("%s",tr(Label::NativeLegend));ImGui::TextWrapped("%s",tr(Label::NativeLimits));
+    ui::label(tr(Label::NativeLegend),s,ui::typography::note,ui::muted,true);ui::label(tr(Label::NativeLimits),s,ui::typography::note,ui::muted,true);
 }
 void drawing_settings(Point size,Point mouse,bool &over_ui){
     if(!settings_open)return;
@@ -592,12 +594,12 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
                 if(segmented("##language",languages,3,choice,s))set_language(i18n::Language(choice));
                 setting_label(Label::UIScale);float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
                 ui::slider("##scale",ui_scale.pending,75,200,available-s.px(45),s);
-                ImGui::SameLine();ImGui::Text("%d%%",ui_scale.pending);
+                ImGui::SameLine();ui::percent_value(ui_scale.pending,s);
                 ImGui::TableNextRow();ImGui::TableSetColumnIndex(1);ImGui::BeginDisabled(ui_scale.pending==ui_scale.applied);
                 if(ImGui::Button(tr(Label::ApplyUIScale))&&ui_scale.apply()){ui_preferences_dirty=true;ui_preferences_due=GetTickCount64()+500;}
                 ImGui::EndDisabled();ImGui::EndTable();
             }
-            ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::WheelSettings));
+            ImGui::Separator();ui::label(tr(Label::WheelSettings),s,ui::typography::section,ui::muted);
             bool changed=false;
             if(setting_rows("##wheel")){
                 const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};constexpr Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
@@ -607,7 +609,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
                 }
                 ImGui::EndTable();
             }
-            ImGui::TextWrapped("%s",tr(Label::WheelHelp));ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::HintSettings));
+            ui::label(tr(Label::WheelHelp),s,ui::typography::note,ui::muted,true);ImGui::Separator();ui::label(tr(Label::HintSettings),s,ui::typography::section,ui::muted);
             if(setting_rows("##hint")){
                 setting_label(Label::HintMode);const char *modes[]={tr(Label::HintOn),tr(Label::HintOff),tr(Label::HintWheelOnly)};int mode=int(hint_preferences.mode);
                 if(segmented("##mode",modes,3,mode,s)){hint_preferences.mode=grid::HintMode(mode);changed=true;}
@@ -615,7 +617,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
                 if(ImGui::DragFloat("##duration",&seconds,.01f,0,5,"%.2f",ImGuiSliderFlags_AlwaysClamp)){hint_preferences.duration_ms=unsigned(std::lround(seconds*1000));changed=true;}
                 ImGui::EndTable();
             }
-            ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::HintStyle));
+            ImGui::Separator();ui::label(tr(Label::HintStyle),s,ui::typography::section,ui::muted);
             auto &preview=hint_preferences.style;
             if(ImGui::BeginTable("##layers",2,ImGuiTableFlags_SizingStretchSame|ImGuiTableFlags_NoSavedSettings)){
                 ImGui::TableNextRow();ImGui::TableNextColumn();changed|=ui::checkbox(tr(Label::GridCenters),preview.centers,s);ImGui::TableNextColumn();changed|=ui::checkbox(tr(Label::GridIntersections),preview.intersections,s);
@@ -623,7 +625,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
             }
             if(setting_rows("##opacity")){
                 setting_label(Label::GridOpacity);float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
-                changed|=ui::slider("##opacity",preview.opacity,0,100,available-s.px(40),s);ImGui::SameLine();ImGui::Text("%d%%",preview.opacity);ImGui::EndTable();
+                changed|=ui::slider("##opacity",preview.opacity,0,100,available-s.px(40),s);ImGui::SameLine();ui::percent_value(preview.opacity,s);ImGui::EndTable();
             }
             if(changed){plane_hint.expire(GetTickCount64(),doc.page,ground_generation,hint_preferences);drawing_preferences_changed();status();}
             native_debug_settings();
@@ -639,15 +641,15 @@ void grid_preview_controls(Point size,Point mouse,bool &over_ui){
     ImGui::SetNextWindowPos(ui::vec(placement.x,placement.y),ImGuiCond_Always);
     ui::panel_size(placement.w,size.y-s.px(16));
     if(ImGui::Begin("##SketchGridPreview",nullptr,ui::panel_flags|ImGuiWindowFlags_NoMove)){
-        ImGui::TextUnformatted(tr(Label::GridPreview));ImGui::Separator();
+        ui::label(tr(Label::GridPreview),s,{12,true});ImGui::Separator();
         bool changed=ui::checkbox(tr(Label::GridPreview),grid_preview.enabled,s);
         changed|=ui::checkbox(tr(Label::GridCenters),grid_preview.centers,s);
         changed|=ui::checkbox(tr(Label::GridIntersections),grid_preview.intersections,s);
         changed|=ui::checkbox(tr(Label::GridBorders),grid_preview.borders,s);
         changed|=ui::checkbox(tr(Label::GridChecker),grid_preview.checker,s);
-        ImGui::AlignTextToFramePadding();ImGui::TextDisabled("%s",tr(Label::GridOpacity));
+        ImGui::AlignTextToFramePadding();ui::label(tr(Label::GridOpacity),s,ui::typography::note,ui::muted);
         float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
-        changed|=ui::slider("##opacity",grid_preview.opacity,0,100,available-s.px(38),s);ImGui::SameLine();ImGui::Text("%d%%",grid_preview.opacity);
+        changed|=ui::slider("##opacity",grid_preview.opacity,0,100,available-s.px(38),s);ImGui::SameLine();ui::percent_value(grid_preview.opacity,s);
         if(changed){drawing_preferences_changed();status();}
     }
     grid_panel_bounds=ui::finish_panel(size.x,size.y,s);over_ui|=grid_panel_bounds.contains(mouse.x,mouse.y);
@@ -663,7 +665,7 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
     if(ImGui::Begin(tr(Label::Title),nullptr,ui::panel_flags)){
         float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
         ImGui::InvisibleButton("##title",ui::vec(std::max(s.px(1),available-s.px(114)),s.px(28)));
-        auto title=ui::item_rect();ui::text(ui::vec(title.x,title.y+s.px(6)),"SketchPad",s,13);
+        auto title=ui::item_rect();ui::text(ui::vec(title.x,title.y+s.px(6)),"SketchPad",s,ui::typography::title.size,ui::ink,ui::typography::title.bold);
         if(ImGui::IsItemActive()&&ImGui::IsMouseDragging(ImGuiMouseButton_Left)){auto r=ui::window_rect();auto delta=ImGui::GetIO().MouseDelta;ImGui::SetWindowPos(ui::vec(r.x+delta.x,r.y+delta.y));}
         for(unsigned i=0;i<3;++i){
             ImGui::SameLine(0,s.px(2));ImGui::PushID(int(i));
@@ -671,7 +673,7 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
             if(active){ImGui::PushStyleColor(ImGuiCol_Button,ui::gold);ImGui::PushStyleColor(ImGuiCol_Text,IM_COL32(26,20,5,255));}
             char number[]={char('1'+i),0};
             if(ImGui::Button(number,ui::vec(s.px(24),s.px(28)))){settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}
-            if(active)ImGui::PopStyleColor(2);
+            if(active){ui::bold_item_label(number);ImGui::PopStyleColor(2);}
             char keys[16];std::snprintf(keys,sizeof(keys),"Ctrl+%u",i+1);ui::hint(tr(Label::Page),keys);ImGui::PopID();
         }
         ImGui::SameLine(0,s.px(2));if(ui::button("##return",ui::Icon::Return,nullptr,s.px(28),s.px(28),s))set_edit(false);ui::hint(tr(Label::Return),"E");
@@ -691,10 +693,12 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
             d->AddCircle(center,s.px(15),selected_color==i?ui::gold:ui::border,24,s.px(2));d->AddCircleFilled(center,s.px(12),colors[i],24);
             char key[16];std::snprintf(key,sizeof(key),"Alt+%u",i+1);ui::hint(tr(Label::Color),key);ImGui::PopID();
         }
-        ImGui::AlignTextToFramePadding();ImGui::TextDisabled("%s",tr(Label::Width));ImGui::SameLine();
-        ui::slider("##width",width,1,16,gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x-s.px(25),s);ImGui::SameLine();ImGui::Text("%.0f",width);
-        ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::GridPlane));
-        ImGui::SameLine();if(doc.grids[doc.page].ready)ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(ui::teal),tr(Label::PlaneHeight),camera_plane());else ImGui::TextDisabled("%s",tr(Label::PlaneUnset));
+        ImGui::AlignTextToFramePadding();ui::label(tr(Label::Width),s,ui::typography::note,ui::muted);ImGui::SameLine();
+        ui::slider("##width",width,1,16,gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x-s.px(25),s);ImGui::SameLine();
+        {ui::FontScope note(s.px(ui::typography::note.size)/ImGui::GetFontSize());ImGui::Text("%.0f",width);}
+        ImGui::Separator();
+        {ui::FontScope note(s.px(ui::typography::note.size)/ImGui::GetFontSize());ImGui::TextDisabled("%s",tr(Label::GridPlane));
+        ImGui::SameLine();if(doc.grids[doc.page].ready)ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(ui::teal),tr(Label::PlaneHeight),camera_plane());else ImGui::TextDisabled("%s",tr(Label::PlaneUnset));}
         float chip_width=(available-s.px(6))*.5f;
         if(ui::button("##grid",ui::Icon::Grid,tr(Label::GridDrawing),chip_width,s.px(38),s,grid_drawing,ui::Tone::Teal)){
             settle_drawing();if(text_open)finish_text();cancel_ground_marking();finish_path();grid_drawing=!grid_drawing;drawing_preferences_changed();status();
@@ -713,7 +717,7 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
             commit();if(text_open)finish_text();if(ground_marking){cancel_ground_marking();status();}else request_ground(GroundAction::Manual);
         }
         ui::hint(tr(Label::GroundHelp));
-        ImGui::TextWrapped("%s",tr(Label::GroundShortcut));ui::hint(tr(Label::GroundLimits));
+        ui::label(tr(Label::GroundShortcut),s,ui::typography::caption,ui::muted,true);ui::hint(tr(Label::GroundLimits));
         if(ground_marking)ImGui::TextWrapped("%s",tr(Label::GroundHelp));
         if(ground_request.tag.id||!ground_ready())ImGui::TextWrapped("%s",tr(Label::GroundLoading));
         if((grid_drawing||selected==Tool::Path)&&!camera.valid)ImGui::TextWrapped("%s",tr(Label::CameraWait));
@@ -736,7 +740,7 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
             }
             ui::hint(tr(labels[i]),shortcuts[i]);ImGui::PopID();
         }
-        ImGui::Separator();ImGui::TextDisabled(tr(Label::PageStats),doc.page+1,page().size());
+        ImGui::Separator();ui::FontScope footer(s.px(ui::typography::caption.size)/ImGui::GetFontSize());ImGui::TextDisabled(tr(Label::PageStats),doc.page+1,page().size());
         const char *saved=tr(dirty?Label::Saving:Label::Saved);float saved_width=gui_text_size(saved).x;
         ImGui::SameLine(std::max(0.f,available-saved_width+s.px(10)));ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(dirty?ui::muted:ui::teal),"%s",saved);
     }

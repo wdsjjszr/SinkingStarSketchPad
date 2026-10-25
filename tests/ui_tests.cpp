@@ -1,5 +1,14 @@
 #include "../src/ui_scale.hpp"
 using namespace sketch::ui;
+constexpr bool type_hierarchy(){
+    if(!typography::title.bold||!typography::section.bold||typography::body.bold||typography::note.bold||typography::caption.bold)return false;
+    for(int percent=75;percent<=200;++percent){
+        UIScale s(percent);
+        if(s.px(typography::title.size)<=s.px(typography::body.size)||s.px(typography::body.size)<=s.px(typography::note.size)||s.px(typography::caption.size)>s.px(typography::note.size))return false;
+    }
+    return true;
+}
+static_assert(type_hierarchy(),"Titles and section labels carry weight; title/body/note hierarchy survives every supported scale");
 static_assert(UIScale{}.percent==100&&UIScale{}.px(12)==18&&UIScale{}.px(256)==384,"100 percent retains 18px text and the reference proportions");
 static_assert(UIScale(10).percent==75&&UIScale(500).percent==200&&UIScale(150).legacy(400)==600,"Manual scale is bounded and legacy windows only multiply by the manual ratio");
 static_assert(UIScale(200).px(28)==84&&UIScale(100,24).px(12)==24,"Geometry and font sizing share one scale, including host font size");
