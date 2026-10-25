@@ -7,6 +7,7 @@
 - Middle-click ground marking keeps active world lines/arrows and paths across its asynchronous reply. A held shape drag waits for a new endpoint click; failed picks keep the drawing and plane.
 - Show a half-opacity dashed height projection and landing dot from a pending line/arrow start or the current path endpoint onto the newly chosen plane. Helpers disappear when drawing ends and are never saved/exported.
 - Enabled free-camera controls own right drag for rotation/tilt even while drawing is open. Holding a pose without controls retains normal drawing right-click behavior.
+- Replace text annotation shadows with a 2px black outline, retaining text size and ink color. SVG uses stroke-before-fill text; UI typography is unchanged.
 - Retain preview geometry while caching circle offsets, emitting fixed quads directly and bypassing unnecessary polygon clipping. A 128x128 isolated comparison reduced dense center/cross generation plus clipping by 88-90%, with matching triangle positions, colors and opacity; actual game frame costs remain unmeasured.
 
 ## Unreleased — upstream integration and preview visibility (2026-10-25)

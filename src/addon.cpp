@@ -476,13 +476,18 @@ void draw_native_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_
         ImGui::SetTooltip(tr(Label::NativeHover),native_ground_source(nearest->source),nearest->entity_id,nearest->center.x,nearest->center.y,nearest->center.z);
     }
 }
+constexpr float text_outline_width=2;
+void outlined_text(ImDrawList *draw,Point position,float size,ImU32 color,const char *text){
+    for(int y=-1;y<=1;++y)for(int x=-1;x<=1;++x)if(x||y)
+        draw->AddText(ImGui::GetFont(),size,ImVec2(position.x+x*text_outline_width,position.y+y*text_outline_width),IM_COL32(0,0,0,255),text);
+    draw->AddText(ImGui::GetFont(),size,v(position),color,text);
+}
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
     auto p=projected(s,size);if(p.empty())return;auto a=p.front();
     ImU32 c=colors[s.color],shadow=IM_COL32(9,14,23,210);
     if(s.tool==Tool::Text) {
         float fs=std::max(20.f,s.width*4+12);
-        draw->AddText(ImGui::GetFont(),fs,ImVec2(a.x+1.5f,a.y+1.5f),shadow,s.text.c_str());
-        draw->AddText(ImGui::GetFont(),fs,v(a),c,s.text.c_str());return;
+        outlined_text(draw,a,fs,c,s.text.c_str());return;
     }
     polyline(draw,p,shadow,s.width+3);polyline(draw,p,c,s.width);
     if(s.tool==Tool::Path){
@@ -511,7 +516,7 @@ void export_svg(Point size) {
         for(const auto&s:page()) {
             auto p=projected(*s,size);if(p.empty())continue;const char *c=hex[s->color];
             if(s->tool==Tool::Text) {
-                out<<"<text x=\""<<p[0].x<<"\" y=\""<<p[0].y+std::max(20.f,s->width*4+12)<<"\" fill=\""<<c<<"\" font-size=\""<<std::max(20.f,s->width*4+12)<<"\" font-family=\"Microsoft YaHei,sans-serif\" xml:space=\"preserve\">";
+                out<<"<text x=\""<<p[0].x<<"\" y=\""<<p[0].y+std::max(20.f,s->width*4+12)<<"\" fill=\""<<c<<"\" stroke=\"#000000\" stroke-width=\""<<text_outline_width*2<<"\" stroke-linejoin=\"round\" paint-order=\"stroke fill\" font-size=\""<<std::max(20.f,s->width*4+12)<<"\" font-family=\"Microsoft YaHei,sans-serif\" xml:space=\"preserve\">";
                 for(char ch:s->text){if(ch=='&')out<<"&amp;";else if(ch=='<')out<<"&lt;";else if(ch=='>')out<<"&gt;";else if(ch=='\n')out<<"<tspan x=\""<<p[0].x<<"\" dy=\"1.2em\">&#160;</tspan>";else out<<ch;}out<<"</text>\n";
             } else {
                 if(p.size()==1)out<<"<circle cx=\""<<p[0].x<<"\" cy=\""<<p[0].y<<"\" r=\""<<s->width*.5f<<"\" fill=\""<<c<<"\"/>\n";
