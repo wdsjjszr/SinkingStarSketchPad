@@ -64,10 +64,10 @@ Repeat with `-InputSuite` to exercise the production keyboard/mouse routing in a
 
 ## Create a distributable package
 
-After building, provide the tested ReShade runtime, the unmodified Noto Sans CJK SC Regular font and its license to the packaging script:
+After building, provide the tested ReShade runtime, the unmodified Noto Sans CJK SC Regular and Bold fonts and their license to the packaging script:
 
 ```powershell
-python scripts/package.py --runtime 'C:\deps\ReShade64.dll' --font 'C:\deps\NotoSansCJKsc-Regular.otf' --font-license 'C:\deps\LICENSE-Noto.txt'
+python scripts/package.py --runtime 'C:\deps\ReShade64.dll' --font 'C:\deps\NotoSansCJKsc-Regular.otf' --bold-font 'C:\deps\NotoSansCJKsc-Bold.otf' --font-license 'C:\deps\LICENSE-Noto.txt'
 ```
 
 This creates a ZIP in `dist/` with bilingual manual-install/uninstall guides, checksums, configuration and notices, without installer scripts. It validates the external dependency hashes; it does not download dependencies. The package uses the source build output, not a binary branding patch. Verify a fresh package before distributing it. [Nexus publishing notes](docs/UPLOAD_GUIDE_zh-CN.md) and an [English page draft](docs/NEXUS_DESCRIPTION_EN.md) are included.

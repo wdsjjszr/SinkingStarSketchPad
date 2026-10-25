@@ -1,4 +1,6 @@
 #include "../src/ui_scale.hpp"
+#include "../src/font_weight.hpp"
+#include <array>
 using namespace sketch::ui;
 constexpr bool type_hierarchy(){
     if(!typography::title.bold||!typography::section.bold||typography::body.bold||typography::note.bold||typography::caption.bold)return false;
@@ -34,3 +36,10 @@ constexpr bool dismissal(){
 }
 static_assert(dismissal(),"Closing clicks stay blocked through release; the next intentional click reaches the canvas");
 static_assert(Rect{10,20,30,40}.contains(10,20)&&!Rect{10,20,30,40}.contains(40,20),"UI hit regions use the same bounds as drawing");
+constexpr bool font_weights(){
+    std::array<unsigned char,34> font{{'O','T','T','O',0,1,0,0,0,0,0,0,'O','S','/','2',0,0,0,0,0,0,0,28,0,0,0,6,0,0,0,0,2,188}};
+    if(font_weight(font.data(),font.size())!=700||font_weight(font.data(),33)!=0||font_weight(nullptr,0)!=0)return false;
+    font[32]=1;font[33]=144;if(font_weight(font.data(),font.size())!=400)return false;
+    font[20]=255;return font_weight(font.data(),font.size())==0;
+}
+static_assert(font_weights(),"Font selection distinguishes real Bold from Regular and rejects truncated/out-of-range tables");

@@ -546,9 +546,9 @@ bool segmented(const char *id,const char *const *labels,int count,int &selected,
     bool changed=false;ImGui::PushID(id);ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ui::vec(s.px(6),s.px(4)));
     for(int i=0;i<count;++i){
         if(i)ImGui::SameLine(0,s.px(2));ImGui::PushID(i);bool active=selected==i;
+        ui::FontScope weight(1,active);
         ImGui::PushStyleColor(ImGuiCol_Button,active?ui::gold:IM_COL32(18,20,26,255));ImGui::PushStyleColor(ImGuiCol_Text,active?IM_COL32(26,20,5,255):ui::ink);
         if(ImGui::Button(labels[i])){changed=selected!=i;selected=i;}
-        if(active)ui::bold_item_label(labels[i]);
         ImGui::PopStyleColor(2);ImGui::PopID();
     }
     ImGui::PopStyleVar(2);ImGui::PopID();return changed;
@@ -671,9 +671,10 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
             ImGui::SameLine(0,s.px(2));ImGui::PushID(int(i));
             bool active=doc.page==i;
             if(active){ImGui::PushStyleColor(ImGuiCol_Button,ui::gold);ImGui::PushStyleColor(ImGuiCol_Text,IM_COL32(26,20,5,255));}
+            ui::FontScope weight(1,active);
             char number[]={char('1'+i),0};
             if(ImGui::Button(number,ui::vec(s.px(24),s.px(28)))){settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}
-            if(active){ui::bold_item_label(number);ImGui::PopStyleColor(2);}
+            if(active)ImGui::PopStyleColor(2);
             char keys[16];std::snprintf(keys,sizeof(keys),"Ctrl+%u",i+1);ui::hint(tr(Label::Page),keys);ImGui::PopID();
         }
         ImGui::SameLine(0,s.px(2));if(ui::button("##return",ui::Icon::Return,nullptr,s.px(28),s.px(28),s))set_edit(false);ui::hint(tr(Label::Return),"E");

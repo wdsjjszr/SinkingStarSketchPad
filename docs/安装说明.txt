@@ -36,3 +36,5 @@ SinkingStarSketchPad 3.4.6 — 手动安装
 ## 上游相机整合 — 3.4.6
 
 尚未保存对应设置时，速度默认 5、反转 Y 开启；已有速度及轴向偏好保留。T/Esc 退出操作并恢复游戏视角，只有“固定相机”按钮会保留机位并释放输入；T 可继续调整，Esc 或“恢复游戏视角”可归位。机位不跨重启保留，切换原生关卡会清除。绘画、地面标记及体素裁剪继续使用有效相机的位置和朝向。仍采用附字体的完整手动包。
+
+真粗体：一并复制 SinkingStarSketch-assets/NotoSansCJKsc-Bold.otf；在原 ReShade.ini 的 [STYLE] 中设置 EditorFont=.\SinkingStarSketch-assets\NotoSansCJKsc-Bold.otf 和 EditorFontSize=18。Font、LatinFont 保持 Regular 文件。ReShade 的着色器代码编辑器也会使用 Bold。重启后加载；仅复制插件不会加载粗体字体。

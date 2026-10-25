@@ -1,6 +1,7 @@
 #pragma once
 #include "ui_scale.hpp"
 #include "imgui_abi.hpp"
+#include "font_weight.hpp"
 #include <cmath>
 #include <cstring>
 
@@ -9,8 +10,21 @@ inline constexpr ImU32 ink=IM_COL32(232,234,240,255),muted=IM_COL32(154,163,181,
 inline ImVec2 vec(float x,float y){return ImVec2(x,y);}
 inline Rect window_rect(){auto p=gui_vec2(imgui_function_table_instance()->GetWindowPos),s=gui_vec2(imgui_function_table_instance()->GetWindowSize);return {p.x,p.y,s.x,s.y};}
 inline Rect item_rect(){auto a=gui_vec2(imgui_function_table_instance()->GetItemRectMin),b=gui_vec2(imgui_function_table_instance()->GetItemRectMax);return {a.x,a.y,b.x-a.x,b.y-a.y};}
+inline ImFont *font_face(bool bold){
+    auto &fonts=ImGui::GetIO().Fonts->Fonts;
+    // ReShade loads EditorFont into the second slot; do not mistake its default editor face for CJK bold.
+    if(bold&&fonts.Size>1){
+        auto *font=fonts[1];
+        if(font->Sources.Size){
+            auto *source=font->Sources[0];
+            if(source->FontDataSize>0&&font_weight(static_cast<const unsigned char *>(source->FontData),size_t(source->FontDataSize))>=600
+               &&font->IsGlyphInFont(0x8bbe))return font;
+        }
+    }
+    return fonts[0];
+}
 struct FontScope {
-    explicit FontScope(float ratio){float current=ImGui::GetFontSize();ImGui::PushFont(nullptr,ImGui::GetStyle().FontSizeBase*pixel_round(current*ratio)/current);}
+    explicit FontScope(float ratio,bool bold=false){float current=ImGui::GetFontSize();ImGui::PushFont(font_face(bold),ImGui::GetStyle().FontSizeBase*pixel_round(current*ratio)/current);}
     ~FontScope(){ImGui::PopFont();}
 };
 struct Style {
@@ -84,21 +98,14 @@ inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
     }
 }
 inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink,bool bold=false){
+    FontScope font(s.px(size)/ImGui::GetFontSize(),bold);
     auto *draw=ImGui::GetWindowDrawList();p=vec(pixel_round(p.x),pixel_round(p.y));const char *end=std::strstr(label,"###");
-    draw->AddText(ImGui::GetFont(),s.px(size),p,c,label,end);
-    // shortcut: emphasize the shared regular font with one pixel; use a real bold face when exact weights are required.
-    if(bold)draw->AddText(ImGui::GetFont(),s.px(size),vec(p.x+1,p.y),c,label,end);
+    draw->AddText(ImGui::GetFont(),ImGui::GetFontSize(),p,c,label,end);
 }
 inline void label(const char *value,UIScale s,TextStyle style=typography::body,ImU32 color=ink,bool wrap=false){
-    FontScope font(s.px(style.size)/ImGui::GetFontSize());auto p=gui_vec2(imgui_function_table_instance()->GetCursorScreenPos);
-    float wrap_width=wrap?gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x:0;
+    FontScope font(s.px(style.size)/ImGui::GetFontSize(),style.bold);
     ImGui::PushStyleColor(ImGuiCol_Text,color);if(wrap)ImGui::PushTextWrapPos(0);ImGui::TextUnformatted(value);if(wrap)ImGui::PopTextWrapPos();
-    if(style.bold)ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),ImGui::GetFontSize(),vec(pixel_round(p.x)+1,pixel_round(p.y)),ImGui::GetColorU32(ImGuiCol_Text),value,nullptr,wrap_width);
     ImGui::PopStyleColor();
-}
-inline void bold_item_label(const char *value){
-    auto r=item_rect();auto size=gui_text_size(value);
-    ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),ImGui::GetFontSize(),vec(std::floor(r.x+(r.w-size.x)*.5f)+1,std::floor(r.y+(r.h-size.y)*.5f)),ImGui::GetColorU32(ImGuiCol_Text),value);
 }
 inline void percent_value(int value,UIScale s){FontScope font(s.px(typography::note.size)/ImGui::GetFontSize());ImGui::TextDisabled("%d%%",value);}
 inline void hint(const char *label,const char *keys=nullptr){
@@ -119,8 +126,10 @@ inline bool button(const char *id,Icon glyph,const char *label,float w,float h,U
     float sz=s.px(18);const char *caption=label;
     float ix=r.x+(r.w-sz)*.5f,iy=r.y+(r.h-sz)*.5f;
     if(caption){
-        if(stacked){iy=r.y+s.px(7);auto m=gui_text_size(caption);float k=s.px(11)/ImGui::GetFontSize();text(vec(r.x+(r.w-m.x*k-(active?1:0))*.5f,r.y+r.h-s.px(17)),caption,s,11,fg,active);}
-        else{ix=r.x+s.px(8);float size=glyph==Icon::Grid||glyph==Icon::Eye?12.f:11.5f;auto m=gui_text_size(caption);text(vec(ix+sz+s.px(6),r.y+(r.h-m.y*s.px(size)/ImGui::GetFontSize())*.5f),caption,s,size,fg,true);}
+        float size=stacked?11.f:glyph==Icon::Grid||glyph==Icon::Eye?12.f:11.5f;bool strong=stacked?active:true;
+        FontScope caption_font(s.px(size)/ImGui::GetFontSize(),strong);auto m=gui_text_size(caption);
+        if(stacked){iy=r.y+s.px(7);text(vec(r.x+(r.w-m.x)*.5f,r.y+r.h-s.px(17)),caption,s,size,fg,strong);}
+        else{ix=r.x+s.px(8);text(vec(ix+sz+s.px(6),r.y+(r.h-m.y)*.5f),caption,s,size,fg,strong);}
     }
     icon(glyph,vec(ix,iy),sz,active&&tone==Tone::Teal?teal:fg);return clicked;
 }

@@ -51,7 +51,7 @@ Language=zh-CN
 
 **设置 → 界面缩放** 可在 75%–200% 调整所有插件窗口、悬停提示和 HUD；默认 100% 对应当前约 18px 字号。拖动只修改待应用值，点击 **应用缩放** 后下一帧生效，并保存为 `[Interface] UIScalePercent`；其他设置仍即时生效。笔迹、文字标注、世界网格和鼠标图案保持原尺寸；自由相机保留原布局和配色。
 
-中英文统一使用原版 **Noto Sans CJK SC Regular**。已有安装需在 `ReShade.ini` 的 `[STYLE]` 中将 `Font` 和 `LatinFont` 都设为 `.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf`，保持 `FontSize=18`，重启游戏后生效。仅替换插件不会修改已安装的 ReShade 字体配置。UI 字号、坐标和内边距采用整像素，减少非整数缩放的模糊和多余滚动条。字体按 OFL 1.1 授权，可随 Mod 分发，同时保留原版权声明和许可；详见[第三方说明](../THIRD_PARTY_NOTICES.md)。
+中英文正文使用原版 **Noto Sans CJK SC Regular**，强调文字使用 **Noto Sans CJK SC Bold**。已有安装需在 `ReShade.ini` 的 `[STYLE]` 中将 `Font` 和 `LatinFont` 都设为 `.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf`，保持 `FontSize=18`，另设 `EditorFont=.\SinkingStarSketch-assets\NotoSansCJKsc-Bold.otf` 和 `EditorFontSize=18`，重启后生效。插件复用这个独立字体槽显示真粗体，因此 ReShade 着色器代码编辑器也使用 Bold。缺少粗体文件或配置时保持常规字体，不再使用伪加粗。仅替换插件不会修改已安装的 ReShade 字体配置。UI 字号、坐标和内边距采用整像素，减少非整数缩放的模糊和多余滚动条。字体按 OFL 1.1 授权，可随 Mod 分发，同时保留原版权声明和许可；详见[第三方说明](../THIRD_PARTY_NOTICES.md)。
 
 点击 **网格预览** 打开工具栏旁的控制页，鼠标离开仍保持打开；再次点击入口或点击外部关闭，关闭这一击直到释放都不会触发画布操作。原生地面 Debug 控件移至设置。平面变动预览在缺少配置时默认仅开启棋盘填充，边框关闭、透明度 15%、保持 0.75 秒；已有明确保存的设置继续生效。
 

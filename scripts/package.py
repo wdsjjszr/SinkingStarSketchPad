@@ -24,6 +24,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runtime', type=Path, required=True)
     parser.add_argument('--font', type=Path, required=True)
+    parser.add_argument('--bold-font', type=Path, required=True)
     parser.add_argument('--font-license', type=Path, required=True)
     parser.add_argument('--addon', type=Path, default=ROOT/'build/SinkingStarSketch.addon64')
     parser.add_argument('--staging', type=Path, default=ROOT/'build/package/SinkingStarSketchPad-3.4.6-Manual')
@@ -34,6 +35,8 @@ def main():
             parser.error(f'Use the tested, unmodified {key} dependency; SHA256 must be {expected}')
     if not args.addon.is_file() or args.addon.read_bytes()[:2] != b'MZ':
         parser.error('Build the native add-on first, or pass --addon.')
+    if not args.bold_font.is_file():
+        parser.error('Pass the unmodified NotoSansCJKsc-Bold.otf with --bold-font.')
 
     staging = args.staging.resolve()
     if staging.exists():
@@ -44,6 +47,7 @@ def main():
         'SinkingStarSketch.addon64': args.addon,
         'ReShade.ini': ROOT/'config/ReShade.ini',
         'SinkingStarSketch-assets\\NotoSansCJKsc-Regular.otf': args.font,
+        'SinkingStarSketch-assets\\NotoSansCJKsc-Bold.otf': args.bold_font,
     }
     manifest = {'Name':'SinkingStarSketchPad', 'Version':'3.4.6', 'ReleaseStatus':'Beta',
                 'Source':'https://github.com/ouyangzhixuan/SinkingStarSketchPad', 'License':'MIT',
