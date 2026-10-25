@@ -2,6 +2,7 @@
 #include "ui_scale.hpp"
 #include "imgui_abi.hpp"
 #include <cmath>
+#include <cstring>
 
 namespace sketch::ui {
 inline constexpr ImU32 ink=IM_COL32(232,234,240,255),muted=IM_COL32(154,163,181,255),gold=IM_COL32(255,181,71,255),teal=IM_COL32(45,212,191,255),border=IM_COL32(51,56,71,255);
@@ -78,7 +79,7 @@ inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
     case Icon::Chevron:line(9,6,15,12);line(15,12,9,18);break;
     }
 }
-inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink){ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),s.px(size),p,c,label);}
+inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink){ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),s.px(size),p,c,label,std::strstr(label,"###"));}
 inline void hint(const char *label,const char *keys=nullptr){
     if(!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))return;
     ImGui::BeginTooltip();ImGui::TextUnformatted(plain(label));if(keys&&*keys)ImGui::TextDisabled("%s",keys);ImGui::EndTooltip();
@@ -96,7 +97,7 @@ inline bool button(const char *id,Icon glyph,const char *label,float w,float h,U
     float ix=r.x+(r.w-sz)*.5f,iy=r.y+(r.h-sz)*.5f;
     if(caption){
         if(stacked){iy=r.y+s.px(7);auto m=gui_text_size(caption);float k=s.px(11)/ImGui::GetFontSize();text(vec(r.x+(r.w-m.x*k)*.5f,r.y+r.h-s.px(17)),caption,s,11,fg);}
-        else{ix=r.x+s.px(8);text(vec(ix+sz+s.px(6),r.y+(r.h-s.px(22))*.5f),caption,s,11,fg);}
+        else{ix=r.x+s.px(8);auto m=gui_text_size(caption);text(vec(ix+sz+s.px(6),r.y+(r.h-m.y*s.px(11)/ImGui::GetFontSize())*.5f),caption,s,11,fg);}
     }
     icon(glyph,vec(ix,iy),sz,active&&tone==Tone::Teal?teal:fg);return clicked;
 }

@@ -8,20 +8,31 @@ inline constexpr const char *language_code(Language l){return l==Language::Engli
 inline Language parse_language(std::string_view s){return s=="en"?Language::English:s=="zh-CN"?Language::Chinese:Language::System;}
 inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chinese||(l==Language::System&&system_chinese);}
 
+// ReShade 6.8.0 merges Fork Awesome glyphs into the main UI font.
 #define SKETCH_TEXTS(X) \
  X(Title,"SinkingStarSketchPad###SinkingStarSketch","SinkingStarSketchPad###SinkingStarSketch") \
- X(Pen,"Pen Alt+P","画笔 Alt+P") X(Line,"Line Alt+L","直线 Alt+L") X(Arrow,"Arrow Alt+A","箭头 Alt+A") \
- X(Rectangle,"Rectangle Alt+R","矩形 Alt+R") X(Ellipse,"Ellipse Alt+O","椭圆 Alt+O") X(Text,"Text Alt+T","文字 Alt+T") \
- X(Eraser,"Eraser Alt+K","橡皮 Alt+K") X(Path,"Path Alt+H","路径 Alt+H") X(Color,"Color","颜色") X(Width,"Width","笔宽") \
- X(Undo,"Undo","撤销") X(Redo,"Redo","重做") X(Clear,"Clear page","清空本页") X(Page,"Page ","草稿 ") \
- X(Save,"Save","保存") X(Saved,"Saved","已保存") X(Saving,"Saving...","正在保存") X(Export,"Export SVG","导出 SVG") \
- X(Return,"Return to game E","返回游戏 E") \
- X(Help,"Shapes: drag or click start/end | Right: cancel shape / finish path / hold to erase | Wheel: configured action | Shift+wheel: color by default | Middle: mark ground","图形可拖绘或点击起终点 · 右键取消图形 / 结束路径 / 按住擦除 · 滚轮按设置执行 · 默认 Shift+滚轮切色 · 中键标记地面") \
- X(KeyboardHelp,"Keyboard: game | Alt+letter: tool | Alt+1-5: color | Alt+Tab: keep drawing mode","键盘操作游戏 · Alt+字母选工具 · Alt+1-5 选色 · 切出后保留绘图模式") \
- X(CameraToggle,"Free camera T","自由相机 T") \
+ X(Pen,"\uf040 Pen","\uf040 画笔") X(Line,"\uf068 Line","\uf068 直线") X(Arrow,"\uf178 Arrow","\uf178 箭头") \
+ X(Rectangle,"\uf096 Rectangle","\uf096 矩形") X(Ellipse,"\uf10c Ellipse","\uf10c 椭圆") X(Text,"\uf031 Text","\uf031 文字") \
+ X(Eraser,"\uf056 Eraser","\uf056 橡皮") X(Path,"\uf126 Path","\uf126 路径") X(Color,"Color","颜色") X(Width,"Width","笔宽") \
+ X(Undo,"\uf0e2 Undo","\uf0e2 撤销") X(Redo,"\uf01e Redo","\uf01e 重做") X(Clear,"\uf014 Clear page","\uf014 清空本页") X(Page,"Page ","草稿 ") \
+ X(Save,"\uf0c7 Save","\uf0c7 保存") X(Saved,"Saved","已保存") X(Saving,"Saving...","正在保存") X(Export,"\uf14d Export SVG","\uf14d 导出 SVG") \
+ X(Return,"\uf11b Return to game E","\uf11b 返回游戏 E") \
+ X(Shortcuts,"Shortcut help","快捷键说明") \
+ X(ShortcutsTitle,"Shortcut help###SketchShortcuts","快捷键说明###SketchShortcuts") \
+ X(ShortcutGeneralTitle,"General","常用操作") \
+ X(ShortcutGeneral,"E: enter / leave drawing\nG: show / hide cursor\nB: show / hide marks and leave drawing\nT: toggle free camera\nEsc: cancel marking, pending shape or text; otherwise restore game view / leave drawing\nAlt+Tab: keep drawing mode and text; finish drag strokes, cancel pending click shapes and save","E：进入 / 退出绘图\nG：指针显隐\nB：草稿显隐并退出绘图\nT：开关自由相机\nEsc：取消标记、未完成图形或文字，否则恢复游戏视角 / 退出绘图\nAlt+Tab：保留绘图模式和文字；完成实际拖绘，取消待定图形并保存") \
+ X(ShortcutToolsTitle,"Drawing tools","绘图工具") \
+ X(ShortcutTools,"Alt+P: pen    Alt+L: line    Alt+A: arrow\nAlt+R: rectangle    Alt+O: ellipse\nAlt+T: text    Alt+K: eraser    Alt+H: cell path\nAlt+1-5: ink color","Alt+P：画笔    Alt+L：直线    Alt+A：箭头\nAlt+R：矩形    Alt+O：椭圆\nAlt+T：文字    Alt+K：橡皮    Alt+H：格子路径\nAlt+1-5：选择笔色") \
+ X(ShortcutDrawingTitle,"While drawing","绘图时") \
+ X(ShortcutDrawing,"Middle click: mark ground under the pointer once\nWheel on canvas: configured action (default: plane height)\nShift+wheel: color by default; Settings changes all bindings\nShapes: left drag or click start, then click end; right click cancels\nPen: left drag; path/text: left click\nShift: vertical across heights; 45-degree lines/arrows on one plane; square/circle constraint\nCtrl+Z: undo; right: cancel shape / finish path / hold to erase\nCtrl+Y / Ctrl+Shift+Z: redo\nCtrl+1 / Ctrl+2 / Ctrl+3: switch scratch page\nCtrl+S: save completed marks\nCtrl+Shift+Delete: clear page (undoable)\nCtrl+Enter: finish text    Esc: cancel text","中键：快速标记指针下地面所在平面\n画布滚轮：按设置执行（默认调整平面高度）\nShift+滚轮：默认切色；设置可修改各组合行为\n图形：左键拖绘，或点击起点再点击终点；右键取消\n画笔：左键拖绘；路径 / 文字：左键点击\nShift：跨层直线 / 箭头锁定竖直，同层保持 45 度；正方形 / 正圆约束\nCtrl+Z：撤销；右键：取消图形 / 结束路径 / 按住擦除\nCtrl+Y / Ctrl+Shift+Z：重做\nCtrl+1 / Ctrl+2 / Ctrl+3：切换草稿\nCtrl+S：保存已完成笔迹\nCtrl+Shift+Delete：清空本页（可撤销）\nCtrl+Enter：完成文字    Esc：取消文字") \
+ X(KeyboardHelp,"Outside text entry, ordinary keys control the game while drawing; Ctrl/Alt chords are captured. Single E/G/B/T shortcuts require no modifiers. Release mouse buttons after returning from another app.","绘图时，文字输入之外的普通键盘操作继续交给游戏；Ctrl / Alt 组合键由 Mod 接管。单键 E/G/B/T 需不按修饰键。切回游戏后先松开鼠标按键。") \
+ X(ShortcutCameraTitle,"Free camera","自由相机") \
+ X(CameraHelp,"W/A/S/D: pan\nQ / Z: up / down    Shift: faster\nRight drag with drawing closed: rotate / tilt\nWheel: configured action while drawing is open; zoom while closed\nE: show / hide drawing toolbar\nEsc / T: restore game view\nHold camera: keep pose and leave controls\nText entry and active widgets pause camera movement.","W/A/S/D：平移\nQ / Z：升高 / 降低    Shift：加速\n关闭绘图后右键拖动：旋转 / 俯仰\n滚轮：绘图打开时按设置执行，关闭时缩放\nE：绘图工具栏开关\nEsc / T：恢复游戏视角\n固定相机：保留机位并退出操作\n输入文字或调整控件时暂停相机移动。") \
+ X(ShortcutDismiss,"Drag the title bar to move this window. E hides/restores it with the drawing toolbar, keeping its position and open state. Other controls keep working. Toggle Shortcut help or use the window's close button to close it.","拖动标题栏可移动窗口。E 随绘图工具栏隐藏 / 恢复说明，保留位置和打开状态。其他操作照常生效；再次点击快捷键说明或窗口关闭按钮可关闭。") \
+ X(Close,"Close","关闭") \
+ X(CameraToggle,"\uf030 Free camera","\uf030 自由相机") \
  X(CameraTitle,"Free camera (experimental)###SketchFreeCamera","自由相机（实验功能）###SketchFreeCamera") \
  X(CameraUnavailable,"Game camera constants are not ready. Enter a level and wait.","尚未连接可控制的游戏相机，请进入关卡后稍候。") \
- X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag with drawing closed: rotate. Wheel: configured drawing action while open, zoom while closed. E: drawing. T / Esc: restore game view. Hold camera keeps the pose.","WASD 平移 · Q/Z 升降 · Shift 加速 · 关闭绘图后右键拖动旋转。滚轮：绘图打开时按设置执行，关闭时缩放。E 绘图；T / Esc 恢复游戏视角，固定相机按钮保留机位。") \
  X(CameraLimits,"Experimental render camera: original game culling, shadows, reflections and mouse picking may not follow large view changes.","实验性渲染相机：大幅变换时，游戏原有裁剪、阴影、反射及鼠标选取可能不随视角更新。") \
  X(CameraSpeed,"Movement speed","移动速度") X(CameraYaw,"Yaw","旋转") X(CameraPitch,"Tilt","俯仰") X(CameraZoom,"Zoom","缩放") \
  X(CameraSensitivity,"Mouse sensitivity","鼠标灵敏度") X(CameraInvertX,"Invert mouse X","反转鼠标 X 轴") X(CameraInvertY,"Invert mouse Y","反转鼠标 Y 轴") \
@@ -33,6 +44,10 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(CameraReset,"Reset to current game camera","重置到当前游戏相机") X(CameraOff,"Restore game view / disable","恢复游戏视角 / 关闭") \
  X(CameraLive,"Camera override connected","相机覆盖已连接") X(CameraWaiting,"Waiting for a fresh game camera frame","等待新的游戏相机帧") \
  X(Stats,"Page %u/3 | %zu marks | %s","草稿 %u/3 · %zu 条笔迹 · %s") \
+ X(PageStats,"Page %u/3 | %zu marks","草稿 %u/3 · %zu 条笔迹") \
+ X(GridPlane,"Grid / plane","网格 · 平面") X(PlaneHeight,"Height %.3g","高度 %.3g") X(PlaneUnset,"Not set","未确定") \
+ X(CharacterPlaneButton,"Character\nplane","设为角色\n所在平面") X(MarkPlaneButton,"Mark ground\nplane","手动标记\n网格平面") \
+ X(UISettingsFailed,"Could not save UI settings.","无法保存界面设置。") \
  X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Grid preview","网格预览") \
  X(GridCenters,"Cell centers","中心点") X(GridIntersections,"Grid intersections","网格交点") \
  X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
@@ -78,12 +93,12 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(CameraReady,"Game camera connected","游戏主相机已连接") \
  X(CameraWait,"Waiting for the game camera. World marks are hidden until it is ready.","等待游戏主相机；连接后才显示世界笔迹。") \
  X(Anchoring,"Grid drawing anchors new marks to the plane; turn it off for screen drawing. Paths always use world cells.","网格绘画将新笔迹固定在当前平面；关闭后使用屏幕绘画。路径始终固定在世界格子上。") \
- X(TextTitle,"Text annotation###SketchText","文字标注###SketchText") X(Done,"Done Ctrl+Enter","完成 Ctrl+Enter") X(Cancel,"Cancel Esc","取消 Esc") \
+ X(TextTitle,"Text annotation###SketchText","文字标注###SketchText") X(Done,"Done","完成") X(Cancel,"Cancel","取消") \
  X(Hud,"SinkingStarSketchPad  E Draw | G Cursor | B Marks | T Camera","SinkingStarSketchPad  E绘图 G指针 B草稿 T相机") \
  X(SaveFailed,"Save failed: ","保存失败：") X(SettingsFailed,"Could not save the language setting.","无法保存语言设置。") \
  X(Recovered,"Draft recovered from backup.","已从备份恢复草稿。") X(Unreadable,"Could not read the old draft; the original was preserved.","旧草稿无法读取；原文件已保留。") \
  X(Full,"Page or point limit reached. Switch pages or remove marks.","本页或点数已满，请换页或清理笔迹。") \
- X(Cleared,"Page cleared. Ctrl+Z restores it.","本页已清空，Ctrl+Z 可恢复。") \
+ X(Cleared,"Page cleared. Undo restores it.","本页已清空，可撤销恢复。") \
  X(NoCamera,"Game camera unavailable. Enter a level and try again.","尚未读取到游戏主相机，请回到关卡后重试。") \
  X(Detecting,"No target plane. Set the character plane or mark ground manually.","尚未确定目标平面，请设为角色所在平面或手动标记。") \
  X(NoPlane,"Could not project this position onto the cell plane.","此处无法投影到格子平面。") \

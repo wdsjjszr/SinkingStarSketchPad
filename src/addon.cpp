@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <reshade.hpp>
 #include "imgui_abi.hpp"
+#include "ui_style.hpp"
 #include "model.hpp"
 #include "drawing_math.hpp"
 #include "grid_preview.hpp"
@@ -29,6 +30,12 @@ std::recursive_mutex state_mutex;
 Document doc;
 std::array<History,3> history;
 std::filesystem::path data_path,legacy_draft_source;
+int ui_scale_percent=100;
+ui::UIScale frame_ui;
+bool ui_preferences_dirty=false,grid_panel_open=false;
+ULONGLONG ui_preferences_due=0;
+ui::DismissClick ui_dismiss;
+ui::Rect toolbar_bounds,grid_button_bounds,grid_panel_bounds;
 i18n::Language language=i18n::Language::System;
 bool chinese(){return i18n::use_chinese(language,PRIMARYLANGID(GetUserDefaultUILanguage())==LANG_CHINESE);}
 const char *tr(i18n::Text text){return i18n::get(text,chinese());}
@@ -47,6 +54,7 @@ void load_camera_preferences(){
 bool loaded=false, editing=false, visible=true, dirty=false, disabled=false, reshade_menu=false;
 bool dragging=false, erasing=false, text_open=false, text_focus=false, protected_file=false;
 bool settings_open=false;
+bool shortcuts_open=false;
 Tool selected=Tool::Pen;
 unsigned selected_color=0;
 float width=3;
@@ -107,6 +115,16 @@ constexpr ImU32 colors[] = {IM_COL32(255,218,105,255),IM_COL32(109,227,255,255),
 Page &page() { return doc.pages[doc.page]; }
 void note(const std::string &s, unsigned ms=4500) { toast=s; toast_until=GetTickCount64()+ms; }
 void log(const std::string &s) { reshade::log::message(reshade::log::level::info,s.c_str()); }
+void load_ui_preferences(){
+    auto path=data_path.parent_path()/L"settings.ini";
+    ui_scale_percent=ui::UIScale(int(GetPrivateProfileIntW(L"Interface",L"UIScalePercent",100,path.c_str()))).percent;
+}
+void save_ui_preferences(){
+    if(!ui_preferences_dirty||data_path.empty())return;
+    auto path=data_path.parent_path()/L"settings.ini";auto value=std::to_wstring(ui_scale_percent);
+    if(WritePrivateProfileStringW(L"Interface",L"UIScalePercent",value.c_str(),path.c_str()))ui_preferences_dirty=false;
+    else{note(tr(Label::UISettingsFailed));ui_preferences_due=GetTickCount64()+5000;}
+}
 void save_camera_preferences(){
     if(!camera_preferences_dirty||data_path.empty())return;
     const auto c=free_camera_bridge::snapshot().camera;auto path=data_path.parent_path()/L"settings.ini";
@@ -216,7 +234,7 @@ void load() {
     wchar_t path[32768]; DWORD n=GetModuleFileNameW(module_handle,path,32768);
     if(!n || n>=32768) throw std::runtime_error("Cannot locate addon directory");
     auto dir=std::filesystem::path(path).parent_path()/L"SinkingStarSketch-data";
-    std::filesystem::create_directories(dir); data_path=dir/L"drafts.txt";load_language();load_camera_preferences();load_drawing_preferences();
+    std::filesystem::create_directories(dir); data_path=dir/L"drafts.txt";load_language();load_ui_preferences();load_camera_preferences();load_drawing_preferences();
     auto read=[&](const std::filesystem::path &p) {
         if(std::filesystem::file_size(p)>16*1024*1024) throw std::runtime_error("Draft file too large");
         std::ifstream in(p,std::ios::binary);auto result=Document::read(in);
@@ -254,7 +272,7 @@ void finish_text() {
     }
     text_open=false; text_buffer[0]=0;
 }
-void set_edit(bool value) { settle_drawing(); if(text_open) finish_text(); editing=value;if(value)visible=true;else{cancel_ground_marking();finish_path();}status();if(!value)save(); }
+void set_edit(bool value) { settle_drawing(); if(text_open) finish_text(); editing=value;if(value)visible=true;else{grid_panel_open=false;cancel_ground_marking();finish_path();}status();if(!value)save(); }
 void undo() { finish_path(); cancel(); if(history[doc.page].back(page()))changed(); }
 void redo() { finish_path(); cancel(); if(history[doc.page].forward(page()))changed(); }
 void clear() { finish_path(); settle_drawing(); if(!page().empty()){history[doc.page].record(page());page().clear();changed();note(tr(Label::Cleared));} }
@@ -479,86 +497,21 @@ void export_svg(Point size) {
     }catch(const std::exception&e){note(std::string(tr(Label::ExportFailed))+e.what());}
 }
 bool in_rect(Point p,ImVec2 a,ImVec2 b){return p.x>=a.x&&p.y>=a.y&&p.x<=b.x&&p.y<=b.y;}
-void drawing_settings(Point size,Point mouse,bool &over_ui){
-    if(!settings_open)return;
+void shortcut_help(Point size,Point mouse,bool &over_ui) {
+    if(!shortcuts_open)return;
     ImGui::SetNextWindowPos(ImVec2(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ImVec2(.5f,.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(480.f,size.x-40),std::min(580.f,size.y-40)),ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(320,200),ImVec2(size.x-40,size.y-40));
-    if(ImGui::Begin(tr(Label::SettingsTitle),&settings_open,ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoCollapse)){
-        ImGui::TextWrapped("%s",tr(Label::SettingsHelp));ImGui::SeparatorText(tr(Label::HintSettings));
-        const char *modes[]={tr(Label::HintOn),tr(Label::HintOff),tr(Label::HintWheelOnly)};int mode=int(hint_preferences.mode);
-        bool changed=ImGui::Combo(tr(Label::HintMode),&mode,modes,3);hint_preferences.mode=grid::HintMode(mode);
-        auto &style=hint_preferences.style;
-        changed|=ImGui::Checkbox(tr(Label::GridCenters),&style.centers);ImGui::SameLine();changed|=ImGui::Checkbox(tr(Label::GridIntersections),&style.intersections);
-        changed|=ImGui::Checkbox(tr(Label::GridBorders),&style.borders);ImGui::SameLine();changed|=ImGui::Checkbox(tr(Label::GridChecker),&style.checker);
-        changed|=ImGui::SliderInt(tr(Label::GridOpacity),&style.opacity,0,100,"%d%%",ImGuiSliderFlags_AlwaysClamp);
-        float seconds=hint_preferences.duration_ms/1000.f;
-        if(ImGui::SliderFloat(tr(Label::HintDuration),&seconds,0,5,"%.2f s",ImGuiSliderFlags_AlwaysClamp)){hint_preferences.duration_ms=unsigned(std::lround(seconds*1000));changed=true;}
-        ImGui::TextWrapped("%s",tr(Label::HintHelp));ImGui::SeparatorText(tr(Label::WheelSettings));
-        const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};
-        const Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
-        for(unsigned i=0;i<4;++i){int action=int(wheel_actions[i]);if(ImGui::Combo(tr(bindings[i]),&action,actions,3)){wheel_actions[i]=input::WheelAction(action);drawing_wheel.reset();changed=true;}}
-        ImGui::TextWrapped("%s",tr(Label::WheelHelp));
-        if(changed){plane_hint.expire(GetTickCount64(),doc.page,ground_generation,hint_preferences);drawing_preferences_changed();status();}
+    ImGui::SetNextWindowSize(ImVec2(std::min(620.f,size.x-40),std::min(560.f,size.y-40)),ImGuiCond_FirstUseEver);
+    if(ImGui::Begin(tr(Label::ShortcutsTitle),&shortcuts_open,ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoFocusOnAppearing)){
+        ImGui::TextWrapped("%s",tr(Label::ShortcutDismiss));
+        const Label sections[][2]={{Label::ShortcutGeneralTitle,Label::ShortcutGeneral},{Label::ShortcutToolsTitle,Label::ShortcutTools},{Label::ShortcutDrawingTitle,Label::ShortcutDrawing},{Label::ShortcutCameraTitle,Label::CameraHelp}};
+        for(const auto &section:sections){ImGui::SeparatorText(tr(section[0]));ImGui::TextWrapped("%s",tr(section[1]));}
+        ImGui::Separator();ImGui::TextWrapped("%s",tr(Label::KeyboardHelp));
+        if(ImGui::Button(tr(Label::Close)))shortcuts_open=false;
     }
     auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
     over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
 }
-void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
-    static ImVec2 toolbar_position;static float toolbar_overflow=0;
-    if(toolbar_overflow>0)ImGui::SetNextWindowPos(ImVec2(toolbar_position.x,std::max(20.f,toolbar_position.y-toolbar_overflow)),ImGuiCond_Always);
-    else ImGui::SetNextWindowPos(ImVec2(24,std::max(20.f,size.y-365)),ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(0,0),ImVec2(size.x-40,size.y-40));
-    ImGui::SetNextWindowBgAlpha(.96f);
-    ImGui::Begin(tr(Label::Title),nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs);
-    ImGui::SetNextItemWidth(195);int choice=static_cast<int>(language);
-    const char *languages[]={"System / 系统","English","简体中文 / Chinese"};
-    if(ImGui::Combo("Language / 语言###SketchLanguage",&choice,languages,3))set_language(static_cast<i18n::Language>(choice));
-    ImGui::SameLine();if(ImGui::Button(tr(Label::Settings)))settings_open=!settings_open;
-    const char *labels[]={tr(Label::Pen),tr(Label::Line),tr(Label::Arrow),tr(Label::Rectangle),tr(Label::Ellipse),tr(Label::Text),tr(Label::Eraser),tr(Label::Path)};
-    for(unsigned i=0;i<8;++i){if(i%4)ImGui::SameLine();const bool active=selected==Tool(i);if(active)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.46f,.36f,.18f,1));if(ImGui::Button(labels[i])){commit();select_tool(Tool(i));}if(active)ImGui::PopStyleColor();}
-    for(unsigned i=0;i<5;++i){if(i)ImGui::SameLine();ImGui::PushID(int(i));auto c=ImGui::ColorConvertU32ToFloat4(colors[i]);if(ImGui::ColorButton(tr(Label::Color),c,0,ImVec2(28,25)))selected_color=i;ImGui::PopID();}
-    ImGui::SameLine();ImGui::SetNextItemWidth(145);ImGui::SliderFloat(tr(Label::Width),&width,1,16,"%.0f");
-    ImGui::SameLine();if(ImGui::Button(tr(Label::Undo)))undo();ImGui::SameLine();if(ImGui::Button(tr(Label::Redo)))redo();ImGui::SameLine();if(ImGui::Button(tr(Label::Clear)))clear();
-    for(unsigned i=0;i<3;++i){if(i)ImGui::SameLine();std::string label=tr(Label::Page)+std::to_string(i+1);if(ImGui::RadioButton(label.c_str(),doc.page==i)){settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}}
-    ImGui::SameLine();if(ImGui::Button(tr(Label::Save))){commit();if(save())note(tr(Label::Saved));}
-    ImGui::SameLine();if(ImGui::Button(tr(Label::Export))){commit();export_svg(size);}
-    ImGui::SameLine();if(ImGui::Button(tr(Label::Return)))set_edit(false);
-    if(ImGui::Button(tr(Label::CameraToggle))){auto c=free_camera_bridge::snapshot();if(!free_camera_bridge::enable(!c.camera.enabled,camera_plane()))note(tr(Label::CameraUnavailable));}
-    ImGui::TextUnformatted(tr(Label::Help));
-    if(free_camera_bridge::snapshot().camera.holding){ImGui::TextWrapped("%s",tr(Label::CameraHeld));if(ImGui::Button(tr(Label::CameraOff)))free_camera_bridge::restore();}
-    ImGui::TextUnformatted(tr(Label::KeyboardHelp));
-    if(grid_drawing)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.12f,.42f,.5f,1));
-    const bool toggle_grid=ImGui::Button(tr(Label::GridDrawing));if(grid_drawing)ImGui::PopStyleColor();
-    if(toggle_grid){settle_drawing();if(text_open)finish_text();cancel_ground_marking();finish_path();grid_drawing=!grid_drawing;drawing_preferences_changed();status();}
-    ImGui::Text(tr(Label::Stats),doc.page+1,page().size(),dirty?tr(Label::Saving):tr(Label::Saved));
-    if(selected==Tool::Path){
-        if(ImGui::Button(tr(Label::NewPath)))finish_path();
-        if(doc.grids[doc.page].ready)ImGui::TextUnformatted(tr(Label::PathHelp));
-        else ImGui::TextUnformatted(tr(Label::GridWait));
-        ImGui::TextDisabled("%s",camera.valid?tr(Label::CameraReady):tr(Label::CameraWait));
-    }else ImGui::TextDisabled("%s",tr(Label::Anchoring));
-    if(grid_drawing&&(selected==Tool::Line||selected==Tool::Arrow))ImGui::TextWrapped("%s",tr(Label::VerticalSnapHelp));
-    ImGui::Separator();
-    bool preview_changed=ImGui::Checkbox(tr(Label::GridPreview),&grid_preview.enabled);
-    if(grid_preview.enabled){
-        preview_changed|=ImGui::Checkbox(tr(Label::GridCenters),&grid_preview.centers);ImGui::SameLine();preview_changed|=ImGui::Checkbox(tr(Label::GridIntersections),&grid_preview.intersections);
-        preview_changed|=ImGui::Checkbox(tr(Label::GridBorders),&grid_preview.borders);ImGui::SameLine();preview_changed|=ImGui::Checkbox(tr(Label::GridChecker),&grid_preview.checker);
-        preview_changed|=ImGui::SliderInt(tr(Label::GridOpacity),&grid_preview.opacity,0,100,"%d%%");
-    }
-    if(preview_changed){drawing_preferences_changed();status();}
-    if(ImGui::Button(tr(Label::GroundCharacter))){commit();if(text_open)finish_text();request_ground(GroundAction::Character);}
-    ImGui::SameLine();
-    if(ImGui::Button(tr(ground_marking?Label::GroundFinish:Label::GroundMark))){
-        commit();if(text_open)finish_text();
-        if(ground_marking){cancel_ground_marking();status();}else request_ground(GroundAction::Manual);
-    }
-    if(ground_marking)ImGui::TextWrapped("%s",tr(Label::GroundHelp));
-    if(ground_request.tag.id)ImGui::TextWrapped("%s",tr(Label::GroundLoading));
-    if(doc.grids[doc.page].ready)ImGui::Text(tr(Label::GroundLocked),doc.grids[doc.page].origin.z);
-    if(!ground_ready())ImGui::TextWrapped("%s",tr(Label::GroundLoading));
-    ImGui::TextWrapped("%s",tr(Label::GroundShortcut));
-    ImGui::TextWrapped("%s",tr(Label::GroundLimits));
+void native_debug_settings(){
     if(ImGui::Checkbox(tr(Label::NativeDebug),&native_ground_debug)){
         native_ground_height=std::numeric_limits<double>::quiet_NaN();status();
     }
@@ -579,17 +532,154 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
         ImGui::TextWrapped("%s",tr(Label::NativeLegend));
         ImGui::TextWrapped("%s",tr(Label::NativeLimits));
     }
+}
+void drawing_settings(Point size,Point mouse,bool &over_ui){
+    if(!settings_open)return;
+    ImGui::SetNextWindowPos(ImVec2(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ImVec2(.5f,.5f));
+    ImGui::SetNextWindowSize(ImVec2(std::min(480.f,size.x-40),std::min(580.f,size.y-40)),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(320,200),ImVec2(size.x-40,size.y-40));
+    if(ImGui::Begin(tr(Label::SettingsTitle),&settings_open,ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoCollapse)){
+        ImGui::TextWrapped("%s",tr(Label::SettingsHelp));ImGui::SeparatorText(tr(Label::HintSettings));
+        const char *modes[]={tr(Label::HintOn),tr(Label::HintOff),tr(Label::HintWheelOnly)};int mode=int(hint_preferences.mode);
+        bool changed=ImGui::Combo(tr(Label::HintMode),&mode,modes,3);hint_preferences.mode=grid::HintMode(mode);
+        auto &style=hint_preferences.style;
+        changed|=ImGui::Checkbox(tr(Label::GridCenters),&style.centers);ImGui::SameLine();changed|=ImGui::Checkbox(tr(Label::GridIntersections),&style.intersections);
+        changed|=ImGui::Checkbox(tr(Label::GridBorders),&style.borders);ImGui::SameLine();changed|=ImGui::Checkbox(tr(Label::GridChecker),&style.checker);
+        changed|=ImGui::SliderInt(tr(Label::GridOpacity),&style.opacity,0,100,"%d%%",ImGuiSliderFlags_AlwaysClamp);
+        float seconds=hint_preferences.duration_ms/1000.f;
+        if(ImGui::SliderFloat(tr(Label::HintDuration),&seconds,0,5,"%.2f s",ImGuiSliderFlags_AlwaysClamp)){hint_preferences.duration_ms=unsigned(std::lround(seconds*1000));changed=true;}
+        ImGui::TextWrapped("%s",tr(Label::HintHelp));ImGui::SeparatorText(tr(Label::WheelSettings));
+        const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};
+        const Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
+        for(unsigned i=0;i<4;++i){int action=int(wheel_actions[i]);if(ImGui::Combo(tr(bindings[i]),&action,actions,3)){wheel_actions[i]=input::WheelAction(action);drawing_wheel.reset();changed=true;}}
+        ImGui::TextWrapped("%s",tr(Label::WheelHelp));
+        native_debug_settings();
+        if(changed){plane_hint.expire(GetTickCount64(),doc.page,ground_generation,hint_preferences);drawing_preferences_changed();status();}
+    }
     auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
-    toolbar_position=pos;toolbar_overflow=pos.y+extent.y-size.y+20;
-    over_ui=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));
-    ImGui::End();
-    if(text_open) {
-        ImGui::SetNextWindowPos(ImVec2(std::clamp(mouse.x,20.f,std::max(20.f,size.x-450)),std::clamp(mouse.y,20.f,std::max(20.f,size.y-250))),ImGuiCond_Appearing);
-        ImGui::Begin(tr(Label::TextTitle),nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings);
-        if(text_focus){ImGui::SetKeyboardFocusHere();text_focus=false;}
-        ImGui::InputTextMultiline("##text",text_buffer,sizeof(text_buffer),ImVec2(400,120));
-        if(ImGui::Button(tr(Label::Done)))finish_text();ImGui::SameLine();if(ImGui::Button(tr(Label::Cancel))){text_open=false;text_buffer[0]=0;}
-        pos=gui_vec2(imgui_function_table_instance()->GetWindowPos);extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
+    over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
+}
+void grid_preview_controls(Point size,Point mouse,bool &over_ui){
+    if(!grid_panel_open)return;
+    auto s=frame_ui;
+    auto placement=ui::beside(toolbar_bounds,grid_button_bounds.y,s.px(224),grid_panel_bounds.h>0?grid_panel_bounds.h:s.px(210),size.x,size.y,s.px(8));
+    if((ImGui::IsMouseClicked(ImGuiMouseButton_Left)||ImGui::IsMouseClicked(ImGuiMouseButton_Right)||ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+       &&!placement.contains(mouse.x,mouse.y)&&!grid_button_bounds.contains(mouse.x,mouse.y)){
+        grid_panel_open=false;ui_dismiss.consume();return;
+    }
+    ImGui::SetNextWindowPos(ui::vec(placement.x,placement.y),ImGuiCond_Always);
+    ui::panel_size(placement.w,size.y-s.px(16));
+    if(ImGui::Begin("##SketchGridPreview",nullptr,ui::panel_flags|ImGuiWindowFlags_NoMove)){
+        ImGui::TextUnformatted(tr(Label::GridPreview));ImGui::Separator();
+        bool changed=ui::checkbox(tr(Label::GridPreview),grid_preview.enabled,s);
+        changed|=ui::checkbox(tr(Label::GridCenters),grid_preview.centers,s);
+        changed|=ui::checkbox(tr(Label::GridIntersections),grid_preview.intersections,s);
+        changed|=ui::checkbox(tr(Label::GridBorders),grid_preview.borders,s);
+        changed|=ui::checkbox(tr(Label::GridChecker),grid_preview.checker,s);
+        ImGui::AlignTextToFramePadding();ImGui::TextDisabled("%s",tr(Label::GridOpacity));
+        float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
+        changed|=ui::slider("##opacity",grid_preview.opacity,0,100,available-s.px(38),s);ImGui::SameLine();ImGui::Text("%d%%",grid_preview.opacity);
+        if(changed){drawing_preferences_changed();status();}
+    }
+    grid_panel_bounds=ui::finish_panel(size.x,size.y,s);over_ui|=grid_panel_bounds.contains(mouse.x,mouse.y);
+}
+void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
+    auto s=frame_ui;ui::FontScope font(s.ratio());ui::Style style(s);
+    ImGui::SetNextWindowPos(ui::vec(s.px(16),std::max(s.px(8),size.y-s.px(455))),ImGuiCond_FirstUseEver);
+    ui::panel_size(std::min(s.px(256),size.x-s.px(16)),size.y-s.px(16));
+    if(ImGui::Begin(tr(Label::Title),nullptr,ui::panel_flags)){
+        float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
+        ImGui::InvisibleButton("##title",ui::vec(std::max(s.px(1),available-s.px(114)),s.px(28)));
+        auto title=ui::item_rect();ui::text(ui::vec(title.x,title.y+s.px(6)),"SketchPad",s,13);
+        if(ImGui::IsItemActive()&&ImGui::IsMouseDragging(ImGuiMouseButton_Left)){auto r=ui::window_rect();auto delta=ImGui::GetIO().MouseDelta;ImGui::SetWindowPos(ui::vec(r.x+delta.x,r.y+delta.y));}
+        for(unsigned i=0;i<3;++i){
+            ImGui::SameLine(0,s.px(2));ImGui::PushID(int(i));
+            bool active=doc.page==i;
+            if(active){ImGui::PushStyleColor(ImGuiCol_Button,ui::gold);ImGui::PushStyleColor(ImGuiCol_Text,IM_COL32(26,20,5,255));}
+            char number[]={char('1'+i),0};
+            if(ImGui::Button(number,ui::vec(s.px(24),s.px(28)))){settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();doc.page=i;changed();}
+            if(active)ImGui::PopStyleColor(2);
+            char keys[16];std::snprintf(keys,sizeof(keys),"Ctrl+%u",i+1);ui::hint(tr(Label::Page),keys);ImGui::PopID();
+        }
+        ImGui::SameLine(0,s.px(2));if(ui::button("##return",ui::Icon::Return,nullptr,s.px(28),s.px(28),s))set_edit(false);ui::hint(tr(Label::Return),"E");
+        ImGui::Separator();
+        constexpr Label tools[]={Label::Pen,Label::Line,Label::Arrow,Label::Rectangle,Label::Ellipse,Label::Text,Label::Eraser,Label::Path};
+        constexpr const char *keys[]={"Alt+P","Alt+L","Alt+A","Alt+R","Alt+O","Alt+T","Alt+K","Alt+H"};
+        float tool_width=(available-s.px(18))/4;
+        for(unsigned i=0;i<8;++i){
+            if(i%4)ImGui::SameLine();ImGui::PushID(int(i));
+            if(ui::button("##tool",ui::Icon(i),tr(tools[i]),tool_width,s.px(50),s,selected==Tool(i),ui::Tone::Gold,true)){commit();select_tool(Tool(i));}
+            ui::hint(tr(tools[i]),keys[i]);ImGui::PopID();
+        }
+        ImGui::Separator();
+        for(unsigned i=0;i<std::size(colors);++i){
+            if(i)ImGui::SameLine(0,(available-s.px(32)*5)/4);ImGui::PushID(int(i));
+            if(ImGui::InvisibleButton("##color",ui::vec(s.px(32),s.px(34))))selected_color=i;
+            auto r=ui::item_rect();auto *d=ImGui::GetWindowDrawList();auto center=ui::vec(r.x+r.w*.5f,r.y+r.h*.5f);
+            d->AddCircle(center,s.px(15),selected_color==i?ui::gold:ui::border,24,s.px(2));d->AddCircleFilled(center,s.px(12),colors[i],24);
+            char key[16];std::snprintf(key,sizeof(key),"Alt+%u",i+1);ui::hint(tr(Label::Color),key);ImGui::PopID();
+        }
+        ImGui::AlignTextToFramePadding();ImGui::TextDisabled("%s",tr(Label::Width));ImGui::SameLine();
+        ui::slider("##width",width,1,16,gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x-s.px(25),s);ImGui::SameLine();ImGui::Text("%.0f",width);
+        ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::GridPlane));
+        ImGui::SameLine();if(doc.grids[doc.page].ready)ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(ui::teal),tr(Label::PlaneHeight),camera_plane());else ImGui::TextDisabled("%s",tr(Label::PlaneUnset));
+        float chip_width=(available-s.px(6))*.5f;
+        if(ui::button("##grid",ui::Icon::Grid,tr(Label::GridDrawing),chip_width,s.px(38),s,grid_drawing,ui::Tone::Teal)){
+            settle_drawing();if(text_open)finish_text();cancel_ground_marking();finish_path();grid_drawing=!grid_drawing;drawing_preferences_changed();status();
+        }
+        ui::hint(tr(Label::Anchoring));ImGui::SameLine();
+        if(ui::button("##preview",ui::Icon::Eye,tr(Label::GridPreview),chip_width,s.px(38),s,grid_preview.enabled,ui::Tone::Teal)){
+            settle_drawing();grid_panel_open=!grid_panel_open;if(!grid_panel_open)ui_dismiss.consume();
+        }
+        grid_button_bounds=ui::item_rect();ui::hint(tr(Label::GridPreview));
+        if(ui::button("##character",ui::Icon::Character,tr(Label::CharacterPlaneButton),chip_width,s.px(42),s,true,ui::Tone::Teal)){
+            commit();if(text_open)finish_text();request_ground(GroundAction::Character);
+        }
+        ui::hint(tr(Label::GroundCharacter));ImGui::SameLine();
+        if(ui::button("##mark",ui::Icon::Target,tr(ground_marking?Label::GroundFinish:Label::MarkPlaneButton),chip_width,s.px(42),s,ground_marking,ui::Tone::Teal)){
+            commit();if(text_open)finish_text();if(ground_marking){cancel_ground_marking();status();}else request_ground(GroundAction::Manual);
+        }
+        ui::hint(tr(Label::GroundHelp));
+        ImGui::TextWrapped("%s",tr(Label::GroundShortcut));ui::hint(tr(Label::GroundLimits));
+        if(ground_marking)ImGui::TextWrapped("%s",tr(Label::GroundHelp));
+        if(ground_request.tag.id||!ground_ready())ImGui::TextWrapped("%s",tr(Label::GroundLoading));
+        if((grid_drawing||selected==Tool::Path)&&!camera.valid)ImGui::TextWrapped("%s",tr(Label::CameraWait));
+        if(selected==Tool::Path){if(ImGui::Button(tr(Label::NewPath)))finish_path();ui::hint(tr(Label::PathHelp));if(!doc.grids[doc.page].ready)ImGui::TextWrapped("%s",tr(Label::GridWait));}
+        if(grid_drawing&&(selected==Tool::Line||selected==Tool::Arrow)){ImGui::TextWrapped("%s",tr(Label::VerticalSnapHelp));}
+        auto free=free_camera_bridge::snapshot().camera;
+        if(free.holding){ImGui::TextWrapped("%s",tr(Label::CameraHeld));if(ImGui::Button(tr(Label::CameraOff)))free_camera_bridge::restore();}
+        ImGui::Separator();
+        constexpr ui::Icon icons[]={ui::Icon::Undo,ui::Icon::Redo,ui::Icon::Clear,ui::Icon::Save,ui::Icon::Export,ui::Icon::Camera,ui::Icon::Help,ui::Icon::Settings};
+        constexpr Label labels[]={Label::Undo,Label::Redo,Label::Clear,Label::Save,Label::Export,Label::CameraToggle,Label::Shortcuts,Label::Settings};
+        constexpr const char *shortcuts[]={"Ctrl+Z","Ctrl+Y / Ctrl+Shift+Z","Ctrl+Shift+Delete","Ctrl+S",nullptr,"T",nullptr,nullptr};
+        for(unsigned i=0;i<8;++i){
+            if(i)ImGui::SameLine(0,std::max(0.f,(available-s.px(224))/7));ImGui::PushID(int(i));
+            bool active=i==5?free.active_view():i==6?shortcuts_open:i==7?settings_open:false;
+            if(ui::button("##action",icons[i],nullptr,s.px(28),s.px(28),s,active,ui::Tone::Teal))switch(i){
+            case 0:undo();break;case 1:redo();break;case 2:clear();break;
+            case 3:commit();if(save())note(tr(Label::Saved));break;case 4:commit();export_svg(size);break;
+            case 5:if(!free_camera_bridge::enable(!free.enabled,camera_plane()))note(tr(Label::CameraUnavailable));break;
+            case 6:commit();shortcuts_open=!shortcuts_open;break;case 7:settings_open=!settings_open;break;
+            }
+            ui::hint(tr(labels[i]),shortcuts[i]);ImGui::PopID();
+        }
+        ImGui::Separator();ImGui::TextDisabled(tr(Label::PageStats),doc.page+1,page().size());
+        const char *saved=tr(dirty?Label::Saving:Label::Saved);float saved_width=gui_text_size(saved).x;
+        ImGui::SameLine(std::max(0.f,available-saved_width+s.px(10)));ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(dirty?ui::muted:ui::teal),"%s",saved);
+    }
+    toolbar_bounds=ui::finish_panel(size.x,size.y,s);over_ui|=toolbar_bounds.contains(mouse.x,mouse.y);
+    grid_preview_controls(size,mouse,over_ui);
+    if(text_open){
+        float w=std::min(s.legacy(440),size.x-s.px(16)),h=std::min(s.legacy(220),size.y-s.px(16));
+        auto position=ui::fit({mouse.x,mouse.y,w,h},size.x,size.y,s.px(8));
+        ImGui::SetNextWindowPos(ui::vec(position.x,position.y),ImGuiCond_Appearing);ui::panel_size(w,size.y-s.px(16));
+        if(ImGui::Begin(tr(Label::TextTitle),nullptr,ui::panel_flags)){
+            ui::header(tr(Label::TextTitle),nullptr,s);
+            if(text_focus){ImGui::SetKeyboardFocusHere();text_focus=false;}
+            ImGui::InputTextMultiline("##text",text_buffer,sizeof(text_buffer),ui::vec(std::max(s.px(20),w-s.px(20)),std::min(s.legacy(120),size.y*.4f)));
+            if(ImGui::Button(tr(Label::Done)))finish_text();ui::hint(tr(Label::Done),"Ctrl+Enter");ImGui::SameLine();if(ImGui::Button(tr(Label::Cancel))){text_open=false;text_buffer[0]=0;}ui::hint(tr(Label::Cancel),"Esc");
+        }
+        auto r=ui::finish_panel(size.x,size.y,s);over_ui|=r.contains(mouse.x,mouse.y);
     }
 }
 void keys(effect_runtime*rt) {
@@ -714,11 +804,12 @@ void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui
 }
 void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
-    ImGui::SetNextWindowPos(ImVec2(std::max(24.f,size.x-24),std::max(24.f,size.y-24)),ImGuiCond_FirstUseEver,ImVec2(1,1));
-    ImGui::SetNextWindowSize(ImVec2(460,0),ImGuiCond_FirstUseEver);
+    auto s=frame_ui;ui::FontScope font(s.ratio());ui::LegacyStyle style(s);
+    ImGui::SetNextWindowPos(ImVec2(std::max(s.legacy(24),size.x-s.legacy(24)),std::max(s.legacy(24),size.y-s.legacy(24))),ImGuiCond_FirstUseEver,ImVec2(1,1));
+    ui::panel_size(std::min(s.legacy(460),size.x-s.px(16)),size.y-s.px(16));
     ImGui::Begin(tr(Label::CameraTitle),nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs);
     ImGui::PushTextWrapPos(ImGui::GetFontSize()*28);
-    ImGui::TextWrapped("%s",tr(Label::CameraHelp));
+    if(ImGui::Button(tr(Label::Shortcuts))){commit();shortcuts_open=!shortcuts_open;if(shortcuts_open&&!editing)set_edit(true);}
     auto slider=[&](Label label,double &value,float low,float high){float x=float(value);bool changed=ImGui::SliderFloat(tr(label),&x,low,high,"%.2f");if(changed)value=x;return changed;};
     bool preferences_changed=slider(Label::CameraSpeed,c.speed,.1f,30);
     preferences_changed|=slider(Label::CameraSensitivity,c.sensitivity,.01f,.3f);
@@ -731,8 +822,7 @@ void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     bool reset=ImGui::Button(tr(Label::CameraReset));bool hold=ImGui::Button(tr(Label::CameraHold));ImGui::SameLine();bool off=ImGui::Button(tr(Label::CameraOff));
     ImGui::TextUnformatted(state.last_patch&&GetTickCount64()-state.last_patch<1500?tr(Label::CameraLive):tr(Label::CameraWaiting));
     ImGui::TextWrapped("%s",tr(Label::CameraLimits));ImGui::PopTextWrapPos();
-    auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
-    over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
+    auto r=ui::finish_panel(size.x,size.y,s);over_ui|=r.contains(mouse.x,mouse.y);
     if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
     if(off){free_camera_bridge::restore();status();return;}
     if(reset){free_camera_bridge::reset_view(camera_plane());return;}
@@ -742,8 +832,7 @@ void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
 void camera_navigation(effect_runtime*rt,bool foreground,bool over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
     const bool chord=rt->is_key_down(VK_CONTROL)||rt->is_key_down(VK_MENU);
-    // Hovering a panel must not disable keyboard navigation. Only an active
-    // widget (including Ctrl-click numeric entry) owns these keys.
+    // Hovering a panel keeps navigation active; only active widgets own keys.
     if(!text_open&&!chord&&!ImGui::IsAnyItemActive()){
         c.move((rt->is_key_down('D')?1:0)-(rt->is_key_down('A')?1:0),(rt->is_key_down('W')?1:0)-(rt->is_key_down('S')?1:0),
                (rt->is_key_down('Q')?1:0)-(rt->is_key_down('Z')?1:0),ImGui::GetIO().DeltaTime,rt->is_key_down(VK_SHIFT));
@@ -766,6 +855,7 @@ void overlay(effect_runtime*rt) {
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
         camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));
+        frame_ui=ui::UIScale(ui_scale_percent,ImGui::GetFontSize());
         if(frame_count%120==0)status();
         HWND window=static_cast<HWND>(rt->get_hwnd());bool foreground=GetForegroundWindow()==window;
         // ReShade virtualizes Win32 GetCursorPos while it blocks game input.
@@ -779,10 +869,13 @@ void overlay(effect_runtime*rt) {
         // an unfinished text dialog intact while another application has focus.
         if(foreground&&was_foreground&&!reshade_menu)keys(rt);
         bool over_ui=false;
+        if(!foreground)grid_panel_open=false;
         if(editing&&foreground&&!reshade_menu) {
             controls(rt,size,mouse,over_ui);
             drawing_settings(size,mouse,over_ui);
+            shortcut_help(size,mouse,over_ui);
         }
+        over_ui|=ui_dismiss.block(mouse_down);
         over_ui|=ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopup);
         if(!reshade_menu)camera_controls(size,mouse,foreground,over_ui);
         poll_ground();
@@ -811,11 +904,23 @@ void overlay(effect_runtime*rt) {
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
         if(editing&&foreground&&!over_ui&&!reshade_menu&&!ground_marking)draw_snap_marker(draw,mouse,size,rt->is_key_down(VK_SHIFT));
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
-        if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}
-        if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}
+        if(!editing&&!reshade_menu){
+            auto s=frame_ui;ui::FontScope font(s.ratio());ImDrawList*d=ImGui::GetForegroundDrawList();
+            float right=std::min(size.x-s.legacy(18),s.legacy(42)+gui_text_size(tr(Label::Hud)).x);
+            d->AddRectFilled(ImVec2(s.legacy(18),size.y-s.legacy(47)),ImVec2(right,size.y-s.legacy(14)),IM_COL32(18,27,41,205),s.legacy(7));
+            d->AddText(ImVec2(s.legacy(30),size.y-s.legacy(41)),colors[0],tr(Label::Hud));
+        }
+        if(GetTickCount64()<toast_until){
+            auto s=frame_ui;ui::FontScope font(s.ratio());ui::Style style(s);
+            ImGui::SetNextWindowPos(ImVec2(size.x*.5f,s.legacy(22)),ImGuiCond_Always,ImVec2(.5f,0));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(0,0),ImVec2(size.x-s.px(16),size.y-s.px(16)));
+            ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);
+            ImGui::PushTextWrapPos(std::max(s.px(20),std::min(s.px(500),size.x-s.px(36))));ImGui::TextWrapped("%s",toast.c_str());ImGui::PopTextWrapPos();ImGui::End();
+        }
         if(dirty&&(!dragging||shape_gesture.waiting())&&!erasing&&GetTickCount64()>=save_due)save();
         if(camera_preferences_dirty&&GetTickCount64()>=camera_preferences_due)save_camera_preferences();
         if(drawing_preferences_dirty&&GetTickCount64()>=drawing_preferences_due)save_drawing_preferences();
+        if(ui_preferences_dirty&&GetTickCount64()>=ui_preferences_due)save_ui_preferences();
     } catch(const std::exception&e) {log(std::string("Sketch disabled after error: ")+e.what());disabled=true;editing=false;}
     catch(...) {log("Sketch disabled after unexpected exception");disabled=true;editing=false;}
 }
@@ -856,7 +961,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     log("SinkingStarSketchPad 3.4.6 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
 }
 extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
-    {std::lock_guard<std::recursive_mutex> lock(state_mutex);settle_drawing();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();}
+    {std::lock_guard<std::recursive_mutex> lock(state_mutex);settle_drawing();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();save_ui_preferences();}
     reshade::unregister_event<reshade::addon_event::init_pipeline_layout>(free_camera_bridge::layout_init);
     reshade::unregister_event<reshade::addon_event::destroy_pipeline_layout>(free_camera_bridge::layout_destroy);
     reshade::unregister_event<reshade::addon_event::update_descriptor_tables>(free_camera_bridge::updated);
