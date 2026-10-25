@@ -1,0 +1,32 @@
+#pragma once
+#include <algorithm>
+
+namespace sketch::ui {
+struct UIScale {
+    int percent;
+    float font_pixels;
+    constexpr UIScale(int value=100,float font=18):percent(std::clamp(value,75,200)),font_pixels(font){}
+    constexpr float ratio()const{return percent*.01f;}
+    constexpr float px(float value)const{return value*font_pixels/12*ratio();}
+    constexpr float legacy(float value)const{return value*ratio();}
+};
+struct Rect {
+    float x=0,y=0,w=0,h=0;
+    constexpr bool contains(float px,float py)const{return px>=x&&py>=y&&px<x+w&&py<y+h;}
+};
+constexpr Rect fit(Rect r,float width,float height,float margin){
+    r.w=std::min(r.w,std::max(1.f,width-2*margin));r.h=std::min(r.h,std::max(1.f,height-2*margin));
+    r.x=std::clamp(r.x,margin,std::max(margin,width-margin-r.w));
+    r.y=std::clamp(r.y,margin,std::max(margin,height-margin-r.h));return r;
+}
+constexpr Rect beside(Rect panel,float top,float width,float height,float viewport_width,float viewport_height,float gap){
+    float x=panel.x+panel.w+gap;
+    if(x+width>viewport_width-gap)x=panel.x-gap-width;
+    return fit({x,top,width,height},viewport_width,viewport_height,gap);
+}
+struct DismissClick {
+    bool held=false;
+    constexpr void consume(){held=true;}
+    constexpr bool block(bool mouse_down){bool blocked=held;if(!mouse_down)held=false;return blocked;}
+};
+}
