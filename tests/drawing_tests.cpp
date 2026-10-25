@@ -6,6 +6,8 @@ static_assert(nearest_grid_point({.1f,.2f}).x==0&&nearest_grid_point({.45f,.55f}
 static_assert(nearest_grid_point({-.5f,-.5f}).x==-.5&&nearest_grid_point({.5f,0}).y==0,"Negative intersections work and ties prefer centers");
 static_assert(grid_shape_end(Tool::Line,{.5f,.5f},{3,.5f},true).y==.5,"Shift horizontal lines preserve legal half-cell coordinates");
 static_assert(grid_shape_end(Tool::Rectangle,{0,0},{2,3},true).x==3&&grid_shape_end(Tool::Ellipse,{0,0},{2.2f,3.3f},false).x==2.2f,"Squares constrain on the plane; ellipse bounds remain continuous");
+static_assert(grid_shape_end(Tool::Line,{-.5f,.5f,0},{8,9,3},true).x==-.5f&&grid_shape_end(Tool::Arrow,{-.5f,.5f,0},{8,9,-3},true).y==.5f&&grid_shape_end(Tool::Arrow,{-.5f,.5f,0},{8,9,-3},true).z==-3,"Cross-height Shift keeps the start XY and current height, upward or downward");
+static_assert(grid_shape_end(Tool::Line,{0,0,0},{3.1f,2.2f,4},false).x==3&&grid_shape_end(Tool::Line,{0,0,0},{3.1f,2.2f,4},false).z==4&&!vertical_snap(Tool::Rectangle,{0,0,0},4,true),"Releasing Shift restores plane snapping and preserves Z; rectangles retain their constraints");
 static_assert(!snaps_to_grid(Tool::Pen)&&!snaps_to_grid(Tool::Ellipse)&&snaps_to_grid(Tool::Arrow),"Only the requested geometric tools snap");
 static_assert(path_axes({0,0,0},{0,0,3})==1&&path_axes({0,0,0},{1,0,3})==2&&path_axes({1,2,3},{1,2,3})==0,"Paths allow one changed axis, including vertical movement, and identify repeated endpoints");
 static_assert(grid_shape_end(Tool::Line,{-.5f,-.5f},{-3,-2},true).x==-2.5f&&grid_shape_end(Tool::Line,{-.5f,-.5f},{-3,-2},true).y==-2.5f,"Negative diagonal constraints snap to a legal intersection");

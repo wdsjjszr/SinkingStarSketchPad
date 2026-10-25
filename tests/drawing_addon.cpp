@@ -63,3 +63,15 @@ void compile_settings_roundtrip(const std::filesystem::path &isolated_directory)
     assert(wheel_actions[0]==input::WheelAction::Color);
     wchar_t language[16];GetPrivateProfileStringW(L"Interface",L"Language",L"",language,16,ini.c_str());assert(std::wstring(language)==L"en");
 }
+void compile_vertical_target_without_pointer_intersection(){
+    doc={};doc.grids[0]=native_ground::lattice(4.25);pending={};pending.tool=Tool::Arrow;pending.lattice=native_ground::lattice(3.25);pending.points={{0,0},{1,1}};
+    camera.valid=true;camera.eye={0,-10,4};camera.forward={0,1,0};
+    camera.matrix={1,0,0,0,0,0,1,-4,0,1,0,9.9,0,1,0,10};assert(free_camera::inverse(camera.matrix,camera.inverse));
+    Point target;assert(!drawing_target(pending,{500,500},{1000,1000},false,target));
+    assert(drawing_target(pending,{500,500},{1000,1000},true,target)&&target.x==0&&target.y==0&&target.z==1);
+    Point marker;assert(screen_point(pending.lattice,target,camera,{1000,1000},marker));
+    pending.points[1]=target;assert(project_stroke(pending,camera,{1000,1000}).back().x==marker.x);
+    camera.valid=false;assert(!drawing_target(pending,{500,500},{1000,1000},true,target));camera.valid=true;
+    pending.points[0].y=20;assert(!drawing_target(pending,{500,500},{1000,1000},true,target));
+    doc.grids[0].ready=false;assert(!drawing_target(pending,{500,500},{1000,1000},true,target));
+}

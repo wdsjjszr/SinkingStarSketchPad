@@ -154,7 +154,7 @@ void status() {
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << doc.grids[doc.page].ready << "\ngrid_centers=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0) << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
     f << "grid_drawing=" << grid_drawing << "\ngrid_preview=" << grid_preview.enabled << "\ngrid_preview_centers=" << grid_preview.centers
       << "\ngrid_preview_intersections=" << grid_preview.intersections << "\ngrid_preview_borders=" << grid_preview.borders
-      << "\ngrid_preview_checker=" << grid_preview.checker << "\ngrid_preview_opacity=" << grid_preview.opacity
+      << "\ngrid_preview_checker=" << grid_preview.checker << "\ngrid_preview_opacity=" << grid_preview.opacity << "\ngrid_preview_cells=" << grid::preview_cells
       << "\nplane_hint=" << plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences)
       << "\nshape_gesture=" << unsigned(shape_gesture.phase) << "\ndraft_format=" << doc.format_version
       << "\nink_color=" << selected_color << "\nworld_strokes=" << std::count_if(page().begin(),page().end(),[](const auto &stroke){return stroke->lattice.ready;}) << '\n';
@@ -538,6 +538,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
         else ImGui::TextUnformatted(tr(Label::GridWait));
         ImGui::TextDisabled("%s",camera.valid?tr(Label::CameraReady):tr(Label::CameraWait));
     }else ImGui::TextDisabled("%s",tr(Label::Anchoring));
+    if(grid_drawing&&(selected==Tool::Line||selected==Tool::Arrow))ImGui::TextWrapped("%s",tr(Label::VerticalSnapHelp));
     ImGui::Separator();
     bool preview_changed=ImGui::Checkbox(tr(Label::GridPreview),&grid_preview.enabled);
     if(grid_preview.enabled){
@@ -622,8 +623,12 @@ void keys(effect_runtime*rt) {
 bool drawing_target(const Stroke &stroke,Point mouse,Point size,bool shift,Point &target){
     if(stroke.lattice.ready){
         const auto &plane=(stroke.tool==Tool::Line||stroke.tool==Tool::Arrow)?doc.grids[doc.page]:stroke.lattice;
-        if(!plane.ready||!plane_point(plane,camera,mouse,size,target))return false;
-        target=grid_shape_end(stroke.tool,stroke.points.front(),target,shift);target.z=float(plane.origin.z-stroke.lattice.origin.z);
+        if(!plane.ready||!camera.valid)return false;
+        float z=float(plane.origin.z-stroke.lattice.origin.z);bool vertical=vertical_snap(stroke.tool,stroke.points.front(),z,shift);
+        if(vertical)target={stroke.points.front().x,stroke.points.front().y,z};
+        else if(!plane_point(plane,camera,mouse,size,target))return false;
+        target.z=z;target=grid_shape_end(stroke.tool,stroke.points.front(),target,shift);
+        if(vertical){Point pixel;if(!screen_point(stroke.lattice,target,camera,size,pixel))return false;}
         return std::abs(target.x)<=1000000&&std::abs(target.y)<=1000000;
     }
     if(shift)mouse=snapped(pixel(stroke.points.front(),size),mouse,stroke.tool==Tool::Rectangle||stroke.tool==Tool::Ellipse);
@@ -671,6 +676,10 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
         }else{
             Point target;if(drawing_target(pending,mouse,size,rt->is_key_down(VK_SHIFT),target))pending.points[1]=target;
         }
+    }
+    if(!left&&dragging&&shape_gesture.phase==input::ShapeGesture::Phase::SecondPress&&pending.lattice.ready&&(pending.tool==Tool::Line||pending.tool==Tool::Arrow)){
+        Point target;if(!drawing_target(pending,mouse,size,rt->is_key_down(VK_SHIFT),target)){shape_gesture.phase=input::ShapeGesture::Phase::AwaitEnd;note(tr(Label::NoPlane));return;}
+        pending.points[1]=target;
     }
     if(!left&&(dragging||erasing)){if(!shape_gesture.active()||shape_gesture.release())commit();}
 }

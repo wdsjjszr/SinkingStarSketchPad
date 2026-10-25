@@ -17,7 +17,9 @@ $case = Join-Path $root ('build\free-camera-test-' + [guid]::NewGuid().ToString(
 Copy-Item -LiteralPath $Runtime -Destination (Join-Path $case 'dxgi.dll')
 if ($Font) { Copy-Item -LiteralPath $Font -Destination (Join-Path $case 'SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf') }
 Copy-Item -LiteralPath (Join-Path $root 'config\ReShade.ini') -Destination $case
-if ($Font) { $cfg=Join-Path $case 'ReShade.ini'; (Get-Content -LiteralPath $cfg -Raw).Replace('Font=', 'Font=.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf') | Set-Content -LiteralPath $cfg -Encoding utf8 }
+$cfg = Join-Path $case 'ReShade.ini'
+$fontSetting = if ($Font) { 'Font=.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf' } else { 'Font=' }
+[regex]::Replace((Get-Content -LiteralPath $cfg -Raw), '(?m)^Font=[^\r\n]*', $fontSetting) | Set-Content -LiteralPath $cfg -Encoding utf8
 & $Compiler -std=c++17 -O2 -static -municode -mwindows (Join-Path $PSScriptRoot 'dx12_host.cpp') -o (Join-Path $case 'SketchDX12Test.exe') -ld3d12 -ldxgi -ld3dcompiler -luser32 -lole32 -luuid
 if ($LASTEXITCODE -ne 0) { throw 'Camera host build failed.' }
 $fixture = if ($InputSuite) { 'free_camera_input_addon.cpp' } else { 'free_camera_addon.cpp' }

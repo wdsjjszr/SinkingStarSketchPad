@@ -48,6 +48,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
  X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the next/previous color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择下一色 / 上一色。关闭绘图后滚轮用于相机缩放。") \
  X(PathFinished,"Path finished.","本条路径已结束。") \
+ X(VerticalSnapHelp,"Shift: lock start X/Y across heights for a vertical line. Same-plane Shift keeps angle snapping.","Shift：跨层时锁定起点 X/Y，快速绘制竖直线；同层保持角度约束。") \
  X(GridDrawing,"Grid drawing","网格绘画") \
  X(PathHelp,"Click centers along X, Y or Z; click the endpoint again or right-click to finish.","沿 X、Y、Z 点击格心，转弯处加点；重复点击终点或右键结束。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \

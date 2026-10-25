@@ -18,7 +18,8 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - Gray grid previews, camera-occluded plane hints and configurable wheel/Shift/Ctrl/Alt actions.
 - A live Settings window with persistent hint layers, duration and wheel bindings.
 - Cross-height grid lines/arrows and three-axis orthogonal paths, stored in backward-readable draft v4.
-- Radial previews, hold-plus-fade hints, black/white checker fill and projected voxel clipping.
+- 17×17 white guides with black outlines, drawn below ink; plane hints default to 15% opacity.
+- Cross-height Shift lines/arrows lock world X/Y for vertical segments; voxel clipping and draft v4 remain.
 - Right click cancels shapes or finishes paths first, otherwise temporarily erases; Ctrl+Z undoes.
 - Persistent System / English / Simplified Chinese language selection.
 
@@ -32,7 +33,7 @@ Press **E** to open/close the toolbar, **G** for cursor visibility, and **B** fo
 
 The compatible add-on filename and persistent data folder remain `SinkingStarSketch.addon64` and `SinkingStarSketch-data` so existing drafts and preferences continue to work.
 
-Version 3.4.6 adds gentler defaults, tilt limits, adjustable mouse sensitivity and separate **Invert mouse X/Y** settings, saved across restarts.
+Version 3.4.6 integrates optional retained camera views with default speed 5 and Y inversion enabled; explicit Restore game view remains available.
 
 Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt and wheel zoom with drawing closed; T/Esc leaves camera controls according to Keep view. With drawing open, wheel actions follow Settings; defaults are height changes and Shift+wheel color cycling. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
 

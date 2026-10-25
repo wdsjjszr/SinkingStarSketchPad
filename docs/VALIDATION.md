@@ -1,4 +1,12 @@
-# Validation — 3.4.5 Beta
+# Validation — 3.4.6 Beta
+
+## Preview visibility and upstream integration — 25 October 2026
+
+- Compile-time assertions cover retained/explicitly restored camera states, upstream defaults, 17-cell/radial parameters, 15% missing-preference opacity and cross-height vertical snapping with same-plane compatibility.
+- Compile-only fixtures cover exterior line/dot outlines, large preview batches, Shift release/Z preservation, pointer-ray failure with a valid vertical target, invalid camera/plane and behind-camera rejection, marker/projected-endpoint agreement and existing preference retention. Non-constexpr assertions are not run.
+- Static source ordering checks verify preview < ink < snap marker. C++17 syntax, Clang analysis and add-on linking are used; the full packager is parsed without execution. Game/test binaries, runtime scripts and SHA checks are not run.
+- Actual appearance, performance and held-camera interaction still require game confirmation. Existing unstaged changes and untracked depth prototypes are preserved; full fonts/manual packaging remain.
+
 
 ## Readability and cross-height revision — 25 October 2026
 

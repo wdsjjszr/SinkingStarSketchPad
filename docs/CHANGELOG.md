@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — upstream integration and preview visibility (2026-10-25)
+
+- Merge upstream 3.4.6 camera retention, speed/Y defaults and scene cleanup while retaining the full font-bearing package and all native-ground/v4/input extensions.
+- Put grid previews below saved/pending ink and snap markers above; expand persistent previews to 17×17 with an 8.5-cell radial fade, white cores and black outer outlines. New hint-opacity default is 15%, preserving saved values.
+- Shift locks the start world X/Y for cross-height grid lines/arrows. Same-height constraints, wheel bindings and draft v4 remain; invalid projected endpoints keep waiting.
+- Static checks/analysis and compilation/linking only. No game, test binary or package script execution; no SHA checks.
+
 ## Unreleased — preview readability and cross-height drawing (2026-10-25)
 
 - Add hold-plus-30%-ease-out hint fading, radial persistent previews, thicker points/lines, black/white checker fill and snapped-point markers for grid shapes. New missing-preference defaults are 750ms/45%; saved choices remain.

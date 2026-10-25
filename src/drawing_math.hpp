@@ -13,15 +13,17 @@ constexpr Point nearest_grid_point(Point p){
     return a<=b?center:corner;
 }
 constexpr bool snaps_to_grid(Tool tool){return tool==Tool::Line||tool==Tool::Arrow||tool==Tool::Rectangle;}
+constexpr bool vertical_snap(Tool tool,Point start,float z,bool shift){return shift&&(tool==Tool::Line||tool==Tool::Arrow)&&z!=start.z;}
 constexpr Point grid_shape_end(Tool tool,Point a,Point b,bool shift){
-    if(!shift)return snaps_to_grid(tool)?nearest_grid_point(b):b;
+    if(vertical_snap(tool,a,b.z,shift))return {a.x,a.y,b.z};
+    if(!shift){auto point=snaps_to_grid(tool)?nearest_grid_point(b):b;point.z=b.z;return point;}
     double dx=b.x-a.x,dy=b.y-a.y,x=magnitude(dx),y=magnitude(dy),sx=dx<0?-1:1,sy=dy<0?-1:1;
-    if(tool==Tool::Ellipse){double length=x>y?x:y;return {float(a.x+sx*length),float(a.y+sy*length)};}
-    if(tool==Tool::Rectangle){double length=grid_round((x>y?x:y)*2)*.5;return {float(a.x+sx*length),float(a.y+sy*length)};}
+    if(tool==Tool::Ellipse){double length=x>y?x:y;return {float(a.x+sx*length),float(a.y+sy*length),b.z};}
+    if(tool==Tool::Rectangle){double length=grid_round((x>y?x:y)*2)*.5;return {float(a.x+sx*length),float(a.y+sy*length),b.z};}
     constexpr double tangent=.414213562373095;
-    if(y<=x*tangent)return {float(a.x+grid_round(dx)),a.y};
-    if(x<=y*tangent)return {a.x,float(a.y+grid_round(dy))};
-    double length=grid_round(x+y)*.5;return {float(a.x+sx*length),float(a.y+sy*length)};
+    if(y<=x*tangent)return {float(a.x+grid_round(dx)),a.y,b.z};
+    if(x<=y*tangent)return {a.x,float(a.y+grid_round(dy)),b.z};
+    double length=grid_round(x+y)*.5;return {float(a.x+sx*length),float(a.y+sy*length),b.z};
 }
 inline bool screen_point(const grid::Lattice &g,Point p,const grid::Camera &camera,Point size,Point &out){
     if(!g.ready){out=pixel(p,size);return true;}
