@@ -12,7 +12,7 @@ struct Preview {
 enum class HintMode {On,Off,WheelOnly};
 enum class HintSource {Initialize,Mark,Wheel};
 struct HintPreferences {
-    Preview style{true,false,false,true,true,15};
+    Preview style{true,false,false,false,true,15};
     HintMode mode=HintMode::On;
     unsigned duration_ms=750;
     constexpr bool permits(HintSource source)const{

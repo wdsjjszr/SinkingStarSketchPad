@@ -19,7 +19,7 @@ constexpr bool hints(){
     preferences.duration_ms=5000;return !hint.active(1701,0,1,preferences);
 }
 static_assert(hints(),"Initialization stays silent; hints use the newest mark/page/scene, live duration and policy, without reviving expired hints");
-static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==15&&HintPreferences{}.duration_ms==750&&Preview{}.enabled,"Hint defaults retain borders/checker and enable preview at 15 percent for a 750ms hold");
+static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&!HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==15&&HintPreferences{}.duration_ms==750&&Preview{}.enabled,"Hint defaults enable checker only at 15 percent for a 750ms hold; stored borders still override the default");
 static_assert(fade_weight(750,750)==1&&fade_weight(975,750)==0&&fade_weight(1150,1000)==.125&&fade_weight(0,0)==0,"Hold is followed by a 30 percent cubic ease-out fade");
 static_assert(preview_cells==17&&radial_weight(0)==1&&radial_weight(4.25)==.5&&radial_weight(8.5)==0&&checker_shade(-1,0)==255&&checker_shade(-2,0)==0,"17-cell smooth radial falloff and black/white parity are stable for negative cells");
 constexpr bool policies(){

@@ -1,5 +1,12 @@
 # Validation — 3.4.6 Beta
 
+## UI refactor — 25 October 2026
+
+- The toolbar, Settings, two-column shortcut help and interactive grid flyout use scoped custom styling. Manual UI scale is 75–200%, default 100%; legacy camera controls retain their palette/layout. Ink, grid projection, annotations and cursor artwork are outside UI font scopes.
+- Compile-time assertions cover scale/default bounds, proportional dimensions, flyout placement/viewport fitting, closing-click blocking through release, complete bilingual shortcut rows, matching window IDs and checker-only plane hint defaults. Existing stored hint preferences remain authoritative.
+- Validation is the 11 core static-compilation suites, syntax compilation of the production add-on and four production-facing fixtures, Clang static analysis and production compilation/linking. No test executables, rendering hosts, game sessions or SHA checks are run.
+- Remaining gaps: visual fidelity, live ImGui focus/drag/scroll behavior, Chinese/English layout and actual INI persistence in game. These require later user confirmation.
+
 ## Preview visibility and upstream integration — 25 October 2026
 
 - Follow-up checks cover reversed palette cycling, bilingual compact HUD hints, the 2.5px white center dot with a 1.5px black outline and explicit hold/resume/restore bridge fixtures. Integration fixtures are compiled only.

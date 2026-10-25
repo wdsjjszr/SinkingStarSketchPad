@@ -12,7 +12,7 @@
 
 **设置** 窗口可移动、调整大小，修改即时生效并自动保存到 `settings.ini`。E 随绘图菜单隐藏 / 恢复它，保留本次会话打开状态。以下默认值只用于尚未保存对应偏好的情况，升级不会重置已有设置。
 
-平面变动提示默认边框和棋盘开启、点和十字关闭，基础透明度 **15%**、保持 **0.75 秒**，之后另有保持时长 **30%** 的 Ease-out Fade。渐隐透明度为 `(1-u)³`，默认额外 0.225 秒、总计 0.975 秒。保持时长范围 0–5 秒，Ctrl+点击可直接输入；0 秒不显示。显示策略仍为“开／关／仅微调”，仅微调只响应滚轮改高；关卡首次初始化始终静默。
+平面变动提示默认仅棋盘开启，边框、点和十字关闭（已有明确保存的设置保留），基础透明度 **15%**、保持 **0.75 秒**，之后另有保持时长 **30%** 的 Ease-out Fade。渐隐透明度为 `(1-u)³`，默认额外 0.225 秒、总计 0.975 秒。保持时长范围 0–5 秒，Ctrl+点击可直接输入；0 秒不显示。显示策略仍为“开／关／仅微调”，仅微调只响应滚轮改高；关卡首次初始化始终静默。
 
 同高度重新标定重新计时，新意图、换页、换关卡清除旧提示；过期异步结果不能恢复旧提示。即时调整时长仍按原起点计算，关闭或到期的提示不复活。
 
@@ -63,7 +63,7 @@ Press **E**, then toggle **Grid drawing** to anchor new marks to the target plan
 
 **Grid preview** defaults on with centers only at 45% opacity over 17×17 cells. A plane-space radial smoothstep fades from the pointer to an 8.5-cell radius, without wall cutting. Both previews use white points/lines/crosses with black outer outlines, plus equal-opacity black/white checker fill. The dot outline stays 1.5 pixels thick, giving a 4-pixel outer radius; line outlines add 1 pixel on either side without changing core sizes. Previews are below saved/pending ink; snap markers and the cursor remain above it. White point radius is 2.5 pixels, borders 2 pixels, crosses 3 pixels with 0.12-cell arms. Line/arrow/rectangle/path snapping has a clear marker independent of the preview switch.
 
-**Settings** applies and saves immediately. New/missing hint preferences default to borders/checker, 15% opacity and a **0.75-second hold**, followed by an additional **30% cubic ease-out fade** (0.975 seconds total by default). Existing saved preferences remain. On/Off/Wheel-only and silent initialization remain; zero duration disables display. New intents replace old hints, and expired hints never revive.
+**Settings** applies and saves immediately. New/missing hint preferences default to checker only (borders off), 15% opacity and a **0.75-second hold**, followed by an additional **30% cubic ease-out fade** (0.975 seconds total by default). Existing saved preferences remain. On/Off/Wheel-only and silent initialization remain; zero duration disables display. New intents replace old hints, and expired hints never revive.
 
 Hint occlusion now projects native voxel faces and subtracts their screen polygons from all hint layers, retaining visible portions within a cell. A 1e-4 world-unit contact tolerance excludes self-occlusion without shifting target Z. World checker parity stays fixed. Native geometry and clipped meshes are cached; fade changes opacity only. Missing terrain shows an uncut hint. No game depth/decorative occlusion is added; the 128×128 cap remains.
 

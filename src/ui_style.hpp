@@ -7,7 +7,6 @@
 namespace sketch::ui {
 inline constexpr ImU32 ink=IM_COL32(232,234,240,255),muted=IM_COL32(154,163,181,255),gold=IM_COL32(255,181,71,255),teal=IM_COL32(45,212,191,255),border=IM_COL32(51,56,71,255);
 inline ImVec2 vec(float x,float y){return ImVec2(x,y);}
-inline const char *plain(const char *label){return static_cast<unsigned char>(label[0])==0xef&&label[3]==' '?label+4:label;}
 inline Rect window_rect(){auto p=gui_vec2(imgui_function_table_instance()->GetWindowPos),s=gui_vec2(imgui_function_table_instance()->GetWindowSize);return {p.x,p.y,s.x,s.y};}
 inline Rect item_rect(){auto a=gui_vec2(imgui_function_table_instance()->GetItemRectMin),b=gui_vec2(imgui_function_table_instance()->GetItemRectMax);return {a.x,a.y,b.x-a.x,b.y-a.y};}
 struct FontScope {
@@ -44,8 +43,12 @@ struct LegacyStyle {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec(v.ItemSpacing.x*r,v.ItemSpacing.y*r));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec(v.ItemInnerSpacing.x*r,v.ItemInnerSpacing.y*r));
         ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,v.ScrollbarSize*r);ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize,v.GrabMinSize*r);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,v.WindowRounding*r);ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,v.WindowBorderSize*r);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,v.FrameRounding*r);ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,v.FrameBorderSize*r);
+        ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding,v.GrabRounding*r);ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding,v.ScrollbarRounding*r);
+        ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing,v.IndentSpacing*r);
     }
-    ~LegacyStyle(){ImGui::PopStyleVar(6);}
+    ~LegacyStyle(){ImGui::PopStyleVar(13);}
 };
 enum class Icon {Pen,Line,Arrow,Rectangle,Ellipse,Text,Eraser,Path,Undo,Redo,Clear,Save,Export,Camera,Help,Settings,Return,Grid,Eye,Character,Target,Close,Chevron};
 inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
@@ -82,18 +85,19 @@ inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
 inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink){ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),s.px(size),p,c,label,std::strstr(label,"###"));}
 inline void hint(const char *label,const char *keys=nullptr){
     if(!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))return;
-    ImGui::BeginTooltip();ImGui::TextUnformatted(plain(label));if(keys&&*keys)ImGui::TextDisabled("%s",keys);ImGui::EndTooltip();
+    ImGui::BeginTooltip();ImGui::TextUnformatted(label);if(keys&&*keys)ImGui::TextDisabled("%s",keys);ImGui::EndTooltip();
 }
-enum class Tone {Plain,Gold,Teal};
+enum class Tone {Plain,Gold,Teal,Primary};
 inline bool button(const char *id,Icon glyph,const char *label,float w,float h,UIScale s,bool active=false,Tone tone=Tone::Plain,bool stacked=false){
     ImGui::PushStyleColor(ImGuiCol_Button,0);ImGui::PushStyleColor(ImGuiCol_ButtonHovered,0);ImGui::PushStyleColor(ImGuiCol_ButtonActive,0);
     bool clicked=ImGui::Button(id,vec(w,h));ImGui::PopStyleColor(3);auto r=item_rect();auto *d=ImGui::GetWindowDrawList();
     bool hover=ImGui::IsItemHovered();ImU32 fill=hover?IM_COL32(44,49,62,255):IM_COL32(34,38,49,255),edge=border,fg=ink;
     if(active&&tone==Tone::Gold){fill=gold;edge=gold;fg=IM_COL32(26,20,5,255);}
     if(active&&tone==Tone::Teal){fill=IM_COL32(18,48,45,255);edge=teal;}
+    if(active&&tone==Tone::Primary){fill=teal;edge=teal;fg=IM_COL32(6,35,31,255);}
     if(label||active||hover)d->AddRectFilled(vec(r.x,r.y),vec(r.x+r.w,r.y+r.h),fill,s.px(7));
     if(label)d->AddRect(vec(r.x,r.y),vec(r.x+r.w,r.y+r.h),edge,s.px(7),0,s.px(1));
-    float sz=s.px(18);const char *caption=label?plain(label):nullptr;
+    float sz=s.px(18);const char *caption=label;
     float ix=r.x+(r.w-sz)*.5f,iy=r.y+(r.h-sz)*.5f;
     if(caption){
         if(stacked){iy=r.y+s.px(7);auto m=gui_text_size(caption);float k=s.px(11)/ImGui::GetFontSize();text(vec(r.x+(r.w-m.x*k)*.5f,r.y+r.h-s.px(17)),caption,s,11,fg);}
@@ -108,6 +112,14 @@ inline bool checkbox(const char *label,bool &value,UIScale s){
     if(value)d->AddRectFilled(vec(r.x,y),vec(r.x+s.px(14),y+s.px(14)),teal,s.px(3));
     else d->AddRect(vec(r.x,y),vec(r.x+s.px(14),y+s.px(14)),ImGui::IsItemHovered()?teal:muted,s.px(3),0,s.px(1));
     text(vec(r.x+s.px(22),r.y+(r.h-s.px(12))*.5f),label,s);return clicked;
+}
+inline bool toggle(const char *label,bool &value,UIScale s){
+    ImGui::PushID(label);ImGui::PushStyleColor(ImGuiCol_Button,0);ImGui::PushStyleColor(ImGuiCol_ButtonHovered,0);ImGui::PushStyleColor(ImGuiCol_ButtonActive,0);
+    bool clicked=ImGui::Button("##toggle",vec(gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x,s.px(28)));ImGui::PopStyleColor(3);ImGui::PopID();
+    if(clicked)value=!value;auto r=item_rect();auto *d=ImGui::GetWindowDrawList();float x=r.x+r.w-s.px(34),y=r.y+(r.h-s.px(18))*.5f;
+    d->AddRectFilled(vec(x,y),vec(x+s.px(34),y+s.px(18)),value?teal:border,s.px(9));
+    d->AddCircleFilled(vec(x+s.px(value?25:9),y+s.px(9)),s.px(7),value?IM_COL32(6,35,31,255):ink,20);
+    text(vec(r.x,r.y+(r.h-s.px(12))*.5f),label,s);return clicked;
 }
 struct SliderSkin {
     bool input=ImGui::GetIO().KeyCtrl||ImGui::GetIO().WantTextInput;
@@ -133,6 +145,10 @@ inline void header(const char *title,bool *open,UIScale s){
 }
 inline void panel_size(float width,float max_height){
     ImGui::SetNextWindowSize(vec(width,0),ImGuiCond_Always);ImGui::SetNextWindowSizeConstraints(vec(width,0),vec(width,max_height));
+}
+inline bool begin_body(float max_height,ImGuiWindowFlags flags=ImGuiWindowFlags_NoNavInputs){
+    ImGui::SetNextWindowSizeConstraints(vec(0,0),vec(FLT_MAX,std::max(1.f,max_height)));
+    return ImGui::BeginChild("##body",vec(0,0),ImGuiChildFlags_AutoResizeY,ImGuiWindowFlags_NoSavedSettings|flags);
 }
 inline constexpr ImGuiWindowFlags panel_flags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs|ImGuiWindowFlags_NoDocking|ImGuiWindowFlags_AlwaysAutoResize;
 inline Rect finish_panel(float viewport_width,float viewport_height,UIScale s){

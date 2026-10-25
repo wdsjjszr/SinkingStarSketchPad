@@ -40,7 +40,7 @@ Keep an existing ReShade runtime instead of overwriting it blindly. Only the bun
 
 ## Language
 
-The toolbar's **Language / 语言** menu offers **System**, **English**, and **Chinese (Simplified)**. System uses Chinese for a Chinese Windows UI language and English otherwise. Changes take effect immediately and persist in:
+The **Settings** window's **Language** selector offers **System**, **English**, and **Chinese (Simplified)**. System uses Chinese for a Chinese Windows UI language and English otherwise. Changes take effect immediately and persist in:
 
 `SinkingStarSketch-data/settings.ini`
 
@@ -54,6 +54,12 @@ Language=en
 Other accepted values are `zh-CN` and `auto`. The setting changes the mod interface and notifications. Your annotations and the base game language are not translated.
 
 ## Controls
+
+The toolbar uses icon buttons with names and shortcuts on hover. Open **Shortcut help** from the toolbar or free-camera panel for the full controls in a movable two-column window. E hides/restores Settings and help with drawing, preserving their positions and open state in the current session. Click the relevant toolbar icon again or the window's X to close it. Esc retains its drawing/camera behavior; HUD key hints remain visible when drawing is closed.
+
+**Settings → UI scale** controls all mod windows, tooltips and HUD from 75% to 200% (default 100%, matching the current 18px font). The value is saved as `[Interface] UIScalePercent`. Ink, annotations, world grids and cursor artwork keep their original sizes. The free-camera panel keeps its original layout and colors.
+
+Click **Grid preview** to open its controls beside the toolbar. The flyout stays open while the pointer leaves; click the entry again or click outside to close it. That closing click is consumed through release. Native ground Debug controls are in Settings. New/missing plane-change hint settings enable checker fill only, with borders off, 15% opacity and a 0.75-second hold; saved settings remain.
 
 | Action | Key / input |
 | --- | --- |

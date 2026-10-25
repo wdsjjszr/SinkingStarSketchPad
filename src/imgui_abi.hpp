@@ -12,12 +12,12 @@ inline ImVec2 gui_vec2(ImVec2 (*fn)()) {
     return fn();
 #endif
 }
-inline ImVec2 gui_text_size(const char *text) {
+inline ImVec2 gui_text_size(const char *text,float wrap=-1.f) {
 #if defined(__MINGW32__)
     ImVec2 value;
-    reinterpret_cast<void (*)(ImVec2 *,const char *,const char *,bool,float)>(imgui_function_table_instance()->CalcTextSize)(&value,text,nullptr,false,-1.f);
+    reinterpret_cast<void (*)(ImVec2 *,const char *,const char *,bool,float)>(imgui_function_table_instance()->CalcTextSize)(&value,text,nullptr,false,wrap);
     return value;
 #else
-    return ImGui::CalcTextSize(text);
+    return ImGui::CalcTextSize(text,nullptr,false,wrap);
 #endif
 }
