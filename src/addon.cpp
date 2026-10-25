@@ -597,7 +597,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
                 if(ImGui::Button(tr(Label::ApplyUIScale))&&ui_scale.apply()){ui_preferences_dirty=true;ui_preferences_due=GetTickCount64()+500;}
                 ImGui::EndDisabled();ImGui::EndTable();
             }
-            ImGui::TextWrapped("%s",tr(Label::SettingsHelp));ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::WheelSettings));
+            ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::WheelSettings));
             bool changed=false;
             if(setting_rows("##wheel")){
                 const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};constexpr Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
@@ -615,7 +615,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
                 if(ImGui::DragFloat("##duration",&seconds,.01f,0,5,"%.2f",ImGuiSliderFlags_AlwaysClamp)){hint_preferences.duration_ms=unsigned(std::lround(seconds*1000));changed=true;}
                 ImGui::EndTable();
             }
-            ImGui::TextWrapped("%s",tr(Label::HintHelp));ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::HintStyle));
+            ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::HintStyle));
             auto &preview=hint_preferences.style;
             if(ImGui::BeginTable("##layers",2,ImGuiTableFlags_SizingStretchSame|ImGuiTableFlags_NoSavedSettings)){
                 ImGui::TableNextRow();ImGui::TableNextColumn();changed|=ui::checkbox(tr(Label::GridCenters),preview.centers,s);ImGui::TableNextColumn();changed|=ui::checkbox(tr(Label::GridIntersections),preview.intersections,s);

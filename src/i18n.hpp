@@ -21,7 +21,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(ShortcutGeneralTitle,"General","常用操作") \
  X(ShortcutToolsTitle,"Drawing tools","绘图工具") \
  X(ShortcutDrawingTitle,"While drawing","绘图时") \
- X(KeyboardHelp,"Outside text entry, ordinary keys control the game while drawing; Ctrl/Alt chords are captured. Single E/G/B/T shortcuts require no modifiers. Release mouse buttons after returning from another app.","绘图时，文字输入之外的普通键盘操作继续交给游戏；Ctrl / Alt 组合键由 Mod 接管。单键 E/G/B/T 需不按修饰键。切回游戏后先松开鼠标按键。") \
+ X(KeyboardHelp,"You can move your character while drawing.","绘图时，可以继续操作角色移动") \
  X(ShortcutCameraTitle,"Free camera","自由相机") \
  X(Close,"Close","关闭") \
  X(WindowMoveHelp,"Drag the header to move. E hides / restores this window with drawing.","拖动标题栏移动；E 随绘图隐藏 / 恢复本窗口。") \
@@ -34,7 +34,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(CameraSensitivity,"Mouse sensitivity","鼠标灵敏度") X(CameraInvertX,"Invert mouse X","反转鼠标 X 轴") X(CameraInvertY,"Invert mouse Y","反转鼠标 Y 轴") \
  X(CameraHold,"Hold camera","固定相机") \
  X(CameraHeld,"Camera held. T resumes controls; Esc or Restore game view restores the native camera.","相机已固定。T 继续调整；Esc 或恢复游戏视角可归位。") \
- X(CameraPrefsHelp,"Camera preferences are saved. T / Esc restores the game view; Hold camera alone keeps the pose. Tilt stops at the top and before the horizon.","相机偏好自动保存；T / Esc 恢复游戏视角，只有固定相机按钮保留机位。俯仰在顶部及地平线前停止，避免翻转。") \
+ X(CameraPrefsHelp,"Camera preferences are saved. T / Esc restores the game view; Hold camera alone keeps the pose.","相机偏好自动保存；T / Esc 恢复游戏视角，只有固定相机按钮保留机位。") \
  X(CameraSettingsFailed,"Could not save camera settings.","无法保存相机设置。") \
  X(CameraX,"Offset X","偏移 X") X(CameraY,"Offset Y","偏移 Y") X(CameraZ,"Height offset","高度偏移") \
  X(CameraReset,"Reset to current game camera","重置到当前游戏相机") X(CameraOff,"Restore game view / disable","恢复游戏视角 / 关闭") \
@@ -51,15 +51,13 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
  X(DrawingSettingsFailed,"Could not save drawing settings.","无法保存绘图设置。") \
  X(Settings,"Settings","设置") X(SettingsTitle,"Settings###SketchSettings","设置###SketchSettings") \
- X(SettingsHelp,"Drawing settings apply and save immediately. Click Apply scale to apply UI size changes.","绘图设置即时生效并自动保存；界面缩放点击“应用缩放”后生效。") \
  X(HintSettings,"Plane change preview","平面变动预览") X(HintMode,"Show on plane changes","在平面变动时显示预览") \
  X(HintOn,"On","开") X(HintOff,"Off","关") X(HintWheelOnly,"Height only","仅微调") \
  X(HintDuration,"Hold duration (seconds)","保持时长（秒）") \
- X(HintHelp,"Initial level entry stays silent. Height adjustment only means wheel height changes. Ctrl+click to enter the hold duration; an ease-out fade lasting another 30 percent follows. Zero disables the preview.","进入关卡首次初始化不提示。仅微调指滚轮改高。Ctrl+点击可输入保持时长，随后另有三成时长的缓出渐隐；0 秒不显示。") \
  X(WheelSettings,"Wheel behavior while drawing","绘图时滚轮行为") X(Wheel,"Wheel","滚轮") X(CtrlWheel,"Ctrl + wheel","Ctrl + 滚轮") \
  X(ShiftWheel,"Shift + wheel","Shift + 滚轮") X(AltWheel,"Alt + wheel","Alt + 滚轮") \
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
- X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the previous/next color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择上一色 / 下一色。关闭绘图后滚轮用于相机缩放。") \
+ X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。关闭绘图后滚轮用于相机缩放。") \
  X(PathFinished,"Path finished.","本条路径已结束。") \
  X(VerticalSnapHelp,"Shift: lock start X/Y across heights for a vertical line. Same-plane Shift keeps angle snapping.","Shift：跨层时锁定起点 X/Y，快速绘制竖直线；同层保持角度约束。") \
  X(GridDrawing,"Grid drawing","网格绘画") \
