@@ -881,8 +881,11 @@ void handle_right_button(Point mouse,Point size,bool over_ui){
     if(!down){suppress_right=false;if(erasing&&erase_with_right){commit();status();}}
     bool owns=editing&&input_focus.canvas_ready()&&!reshade_menu&&!text_open&&!over_ui&&!ImGui::IsAnyItemActive()
         &&!ground_marking&&!ground_request.tag.id&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y;
+    const bool camera_control=free_camera_bridge::snapshot().camera.enabled;
+    if(camera_control&&erasing&&erase_with_right){commit();status();}
+    auto action=input::right_action(owns,shape_gesture.active(),path_active,camera_control);
+    if(action==input::RightAction::None){if(camera_control)suppress_right=false;return;}
     if(down&&owns&&ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
-        auto action=input::right_action(owns,shape_gesture.active(),path_active);
         if(action==input::RightAction::CancelShape)cancel();
         else if(action==input::RightAction::FinishPath){finish_path();note(tr(Label::PathFinished),1500);}
         else if(action==input::RightAction::Erase){settle_drawing();erase_before=page();erasing=true;erase_with_right=true;}
@@ -941,7 +944,7 @@ void camera_navigation(effect_runtime*rt,bool foreground,bool over_ui){
         c.move((rt->is_key_down('D')?1:0)-(rt->is_key_down('A')?1:0),(rt->is_key_down('W')?1:0)-(rt->is_key_down('S')?1:0),
                (rt->is_key_down('Q')?1:0)-(rt->is_key_down('Z')?1:0),ImGui::GetIO().DeltaTime,rt->is_key_down(VK_SHIFT));
         if(!over_ui&&input_focus.canvas_ready()){
-            if(!editing&&!suppress_right&&ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
+            if(!suppress_right&&ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
             if(!editing)c.magnify(ImGui::GetIO().MouseWheel);
         }
     }

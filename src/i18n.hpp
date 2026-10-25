@@ -62,7 +62,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(PathFinished,"Path finished.","本条路径已结束。") \
  X(VerticalSnapHelp,"Shift: lock start X/Y across heights for a vertical line. Same-plane Shift keeps angle snapping.","Shift：跨层时锁定起点 X/Y，快速绘制竖直线；同层保持角度约束。") \
  X(GridDrawing,"Grid drawing","网格绘画") \
- X(PathHelp,"Click centers along X, Y or Z; click the endpoint again or right-click to finish.","沿 X、Y、Z 点击格心，转弯处加点；重复点击终点或右键结束。") \
+ X(PathHelp,"Click centers along X, Y or Z. Finish with the button or endpoint; right-click also finishes when camera controls are off.","沿 X、Y、Z 点击格心，转弯处加点；按钮或重复点击终点结束，相机控制关闭时也可右键结束。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \
  X(GroundMark,"Manual marking","手动标记") X(GroundFinish,"Cancel marking","取消标记") \
  X(GroundHelp,"Left-click a visible ground cell to set the plane and finish. A wall or empty space keeps marking active. Esc cancels.","左键点击可见地面格，成功后自动结束标记；命中墙面或空处会保持标记。Esc 取消。") \
@@ -139,7 +139,7 @@ inline constexpr ShortcutEntry drawing_shortcuts[]={
     {"Wheel","Configured action; plane height by default","按设置执行，默认调整平面高度","滚轮"},
     {"Shift+wheel","Cycle color by default; change bindings in Settings","默认切色；可在设置中修改绑定","Shift + 滚轮"},
     {"Shift","Vertical across heights; same-plane 45-degree lines/arrows; square/circle constraint","跨层竖直线；同层 45 度直线 / 箭头；正方形 / 正圆约束"},
-    {"Right click","Cancel shape, finish path, otherwise hold to erase","取消图形、结束路径，否则按住擦除","鼠标右键"},
+    {"Right click","Camera rotation when enabled; otherwise cancel shape, finish path or erase","相机控制启用时旋转镜头；否则取消图形、结束路径或擦除","鼠标右键"},
     {"Alt+wheel","Cycle tool by default; existing bindings are kept","默认切换工具；保留已有绑定","Alt + 滚轮"},
     {"Ctrl+Z","Undo","撤销"},{"Ctrl+Y / Ctrl+Shift+Z","Redo","重做"},
     {"Ctrl+1 / Ctrl+2 / Ctrl+3","Switch scratch page","切换草稿"},{"Ctrl+S","Save completed marks","保存已完成笔迹"},
@@ -147,7 +147,7 @@ inline constexpr ShortcutEntry drawing_shortcuts[]={
 };
 inline constexpr ShortcutEntry camera_shortcuts[]={
     {"W/A/S/D","Pan","平移"},{"Q / Z","Up / down; Shift speeds up","升高 / 降低，Shift 加速"},
-    {"Right drag","Rotate / tilt with drawing closed","旋转 / 俯仰（绘图关闭时）","右键拖动"},
+    {"Right drag","Rotate / tilt, including while drawing","旋转 / 俯仰，绘图打开时也可使用","右键拖动"},
     {"Wheel","Configured action while drawing; zoom while closed","绘图打开时按设置执行，关闭时缩放","滚轮"},
     {"Esc / T","Restore game view","恢复游戏视角"}
 };

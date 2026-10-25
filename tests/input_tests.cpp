@@ -2,7 +2,8 @@
 #include <cassert>
 #include <iostream>
 using namespace sketch::input;
-static_assert(right_action(true,true,true)==RightAction::CancelShape&&right_action(true,false,true)==RightAction::FinishPath&&right_action(true,false,false)==RightAction::Erase&&right_action(false,true,true)==RightAction::None,"Right-click cancels shapes, finishes paths, then erases only on an available canvas");
+static_assert(right_action(true,true,true,false)==RightAction::CancelShape&&right_action(true,false,true,false)==RightAction::FinishPath&&right_action(true,false,false,false)==RightAction::Erase&&right_action(false,true,true,false)==RightAction::None,"Right-click cancels shapes, finishes paths, then erases only on an available canvas");
+static_assert(right_action(true,true,true,true)==RightAction::None&&right_action(true,false,false,true)==RightAction::None,"Enabled camera controls own right-click before any drawing action; holding a pose alone does not enable controls");
 constexpr bool drawing_wheel_checks(){
     WheelState wheel;
     if(wheel.consume(.25,0,WheelAction::Plane,true)||wheel.consume(.5,0,WheelAction::Plane,true)||wheel.consume(.25,0,WheelAction::Plane,true)!=1)return false;
