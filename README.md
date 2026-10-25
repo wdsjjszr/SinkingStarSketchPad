@@ -17,13 +17,13 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - World-space paths and optional grid drawing: plane pen/shapes and camera-following text anchors.
 - Gray grid previews, camera-occluded plane hints and configurable wheel/Shift/Ctrl/Alt actions.
 - A live Settings window with persistent hint layers, duration and wheel bindings.
-- Cross-height grid lines/arrows and three-axis orthogonal paths, stored in backward-readable draft v4.
+- Cross-height grid lines/arrows and optionally numbered orthogonal paths; draft v5 reads all older formats.
 - 17×17 white guides with black outlines, drawn below ink; plane hints default to 15% opacity.
-- Cross-height Shift lines/arrows lock world X/Y for vertical segments; voxel clipping and draft v4 remain.
-- Right click cancels shapes or finishes paths first, otherwise temporarily erases; Ctrl+Z undoes.
+- Cross-height Shift lines/arrows lock world X/Y; middle-click plane marking preserves drawing and shows orthogonal landing guides.
+- Enabled camera controls own right drag; otherwise right click cancels shapes, finishes paths or temporarily erases. Ctrl+Z undoes.
 - Persistent System / English / Simplified Chinese language selection.
 
-**Beta:** the user confirmed native previews and ground marking in the levels they checked. The user reported the preceding grid drawing extension works well. This settings/preview revision has received static checks and compilation only. Inspect alignment in your level; routes do not check obstacles, solve puzzles, or control the player. See [grid drawing, previews and draft upgrades](docs/GRID_DRAWING.md).
+**Beta:** the user confirmed native previews and ground marking in the levels they checked. This drawing revision received static checks, compilation and an isolated preview performance comparison; actual game appearance/performance remains unverified. Routes do not check obstacles, solve puzzles, or control the player. See [grid drawing, previews and draft upgrades](docs/GRID_DRAWING.md).
 
 ## Use
 
@@ -35,7 +35,7 @@ The compatible add-on filename and persistent data folder remain `SinkingStarSke
 
 Version 3.4.6 integrates camera holding with default speed 5 and Y inversion enabled. T/Esc restores the game view; only Hold camera keeps the pose.
 
-Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt and wheel zoom with drawing closed; T/Esc restores the game view; only Hold camera fixes the pose. With drawing open, wheel actions follow Settings; defaults are height changes and Shift+wheel color cycling. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
+Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt even while drawing, and wheel zoom with drawing closed; T/Esc restores the game view; only Hold camera fixes the pose. Drawing wheel defaults are height/plain, color/Shift and tool/Alt, preserving all existing bindings. The camera defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026; broader visual compatibility remains experimental.
 
 ## Build from source
 

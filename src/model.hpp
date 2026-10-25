@@ -16,6 +16,7 @@
 namespace sketch {
 struct Point { float x = 0, y = 0, z = 0; };
 enum class Tool : unsigned { Pen, Line, Arrow, Rectangle, Ellipse, Text, Eraser, Path };
+inline constexpr unsigned draft_version=5;
 struct Stroke {
     Tool tool = Tool::Pen;
     unsigned color = 0;
@@ -23,6 +24,7 @@ struct Stroke {
     std::vector<Point> points;
     std::string text;
     grid::Lattice lattice;
+    bool numbered=false;
 };
 using Page = std::vector<std::shared_ptr<const Stroke>>;
 struct History {
@@ -40,7 +42,7 @@ struct Document {
     unsigned page = 0;
     bool cursor = true;
     std::array<grid::Lattice,3> grids;
-    unsigned format_version=4;
+    unsigned format_version=draft_version;
     size_t point_count() const {
         size_t n = 0;
         for (const auto &p : pages) for (const auto &s : p) n += s->points.size();
@@ -57,6 +59,7 @@ struct Document {
                     || s->points.empty() || s->points.size() > 10000 || s->text.size() > 2048)
                     throw std::runtime_error("Invalid stroke");
                 if (s->tool == Tool::Text && s->points.size() != 1) throw std::runtime_error("Invalid text position");
+                if(s->numbered&&s->tool!=Tool::Path)throw std::runtime_error("Invalid path numbering");
                 if (s->tool != Tool::Text && s->tool != Tool::Pen && s->tool != Tool::Path && s->points.size() != 2) throw std::runtime_error("Invalid shape");
                 if(!s->lattice.valid()||(s->tool==Tool::Path&&!s->lattice.ready))throw std::runtime_error("Invalid stroke grid");
                 for (const auto &pt : s->points)
@@ -81,12 +84,12 @@ struct Document {
     }
     void write(std::ostream &out) const {
         validate();
-        out << "SINKING_STAR_SKETCH 4\n" << page << ' ' << cursor << '\n' << std::setprecision(17);
+        out << "SINKING_STAR_SKETCH " << draft_version << '\n' << page << ' ' << cursor << '\n' << std::setprecision(17);
         for(const auto &g:grids)write_grid(out,g);
         for (const auto &p : pages) {
             out << p.size() << '\n';
             for (const auto &s : p) {
-                out << unsigned(s->tool) << ' ' << s->color << ' ' << s->width << ' ' << s->points.size() << ' ' << std::quoted(s->text) << '\n';
+                out << unsigned(s->tool) << ' ' << s->color << ' ' << s->width << ' ' << s->points.size() << ' ' << std::quoted(s->text) << ' ' << s->numbered << '\n';
                 write_grid(out,s->lattice);
                 for (const auto &pt : s->points) out << pt.x << ' ' << pt.y << ' ' << pt.z << '\n';
             }
@@ -95,7 +98,7 @@ struct Document {
     }
     static Document read(std::istream &in) {
         Document d; std::string magic; unsigned version = 0, cursor = 0;
-        if (!(in >> magic >> version) || magic != "SINKING_STAR_SKETCH" || version<1 || version>4)
+        if (!(in >> magic >> version) || magic != "SINKING_STAR_SKETCH" || version<1 || version>draft_version)
             throw std::runtime_error("Unsupported draft file");
         if (!(in >> d.page >> cursor) || cursor > 1 || d.page > 2) throw std::runtime_error("Invalid draft header");
         d.cursor = cursor != 0;
@@ -109,6 +112,7 @@ struct Document {
                 auto s = std::make_shared<Stroke>(); unsigned tool = 0; size_t count = 0;
                 if (!(in >> tool >> s->color >> s->width >> count >> std::quoted(s->text)) || (tool>7||tool==6||(version==1&&tool>5)) || count == 0 || count > 10000 || s->text.size() > 2048)
                     throw std::runtime_error("Invalid stroke data");
+                if(version>=5){unsigned numbered;if(!(in>>numbered)||numbered>1)throw std::runtime_error("Invalid path numbering");s->numbered=numbered!=0;}
                 total += count; if (total > 120000) throw std::runtime_error("Draft too large");
                 s->tool = Tool(tool); s->points.resize(count);
                 if(version>=3||s->tool==Tool::Path)s->lattice=read_grid(in);

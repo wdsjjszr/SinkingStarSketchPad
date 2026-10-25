@@ -90,7 +90,7 @@ void cancel_ground_marking(){
     if(ground_request.tag.id)native_ground_bridge::cancel(ground_request.tag.id);
     ground_marking=false;ground_hit={};ground_request={};
 }
-bool path_active=false,grid_drawing=false;
+bool path_active=false,grid_drawing=false,path_numbering=false;
 grid::Preview grid_preview;
 grid::PlaneHint plane_hint;
 grid::HintPreferences hint_preferences;
@@ -138,7 +138,7 @@ void save_camera_preferences(){
 void load_drawing_preferences(){
     auto path=data_path.parent_path()/L"settings.ini";
     auto read=[&](const wchar_t *key,int value){return int(GetPrivateProfileIntW(L"Drawing",key,value,path.c_str()));};
-    grid_drawing=read(L"GridMode",0)!=0;grid_preview.enabled=read(L"Preview",1)!=0;
+    grid_drawing=read(L"GridMode",0)!=0;grid_preview.enabled=read(L"Preview",1)!=0;path_numbering=read(L"PathNumbering",0)!=0;
     grid_preview.centers=read(L"Centers",1)!=0;grid_preview.intersections=read(L"Intersections",0)!=0;
     grid_preview.borders=read(L"Borders",0)!=0;grid_preview.checker=read(L"Checker",0)!=0;
     grid_preview.opacity=std::clamp(read(L"Opacity",45),0,100);
@@ -155,7 +155,7 @@ void drawing_preferences_changed(){drawing_preferences_dirty=true;drawing_prefer
 void save_drawing_preferences(){
     if(!drawing_preferences_dirty||data_path.empty())return;auto path=data_path.parent_path()/L"settings.ini";bool ok=true;
     auto write=[&](const wchar_t *key,int value){auto text=std::to_wstring(value);ok=WritePrivateProfileStringW(L"Drawing",key,text.c_str(),path.c_str())!=FALSE&&ok;};
-    write(L"GridMode",grid_drawing);write(L"Preview",grid_preview.enabled);write(L"Centers",grid_preview.centers);
+    write(L"GridMode",grid_drawing);write(L"Preview",grid_preview.enabled);write(L"Centers",grid_preview.centers);write(L"PathNumbering",path_numbering);
     write(L"Intersections",grid_preview.intersections);write(L"Borders",grid_preview.borders);write(L"Checker",grid_preview.checker);write(L"Opacity",grid_preview.opacity);
     const auto &style=hint_preferences.style;
     write(L"HintCenters",style.centers);write(L"HintIntersections",style.intersections);write(L"HintBorders",style.borders);
@@ -181,7 +181,7 @@ void status() {
     f << "settings_open=" << settings_open << "\nhint_mode=" << unsigned(hint_preferences.mode) << "\nhint_duration_ms=" << hint_preferences.duration_ms
       << "\nhint_centers=" << hint_preferences.style.centers << "\nhint_intersections=" << hint_preferences.style.intersections
       << "\nhint_borders=" << hint_preferences.style.borders << "\nhint_checker=" << hint_preferences.style.checker << "\nhint_opacity=" << hint_preferences.style.opacity
-      << "\npath_active=" << path_active << "\nright_erasing=" << erase_with_right
+      << "\npath_active=" << path_active << "\npath_numbering=" << path_numbering << "\nright_erasing=" << erase_with_right
       << "\nhint_source=" << unsigned(plane_hint.source) << "\nhint_started=" << plane_hint.started << '\n';
     for(unsigned i=0;i<4;++i)f << "wheel_binding_" << i << '=' << unsigned(wheel_actions[i]) << '\n';
     f << "ground_marking=" << ground_marking << "\nground_request_pending=" << bool(ground_request.tag.id)
@@ -211,12 +211,12 @@ bool save() {
     if (!dirty) return true;
     try {
         if (protected_file) throw std::runtime_error("Old draft is unreadable and could not be backed up");
-        if(doc.format_version<4&&!legacy_draft_source.empty()){
-            const auto keep=data_path.parent_path()/L"drafts.pre-v4.txt";
+        if(doc.format_version<draft_version&&!legacy_draft_source.empty()){
+            const auto keep=data_path.parent_path()/L"drafts.pre-v5.txt";
             if(!std::filesystem::exists(keep)){
                 auto temporary=keep.wstring()+L"."+std::to_wstring(GetTickCount64())+L".tmp";
                 std::filesystem::copy_file(legacy_draft_source,temporary,std::filesystem::copy_options::none);
-                if(!MoveFileExW(temporary.c_str(),keep.c_str(),MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Cannot preserve the pre-v4 draft backup");
+                if(!MoveFileExW(temporary.c_str(),keep.c_str(),MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Cannot preserve the pre-v5 draft backup");
             }
         }
         const auto temp=data_path.wstring()+L".tmp", backup=data_path.wstring()+L".bak";
@@ -229,7 +229,7 @@ bool save() {
         if(std::filesystem::exists(data_path)) ok=ReplaceFileW(data_path.c_str(),temp.c_str(),backup.c_str(),0,nullptr,nullptr);
         else ok=MoveFileExW(temp.c_str(),data_path.c_str(),MOVEFILE_WRITE_THROUGH);
         if(!ok) throw std::runtime_error("Cannot replace draft file: "+std::to_string(GetLastError()));
-        dirty=false;doc.format_version=4;legacy_draft_source.clear();return true;
+        dirty=false;doc.format_version=draft_version;legacy_draft_source.clear();return true;
     } catch(const std::exception &e) { note(std::string(tr(Label::SaveFailed))+e.what(),15000); log(toast); save_due=GetTickCount64()+15000; return false; }
 }
 void load() {
@@ -240,7 +240,7 @@ void load() {
     auto read=[&](const std::filesystem::path &p) {
         if(std::filesystem::file_size(p)>16*1024*1024) throw std::runtime_error("Draft file too large");
         std::ifstream in(p,std::ios::binary);auto result=Document::read(in);
-        legacy_draft_source=result.format_version<4?p:std::filesystem::path{};return result;
+        legacy_draft_source=result.format_version<draft_version?p:std::filesystem::path{};return result;
     };
     if(std::filesystem::exists(data_path)) {
         try { doc=read(data_path); }
@@ -286,6 +286,13 @@ void polyline(ImDrawList *draw,const std::vector<Point>&p,ImU32 color,float w) {
     draw->AddPolyline(vertices.data(),static_cast<int>(vertices.size()),color,ImDrawFlags_None,w);
 }
 std::vector<Point> projected(const Stroke &s,Point size){return project_stroke(s,camera,size);}
+void set_path_numbering(bool enabled){
+    path_numbering=enabled;drawing_preferences_changed();
+    if(path_active&&!page().empty()&&page().back()->tool==Tool::Path&&page().back()->numbered!=enabled){
+        auto stroke=std::make_shared<Stroke>(*page().back());stroke->numbered=enabled;
+        history[doc.page].record(page());page().back()=stroke;changed();
+    }else status();
+}
 void path_click(Point mouse,Point size){
     if(!camera.valid){note(tr(Label::NoCamera));return;}
     double x=mouse.x/size.x,y=mouse.y/size.y;
@@ -295,7 +302,7 @@ void path_click(Point mouse,Point size){
     Point target{float(i),float(j)};
     const bool append=path_active&&!page().empty()&&page().back()->tool==Tool::Path;
     auto stroke=append?std::make_shared<Stroke>(*page().back()):std::make_shared<Stroke>();
-    if(!append){stroke->tool=Tool::Path;stroke->color=selected_color;stroke->width=width;stroke->lattice=g;}
+    if(!append){stroke->tool=Tool::Path;stroke->color=selected_color;stroke->width=width;stroke->lattice=g;stroke->numbered=path_numbering;}
     size_t extra=1;
     if(append){
         target.z=float(std::round(g.origin.z-stroke->lattice.origin.z));
@@ -477,10 +484,19 @@ void draw_native_ground_debug(ImDrawList *draw,Point mouse,Point size,bool over_
     }
 }
 constexpr float text_outline_width=2;
+constexpr float path_number_size=18;
+constexpr Point path_number_position(Point p){return {p.x+8,p.y-14};}
 void outlined_text(ImDrawList *draw,Point position,float size,ImU32 color,const char *text){
     for(int y=-1;y<=1;++y)for(int x=-1;x<=1;++x)if(x||y)
         draw->AddText(ImGui::GetFont(),size,ImVec2(position.x+x*text_outline_width,position.y+y*text_outline_width),IM_COL32(0,0,0,255),text);
     draw->AddText(ImGui::GetFont(),size,v(position),color,text);
+}
+void draw_path_numbers(ImDrawList *draw,const Stroke &stroke,Point size){
+    if(stroke.tool!=Tool::Path||!stroke.numbered)return;
+    auto points=projected(stroke,size);
+    for(size_t i=0;i<points.size();++i){char number[16];std::snprintf(number,sizeof(number),"%zu",i+1);
+        outlined_text(draw,path_number_position(points[i]),path_number_size,colors[stroke.color],number);
+    }
 }
 void draw_stroke(ImDrawList *draw,const Stroke&s,Point size) {
     auto p=projected(s,size);if(p.empty())return;auto a=p.front();
@@ -522,6 +538,12 @@ void export_svg(Point size) {
                 if(p.size()==1)out<<"<circle cx=\""<<p[0].x<<"\" cy=\""<<p[0].y<<"\" r=\""<<s->width*.5f<<"\" fill=\""<<c<<"\"/>\n";
                 else {out<<"<polyline fill=\"none\" stroke=\""<<c<<"\" stroke-width=\""<<s->width<<"\" stroke-linecap=\"round\" stroke-linejoin=\"round\" points=\"";for(auto pt:p)out<<pt.x<<','<<pt.y<<' ';out<<"\"/>\n";}
                 if(s->tool==Tool::Arrow){auto head=arrow_head(p,s->width);if(!head.empty()){out<<"<polyline fill=\"none\" stroke=\""<<c<<"\" stroke-width=\""<<s->width<<"\" points=\"";for(auto pt:head)out<<pt.x<<','<<pt.y<<' ';out<<"\"/>\n";}}
+            }
+        }
+        for(const auto &stroke:page())if(stroke->tool==Tool::Path&&stroke->numbered){
+            auto points=projected(*stroke,size);
+            for(size_t i=0;i<points.size();++i){auto p=path_number_position(points[i]);
+                out<<"<text x=\""<<p.x<<"\" y=\""<<p.y+path_number_size<<"\" fill=\""<<hex[stroke->color]<<"\" stroke=\"#000000\" stroke-width=\""<<text_outline_width*2<<"\" stroke-linejoin=\"round\" paint-order=\"stroke fill\" font-size=\""<<path_number_size<<"\" font-family=\"Microsoft YaHei,sans-serif\">"<<i+1<<"</text>\n";
             }
         }
         out<<"</svg>\n";out.flush();if(!out)throw std::runtime_error("Export failed");note(tr(Label::Exported));
@@ -753,7 +775,11 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
         if(ground_marking)ImGui::TextWrapped("%s",tr(Label::GroundHelp));
         if(ground_request.tag.id||!ground_ready())ImGui::TextWrapped("%s",tr(Label::GroundLoading));
         if((grid_drawing||selected==Tool::Path)&&!camera.valid)ImGui::TextWrapped("%s",tr(Label::CameraWait));
-        if(selected==Tool::Path){if(ImGui::Button(tr(Label::NewPath)))finish_path();ui::hint(tr(Label::PathHelp));if(!doc.grids[doc.page].ready)ImGui::TextWrapped("%s",tr(Label::GridWait));}
+        if(selected==Tool::Path){
+            if(ImGui::Button(tr(Label::NewPath)))finish_path();ui::hint(tr(Label::PathHelp));ImGui::SameLine();
+            bool numbered=path_numbering;if(ui::checkbox(tr(Label::PathNumbering),numbered,s))set_path_numbering(numbered);
+            if(!doc.grids[doc.page].ready)ImGui::TextWrapped("%s",tr(Label::GridWait));
+        }
         if(grid_drawing&&(selected==Tool::Line||selected==Tool::Arrow)){ImGui::TextWrapped("%s",tr(Label::VerticalSnapHelp));}
         auto free=free_camera_bridge::snapshot().camera;
         if(free.holding){ImGui::TextWrapped("%s",tr(Label::CameraHeld));if(ImGui::Button(tr(Label::CameraOff)))free_camera_bridge::restore();}
@@ -1015,6 +1041,7 @@ void overlay(effect_runtime*rt) {
         if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
         if(editing&&foreground&&!over_ui&&!reshade_menu&&!ground_marking){draw_height_guide(draw,size);draw_snap_marker(draw,mouse,size,rt->is_key_down(VK_SHIFT));}
+        if(visible)for(const auto &stroke:page())draw_path_numbers(draw,*stroke,size);
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){
             auto s=frame_ui;ui::FontScope font(s.ratio());ImDrawList*d=ImGui::GetForegroundDrawList();

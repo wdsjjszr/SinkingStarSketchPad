@@ -47,6 +47,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(UIScale,"UI scale","界面缩放") X(ApplyUIScale,"Apply scale","应用缩放") X(HintStyle,"Preview grid style","预览网格样式") X(DebugTitle,"Debug","Debug") X(DeveloperOnly,"Developer tools","开发用") \
  X(UISettingsFailed,"Could not save UI settings.","无法保存界面设置。") \
  X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Grid preview","网格预览") \
+ X(PathNumbering,"Path count","路径计数") \
  X(GridCenters,"Cell centers","中心点") X(GridIntersections,"Grid intersections","网格交点") \
  X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
  X(DrawingSettingsFailed,"Could not save drawing settings.","无法保存绘图设置。") \

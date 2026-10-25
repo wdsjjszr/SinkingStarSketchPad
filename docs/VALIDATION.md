@@ -1,5 +1,11 @@
 # Validation — 3.4.6 Beta
 
+## Drawing interaction and numbered paths — 26 October 2026
+
+- Compile-time assertions cover tool cycling/wrapping, stable wheel action values and defaults, camera right-button priority, middle-click drag-to-endpoint transitions and orthogonal world-XY landings.
+- Compile-only fixtures cover retained shapes/paths across successful/failed quick marking, cancellation, v1-v5 loading, path-only numbering validation, invalid stored flags, immutable undo snapshots, active-only toggles, fresh paths, INI defaults/preservation and non-overwriting pre-v5 backup/save failure paths. Their non-constexpr assertions were not executed.
+- Source ordering checks verify hints/pointer preview exclusion, ink then height guides/snap markers then path numbers then foreground cursor, and SVG labels after shapes. Static compilation, Clang analysis and production linking are used. Actual rendering, interaction, persistence and upgrade/recovery still need game confirmation.
+
 ## Preview performance investigation — 26 October 2026
 
 - The user explicitly allowed runtime diagnostics for this performance investigation. Only an isolated native preview probe was executed; no game, rendering host or other functional test program was run, and no SHA checks were performed.

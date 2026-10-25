@@ -8,6 +8,8 @@
 - Show a half-opacity dashed height projection and landing dot from a pending line/arrow start or the current path endpoint onto the newly chosen plane. Helpers disappear when drawing ends and are never saved/exported.
 - Enabled free-camera controls own right drag for rotation/tilt even while drawing is open. Holding a pose without controls retains normal drawing right-click behavior.
 - Replace text annotation shadows with a 2px black outline, retaining text size and ink color. SVG uses stroke-before-fill text; UI typography is unchanged.
+- Add persisted, default-off path counting beside Finish / New path. Number every stored point from 1 per route, update active paths with an undoable toggle, render labels above ink/previews and export them after all SVG shapes.
+- Draft v5 reads v1-v4 with old paths unnumbered. Preserve a non-overwriting pre-v5 backup before upgrading; keep older backups and stop saving on backup failure. Older add-ons need the pre-v5 draft restored before downgrade.
 - Retain preview geometry while caching circle offsets, emitting fixed quads directly and bypassing unnecessary polygon clipping. A 128x128 isolated comparison reduced dense center/cross generation plus clipping by 88-90%, with matching triangle positions, colors and opacity; actual game frame costs remain unmeasured.
 
 ## Unreleased — upstream integration and preview visibility (2026-10-25)

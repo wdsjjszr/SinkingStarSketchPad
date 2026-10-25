@@ -2,7 +2,7 @@
 
 In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
 
-**Release status: beta.** The user confirmed native ground previews and marking in the levels they checked. The user reported the preceding grid drawing revision works well. This settings/preview revision has static checks and compilation only; full alignment still needs in-game confirmation.
+**Release status: beta.** The user confirmed native ground previews and marking in the levels they checked. The user reported the preceding grid drawing revision works well. This drawing revision has static checks/compilation and an isolated preview performance comparison; actual game appearance/performance remains unverified.
 
 ## Requirements
 
@@ -76,6 +76,7 @@ Click **Grid preview** to open its controls beside the toolbar. The flyout stays
 | Line / arrow / rectangle / ellipse | Also supports click start, then click end; right-click cancels |
 | Raise / lower target plane one cell | Default: wheel on drawing canvas; configurable in Settings |
 | Cycle ink color | Default: Shift+wheel on drawing canvas |
+| Cycle drawing tool in toolbar order | Default: Alt+wheel for missing preferences; existing bindings remain |
 | Choose one of five ink colors | Alt+1-5 |
 | Snap a line/arrow to 45 degrees; constrain rectangle/ellipse | Hold Shift |
 | Undo | Ctrl+Z |
@@ -98,7 +99,7 @@ Press the single key **T**, or the toolbar's **Free camera** button, after enter
 | Pan on the world plane | W/A/S/D |
 | Move up / down | Q / Z |
 | Move faster | Hold Shift |
-| Orbit the view around its captured focus | Close drawing, then hold right mouse button and drag |
+| Orbit the view around its captured focus | Hold right mouse button and drag, including while drawing |
 | Zoom the lens | Mouse wheel on canvas with drawing closed |
 | Show / hide drawing toolbar | E |
 | Undo an annotation while the camera is active | Ctrl+Z |
@@ -126,14 +127,18 @@ Toggle **Grid drawing** to create new marks on the target plane. Pen/ellipse use
 3. Enable **Grid preview → Cell centers** to inspect the snap points near your mouse.
 4. Click a cell center to start a path. Click along one of X, Y or Z to connect intermediate centers; use wheel height changes for vertical runs.
 5. Place a point at each corner. A diagonal target is rejected until you add the corner.
-6. Click the same XYZ endpoint again, right-click, or use **Finish / New path** to finish before starting another route.
+6. Click the same XYZ endpoint again or use **Finish / New path** to finish; right-click also finishes when camera controls are off.
 7. Press **E** to return to the game. The path is stored using a world-space grid reference and is reprojected with the camera as it moves or zooms.
 
-Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click requests fresh terrain and marks once using the pointer and camera captured at the click, then exits even on failure. It preserves the selected tool and adds no path point. Esc, switching pages/tools and a newer marking request invalidate a pending result. With drawing open, the wheel follows four configurable bindings. Defaults are height adjustment for plain wheel and color cycling for Shift+wheel; Ctrl/Alt+wheel do nothing, as do multiple modifiers. Height changes preserve fractional Z; close drawing for free-camera zoom. Switching levels initializes all pages from one character sample and retains existing paths. See [ground marking](MANUAL_GROUND.md).
+Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click marks once using the captured pointer/camera, preserves active world lines/arrows and paths, and adds no point. A held line/arrow drag waits for a new endpoint click. Failed picks keep the plane and drawing. Esc, switching pages/tools and a newer marking request invalidate a pending result. Drawing wheel defaults are height/plain, color/Shift and tool/Alt; existing bindings (including None) remain, and multiple modifiers do nothing. Wheel up selects the previous color/tool, down the next, wrapping in toolbar order. Height changes preserve fractional Z; close drawing for free-camera zoom. See [ground marking](MANUAL_GROUND.md).
+
+**Path count**, beside **Finish / New path**, defaults off and saves its preference. It numbers every stored path point, including intermediate and vertical cells, from 1 for each new path. Toggling updates the entire active path in one undo step and leaves finished paths unchanged. Numbers keep the path color with a black outline, appear above all ink/previews but below UI, and remain in drafts and SVG exports. Text annotations also use a black outline.
+
+While a plane-change preview is visible, the pointer grid pauses and returns after the fade; snap markers remain. Across heights, a half-opacity dashed guide projects the line/arrow start or current path endpoint vertically onto the new plane, with a landing dot. These guides are temporary and never exported.
 
 The background reader only probes level identity about once per second while idle. Terrain refreshes on level entry and manual/middle-click requests; characters are sampled for initialization and the character-plane button. Initialization retries until a valid character is available, then stops. The duplicate backup GPU camera collector is disabled; effective-camera and free-camera processing remain active.
 
-Ctrl+Z undoes a path addition and ends the active path. Right-click finishes an active path without erasing; otherwise it temporarily erases, after pending-shape cancellation. Alt+K selects the whole-path/whole-mark eraser. A path retains its own grid reference, so a later change in automatic detection does not move existing marks.
+Ctrl+Z undoes a path addition or numbering change and ends the active path. Enabled camera controls own right drag; with controls off, right-click cancels a pending shape, finishes a path, then temporarily erases. Holding a camera pose alone keeps ordinary drawing right-click behavior. Alt+K selects the whole-path/whole-mark eraser. Each path retains its original grid reference.
 
 This tool marks routes only: it does not move the player, push boxes, check obstacles, or solve puzzles. Ordinary drawing stays in screen space; enable Grid drawing for new pen/shapes and text anchors to follow the world. Use a different scratch page for another level; pages are not automatically assigned to level names.
 
@@ -148,7 +153,7 @@ Normal mode uses a pale gold crystal-blade pointer with a dark edge and a small 
 - Language, camera, grid drawing and preview preferences: `settings.ini` in the same folder.
 - **Export SVG** writes a transparent vector image to `SinkingStarSketch-data/exports`. World marks use the same current-camera projection as display and erasing; without a valid camera they are omitted. Unfinished shape previews are never exported.
 - Up to 2,000 marks per page, 120,000 total points, and 60 undo steps. Undo history does not survive a restart.
-- Draft format **v4** reads v1/v2/v3, stores each mark’s grid and relative point Z. Before upgrading an old draft, `drafts.pre-v4.txt` is preserved once without overwriting it; backup failure blocks saving. Restore that file before using an older add-on. The regular `.bak` continues to track the previous save.
+- Draft format **v5** reads v1–v4 and stores each mark's grid, relative point Z and path-numbering flag. Old paths default to unnumbered. Before upgrading, `drafts.pre-v5.txt` is preserved without overwriting it; backup failure blocks saving. Older upgrade backups remain. Restore the pre-v5 draft before downgrading; older add-ons cannot read v5. The regular `.bak` tracks the previous save.
 
 ## Uninstall
 
@@ -169,7 +174,7 @@ To disable a manual install, exit the game and move this add-on out of the game 
 - Incorrect alignment: stop using that route and keep a screenshot plus a description of the level/camera view for a bug report. Do not treat the preview as an obstacle or walkability map.
 - Missing Chinese glyphs after an upgrade: keep your existing `ReShade.ini` and inspect its font setting. In ReShade settings, choose `SinkingStarSketch-assets/NotoSansCJKsc-Regular.otf` as the font and restart if needed.
 - Diagnostics: `ReShade.log` and `SinkingStarSketch-data/status.txt`. Review logs and remove personal paths before posting them publicly.
-- Native preview and ground marking were confirmed by the user in tested levels. The preceding grid drawing revision was reported usable. This settings/preview revision received static checks and compilation only; no test programs or game sessions were run.
+- Native preview and ground marking were confirmed by the user in tested levels. The preceding grid drawing revision was reported usable. Apart from the authorized isolated preview performance probe, this drawing revision received static checks and compilation only; no other test programs or game sessions were run.
 
 ## Credits and third-party notices
 

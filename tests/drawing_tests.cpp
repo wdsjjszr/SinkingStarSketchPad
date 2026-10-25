@@ -23,12 +23,19 @@ int main(){
         if(tool==Tool::Text){stroke->points.resize(1);stroke->text="世界坐标";}
         if(tool==Tool::Path)stroke->points={{-2,1},{3,1}};
         if(tool==Tool::Line||tool==Tool::Arrow)stroke->points[1].z=2;
-        if(tool==Tool::Path)stroke->points={{-2,1,0},{-2,1,3}};
+        if(tool==Tool::Path){stroke->points={{-2,1,0},{-2,1,3}};stroke->numbered=true;}
         doc.pages[0].push_back(stroke);
     }
     auto screen=std::make_shared<Stroke>();screen->points={{.2f,.3f},{.5f,.6f}};doc.pages[0].push_back(screen);
     std::stringstream file;doc.write(file);auto loaded=Document::read(file);
-    assert(loaded.format_version==4&&loaded.pages[0][0]->lattice.origin.z==3.25&&!loaded.pages[0].back()->lattice.ready&&loaded.pages[0][1]->points[1].z==2&&loaded.pages[0][6]->points[1].z==3);
+    assert(loaded.format_version==5&&loaded.pages[0][0]->lattice.origin.z==3.25&&!loaded.pages[0].back()->lattice.ready&&loaded.pages[0][1]->points[1].z==2&&loaded.pages[0][6]->points[1].z==3&&loaded.pages[0][6]->numbered);
+    std::stringstream v4;v4<<"SINKING_STAR_SKETCH 4\n0 1\n";for(int n=0;n<3;++n)Document::write_grid(v4,{});
+    v4<<"1\n7 0 3 2 \"\"\n";Document::write_grid(v4,g);v4<<"-2 1 0\n-2 1 3\n0\n0\n";
+    auto previous_path=Document::read(v4);assert(previous_path.format_version==4&&!previous_path.pages[0][0]->numbered&&previous_path.pages[0][0]->points.back().z==3);
+    for(unsigned flag:{2u,3u}){
+        std::stringstream invalid;invalid<<"SINKING_STAR_SKETCH 5\n0 1\n";for(int n=0;n<3;++n)Document::write_grid(invalid,{});
+        invalid<<"1\n7 0 3 1 \"\" "<<flag<<"\n";bool rejected=false;try{Document::read(invalid);}catch(...){rejected=true;}assert(rejected);
+    }
     std::stringstream v3;v3<<"SINKING_STAR_SKETCH 3\n0 1\n";for(int n=0;n<3;++n)Document::write_grid(v3,{});
     v3<<"1\n0 0 3 1 \"\"\n";Document::write_grid(v3,g);v3<<"-2.5 1.25\n0\n0\n";
     auto previous=Document::read(v3);assert(previous.format_version==3&&previous.pages[0][0]->points[0].z==0&&previous.pages[0][0]->lattice.origin.z==3.25);

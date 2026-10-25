@@ -32,11 +32,30 @@ void compile_plane_capture(){
     set_ground(camera_plane()+1);assert(camera_plane()==5.25);
 }
 void compile_legacy_backup_failure(const std::filesystem::path &draft){
-    assert(!std::filesystem::exists(draft.parent_path()/L"drafts.pre-v4.txt"));
-    data_path=draft;doc={};doc.format_version=2;legacy_draft_source=draft.parent_path()/L"missing-legacy-source";dirty=true;
-    assert(!save()&&dirty&&doc.format_version==2);
+    assert(!std::filesystem::exists(draft.parent_path()/L"drafts.pre-v5.txt"));
+    data_path=draft;doc={};doc.format_version=4;legacy_draft_source=draft.parent_path()/L"missing-legacy-source";dirty=true;
+    assert(!save()&&dirty&&doc.format_version==4);
 }
 void compile_world_export(Point size){export_svg(size);}
+void compile_numbered_path_history(){
+    doc={};history={};data_path.clear();dirty=false;path_active=false;path_numbering=false;selected=Tool::Path;
+    doc.grids[0]=native_ground::lattice(3.25);camera.valid=true;camera.eye={0,0,10};camera.forward={0,0,-1};
+    camera.matrix={.1,0,0,0,0,.1,0,0,0,0,-.1,1,0,0,0,1};camera.inverse={10,0,0,0,0,10,0,0,0,0,-10,10,0,0,0,1};
+    path_click({500,500},{1000,1000});path_click({800,500},{1000,1000});auto original=page().back();assert(original->points.size()==7&&!original->numbered);
+    auto steps=history[0].undo.size();set_path_numbering(true);assert(path_active&&page().back()->numbered&&!original->numbered&&history[0].undo.size()==steps+1);
+    undo();assert(!page().back()->numbered);redo();assert(page().back()->numbered);
+    path_click({500,400},{1000,1000});assert(page().back()->points.size()==1&&page().back()->numbered);
+    set_path_numbering(false);assert(path_active&&!page().back()->numbered&&page().front()->numbered);
+    set_path_numbering(true);finish_path();set_path_numbering(false);assert(page().back()->numbered&&!path_numbering);
+    path_click({500,300},{1000,1000});assert(page().back()->points.size()==1&&!page().back()->numbered);
+}
+void compile_v5_upgrade_backup(const std::filesystem::path &draft){
+    data_path=draft;legacy_draft_source=draft;protected_file=false;doc={};doc.format_version=4;dirty=true;
+    auto keep=draft.parent_path()/L"drafts.pre-v5.txt";bool existed=std::filesystem::exists(keep);
+    std::ifstream original(existed?keep:draft,std::ios::binary);std::string before((std::istreambuf_iterator<char>(original)),{});original.close();
+    assert(save()&&!dirty&&doc.format_version==5&&std::filesystem::exists(keep));
+    std::ifstream preserved(keep,std::ios::binary);std::string after((std::istreambuf_iterator<char>(preserved)),{});assert(before==after);
+}
 void compile_right_erase_transaction(){
     doc={};history={};data_path.clear();selected=Tool::Line;shape_gesture.clear();dragging=false;
     auto stroke=std::make_shared<Stroke>();stroke->points={{.2f,.2f},{.4f,.4f}};page().push_back(stroke);
@@ -80,14 +99,15 @@ void compile_settings_roundtrip(const std::filesystem::path &isolated_directory)
     data_path=isolated_directory/L"drafts.txt";auto ini=isolated_directory/L"settings.ini";
     WritePrivateProfileStringW(L"Interface",L"Language",L"en",ini.c_str());
     hint_preferences.mode=grid::HintMode::WheelOnly;hint_preferences.duration_ms=1250;
-    hint_preferences.style={true,true,true,false,false,37};wheel_actions[0]=input::WheelAction::Color;wheel_actions[3]=input::WheelAction::None;
+    hint_preferences.style={true,true,true,false,false,37};wheel_actions[0]=input::WheelAction::Color;wheel_actions[3]=input::WheelAction::None;path_numbering=true;
     drawing_preferences_dirty=true;save_drawing_preferences();assert(!drawing_preferences_dirty);
-    hint_preferences={};wheel_actions=input::default_wheel;load_drawing_preferences();
+    hint_preferences={};wheel_actions=input::default_wheel;path_numbering=false;load_drawing_preferences();
     assert(hint_preferences.duration_ms==1250&&hint_preferences.mode==grid::HintMode::WheelOnly&&hint_preferences.style.opacity==37);
     assert(hint_preferences.style.centers&&hint_preferences.style.intersections&&!hint_preferences.style.borders&&!hint_preferences.style.checker);
-    assert(wheel_actions[0]==input::WheelAction::Color&&wheel_actions[3]==input::WheelAction::None);
+    assert(wheel_actions[0]==input::WheelAction::Color&&wheel_actions[3]==input::WheelAction::None&&path_numbering);
     WritePrivateProfileStringW(L"Drawing",L"AltWheel",nullptr,ini.c_str());load_drawing_preferences();assert(wheel_actions[3]==input::WheelAction::Tool);
     wheel_actions[3]=input::WheelAction::Tool;drawing_preferences_dirty=true;save_drawing_preferences();load_drawing_preferences();assert(wheel_actions[3]==input::WheelAction::Tool);
+    WritePrivateProfileStringW(L"Drawing",L"PathNumbering",nullptr,ini.c_str());load_drawing_preferences();assert(!path_numbering);
     wchar_t language[16];GetPrivateProfileStringW(L"Interface",L"Language",L"",language,16,ini.c_str());assert(std::wstring(language)==L"en");
 }
 void compile_vertical_target_without_pointer_intersection(){
