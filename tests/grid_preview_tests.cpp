@@ -19,9 +19,9 @@ constexpr bool hints(){
     preferences.duration_ms=5000;return !hint.active(1701,0,1,preferences);
 }
 static_assert(hints(),"Initialization stays silent; hints use the newest mark/page/scene, live duration and policy, without reviving expired hints");
-static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==45&&HintPreferences{}.duration_ms==750&&Preview{}.enabled,"Hint defaults retain borders/checker and enable preview at 45 percent for a 750ms hold");
+static_assert(!HintPreferences{}.style.centers&&!HintPreferences{}.style.intersections&&HintPreferences{}.style.borders&&HintPreferences{}.style.checker&&HintPreferences{}.style.opacity==15&&HintPreferences{}.duration_ms==750&&Preview{}.enabled,"Hint defaults retain borders/checker and enable preview at 15 percent for a 750ms hold");
 static_assert(fade_weight(750,750)==1&&fade_weight(975,750)==0&&fade_weight(1150,1000)==.125&&fade_weight(0,0)==0,"Hold is followed by a 30 percent cubic ease-out fade");
-static_assert(radial_weight(0)==1&&radial_weight(2.75)==.5&&radial_weight(5.5)==0&&checker_shade(-1,0)==255&&checker_shade(-2,0)==0,"Smooth radial falloff and black/white parity are stable for negative cells");
+static_assert(preview_cells==17&&radial_weight(0)==1&&radial_weight(4.25)==.5&&radial_weight(8.5)==0&&checker_shade(-1,0)==255&&checker_shade(-2,0)==0,"17-cell smooth radial falloff and black/white parity are stable for negative cells");
 constexpr bool policies(){
     HintPreferences p;if(!p.permits(HintSource::Mark)||!p.permits(HintSource::Wheel)||p.permits(HintSource::Initialize))return false;
     p.mode=HintMode::WheelOnly;if(p.permits(HintSource::Mark)||!p.permits(HintSource::Wheel))return false;
@@ -30,7 +30,7 @@ constexpr bool policies(){
 static_assert(policies(),"On, off and wheel-only policies exclude automatic level initialization");
 static_assert(Preview{}.centers&&!Preview{}.intersections&&!Preview{}.borders&&!Preview{}.checker&&Preview{}.opacity==45,"Preview defaults preserve center dots");
 static_assert(Preview{}.alpha()==115&&Preview{true,true,false,false,false,100}.alpha()==255&&Preview{true,true,false,false,false,0}.alpha()==0,"Opacity includes exact transparent and opaque endpoints");
-static_assert(preview_gray==190&&cross_arm==.12&&cross_width>border_width,"Gray crosses follow the grid axes and are slightly thicker than borders");
+static_assert(preview_foreground==255&&preview_outline==0&&cross_arm==.12&&cross_width>border_width,"White crosses with black outlines follow the grid axes and retain their core size");
 constexpr bool clipping(){
     Polygon p;p.count=4;p.points={ClipPoint{-2,-2,1},ClipPoint{2,-2,1},ClipPoint{2,2,1},ClipPoint{-2,2,1}};
     auto out=clip(p);if(out.count!=4)return false;
@@ -49,6 +49,10 @@ int main(){
     camera.matrix={.1,0,0,0,0,.1,0,0,0,0,-.1,1,0,0,0,1};
     camera.inverse={10,0,0,0,0,10,0,0,0,0,-10,10,0,0,0,1};
     Lattice plane{true,{0,0,2},{1,0,0},{0,-1,0}};
-    PreviewPainter painter{camera,plane,1000,1000,.45,0,0,true,{}};painter.layers(Preview{true,true,true,true,true,45},CellMask(-5,-5,11,11));
-    assert(!painter.mesh.triangles.empty());for(auto triangle:painter.mesh.triangles)for(auto vertex:triangle.points)assert(vertex.alpha>=0&&vertex.alpha<=.45);
+    PreviewPainter painter{camera,plane,1000,1000,.45,0,0,true,{}};painter.layers(Preview{true,true,true,true,true,45},CellMask(-preview_radius,-preview_radius,preview_cells,preview_cells));
+    assert(painter.mesh.triangles.size()*3>65536);for(auto triangle:painter.mesh.triangles)for(auto vertex:triangle.points)assert(vertex.alpha>=0&&vertex.alpha<=.45);
+    PreviewMesh border;border.line_outline({0,0,.4},{20,0,.4},2);
+    for(auto triangle:border.triangles){assert(triangle.shade==0);for(auto p:triangle.points)assert(std::abs(p.y)>=1&&std::abs(p.y)<=2&&p.alpha==.4);}
+    PreviewMesh dot;dot.dot_outline({0,0,.4});for(auto triangle:dot.triangles){assert(triangle.shade==0);for(auto p:triangle.points)assert(std::hypot(p.x,p.y)>3.99&&std::hypot(p.x,p.y)<5.51);}
+    PreviewMesh body;body.line({0,0,.4},{20,0,.4},2);body.dot({0,0,.4});for(auto triangle:body.triangles)assert(triangle.shade==255);
 }

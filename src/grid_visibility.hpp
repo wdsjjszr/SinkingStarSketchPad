@@ -3,7 +3,7 @@
 #include <vector>
 
 namespace sketch::grid {
-constexpr int preview_gray=190;
+constexpr unsigned preview_foreground=255,preview_outline=0;
 constexpr double cross_arm=.12;
 constexpr float border_width=2,cross_width=3;
 struct CellMask {

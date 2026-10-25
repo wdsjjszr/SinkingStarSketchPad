@@ -124,7 +124,7 @@ void load_drawing_preferences(){
     grid_preview.opacity=std::clamp(read(L"Opacity",45),0,100);
     auto &style=hint_preferences.style;
     style.centers=read(L"HintCenters",0)!=0;style.intersections=read(L"HintIntersections",0)!=0;
-    style.borders=read(L"HintBorders",1)!=0;style.checker=read(L"HintChecker",1)!=0;style.opacity=std::clamp(read(L"HintOpacity",45),0,100);
+    style.borders=read(L"HintBorders",1)!=0;style.checker=read(L"HintChecker",1)!=0;style.opacity=std::clamp(read(L"HintOpacity",15),0,100);
     int mode=read(L"HintMode",0);hint_preferences.mode=mode>=0&&mode<=2?grid::HintMode(mode):grid::HintMode::On;
     hint_preferences.duration_ms=unsigned(std::clamp(read(L"HintDurationMs",750),0,5000));
     const wchar_t *keys[]={L"Wheel",L"CtrlWheel",L"ShiftWheel",L"AltWheel"};
@@ -304,17 +304,21 @@ void draw_preview_mesh(ImDrawList *draw,const grid::PreviewMesh &mesh,double opa
 grid::PreviewMesh preview_mesh(const grid::Preview &style,const grid::Lattice &g,const grid::CellMask &mask,Point size,double fade=1,bool radial=false,double i=0,double j=0){
     grid::PreviewPainter painter{camera,g,size.x,size.y,style.opacity*.01*fade,i,j,radial,{}};painter.layers(style,mask);return std::move(painter.mesh);
 }
-void draw_grid_preview(ImDrawList *draw,Point mouse,Point size,bool shift){
+void draw_grid_preview(ImDrawList *draw,Point mouse,Point size){
     if((selected!=Tool::Path&&!grid_drawing)||!camera.valid)return;
     const auto &g=doc.grids[doc.page];double i,j;if(!g.coordinates(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
-    if(grid_preview.enabled)draw_preview_mesh(draw,preview_mesh(grid_preview,g,grid::CellMask(int(std::round(i))-5,int(std::round(j))-5,11,11),size,1,true,i,j));
-    if(erasing)return;
-    Point target;auto lattice=g;unsigned color=selected_color;
-    if(selected==Tool::Path)target={float(std::round(i)),float(std::round(j))};
-    else if(snaps_to_grid(selected)){
-        if(dragging){if(!drawing_target(pending,mouse,size,shift,target))return;lattice=pending.lattice;color=pending.color;}
-        else target=nearest_grid_point({float(i),float(j)});
-    }else return;
+    if(grid_preview.enabled)draw_preview_mesh(draw,preview_mesh(grid_preview,g,grid::CellMask(int(std::round(i))-grid::preview_radius,int(std::round(j))-grid::preview_radius,grid::preview_cells,grid::preview_cells),size,1,true,i,j));
+}
+void draw_snap_marker(ImDrawList *draw,Point mouse,Point size,bool shift){
+    if((selected!=Tool::Path&&!grid_drawing)||!camera.valid||erasing)return;
+    const auto &g=doc.grids[doc.page];Point target;auto lattice=g;unsigned color=selected_color;
+    if(dragging&&snaps_to_grid(selected)){
+        if(!drawing_target(pending,mouse,size,shift,target))return;lattice=pending.lattice;color=pending.color;
+    }else{
+        double i,j;if(!g.coordinates(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
+        if(selected==Tool::Path)target={float(std::round(i)),float(std::round(j))};
+        else if(snaps_to_grid(selected))target=nearest_grid_point({float(i),float(j)});else return;
+    }
     Point pixel;if(screen_point(lattice,target,camera,size,pixel))draw->AddCircle(v(pixel),9,colors[color],24,2.5f);
 }
 bool ground_ready(){
@@ -793,9 +797,10 @@ void overlay(effect_runtime*rt) {
         }
         ImDrawList *draw=ImGui::GetBackgroundDrawList();
         if(visible&&foreground&&!reshade_menu)draw_plane_hint(draw,size);
-        if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
-        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size,rt->is_key_down(VK_SHIFT));}
+        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
         if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
+        if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
+        if(editing&&foreground&&!over_ui&&!reshade_menu&&!ground_marking)draw_snap_marker(draw,mouse,size,rt->is_key_down(VK_SHIFT));
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){ImDrawList*d=ImGui::GetForegroundDrawList();float right=std::min(size.x-18.f,42.f+gui_text_size(tr(Label::Hud)).x);d->AddRectFilled(ImVec2(18,size.y-47),ImVec2(right,size.y-14),IM_COL32(18,27,41,205),7);d->AddText(ImVec2(30,size.y-41),colors[0],tr(Label::Hud));}
         if(GetTickCount64()<toast_until){ImGui::SetNextWindowPos(ImVec2(size.x*.5f,22),ImGuiCond_Always,ImVec2(.5f,0));ImGui::Begin("##SketchToast",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings);ImGui::TextUnformatted(toast.c_str());ImGui::End();}

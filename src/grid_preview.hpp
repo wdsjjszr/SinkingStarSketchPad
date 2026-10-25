@@ -12,7 +12,7 @@ struct Preview {
 enum class HintMode {On,Off,WheelOnly};
 enum class HintSource {Initialize,Mark,Wheel};
 struct HintPreferences {
-    Preview style{true,false,false,true,true,45};
+    Preview style{true,false,false,true,true,15};
     HintMode mode=HintMode::On;
     unsigned duration_ms=750;
     constexpr bool permits(HintSource source)const{
@@ -24,7 +24,8 @@ constexpr double fade_weight(double elapsed,unsigned hold){
     if(elapsed<=hold)return 1;
     double remaining=1-(elapsed-hold)/(hold*.3);return remaining>0?remaining*remaining*remaining:0;
 }
-constexpr double radial_weight(double distance){double t=distance/5.5;return t>=1?0:t<=0?1:1-t*t*(3-2*t);}
+constexpr int preview_radius=8,preview_cells=2*preview_radius+1;
+constexpr double radial_weight(double distance){double t=distance/(preview_radius+.5);return t>=1?0:t<=0?1:1-t*t*(3-2*t);}
 constexpr unsigned checker_shade(int i,int j){return (i+j)%2?255:0;}
 struct PlaneHint {
     Lattice lattice;
