@@ -344,6 +344,25 @@ void draw_snap_marker(ImDrawList *draw,Point mouse,Point size,bool shift){
 bool ground_ready(){
     return ground_scene_ready&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
 }
+void draw_height_guide(ImDrawList *draw,Point size){
+    if(!camera.valid||!doc.grids[doc.page].ready||erasing)return;
+    const Stroke *stroke=dragging&&pending.lattice.ready&&cross_height_shape(pending.tool)?&pending:
+        selected==Tool::Path&&path_active&&!page().empty()?page().back().get():nullptr;
+    if(!stroke||!stroke->lattice.ready)return;
+    auto point=stroke->tool==Tool::Path?stroke->points.back():stroke->points.front();
+    auto start=stroke->lattice.world(point.x,point.y)+grid::V{0,0,point.z},landing=height_projection(start,camera_plane());
+    if(start.z==landing.z)return;
+    grid::ClipPoint a,b;if(!grid::clip_line(camera,start,landing,a,b))return;
+    Point first{float((a.x/a.w+1)*.5*size.x),float((1-a.y/a.w)*.5*size.y)},last{float((b.x/b.w+1)*.5*size.x),float((1-b.y/b.w)*.5*size.y)};
+    float length=distance(first,last);ImU32 color=(colors[stroke->color]&~IM_COL32_A_MASK)|IM_COL32(0,0,0,128);
+    for(float offset=0;offset<length;offset+=10){float end=std::min(offset+6,length);
+        draw->AddLine(ImVec2(first.x+(last.x-first.x)*offset/length,first.y+(last.y-first.y)*offset/length),
+                      ImVec2(first.x+(last.x-first.x)*end/length,first.y+(last.y-first.y)*end/length),color,1.5f);
+    }
+    double x,y;if(camera.project(landing,x,y)&&x>=0&&x<=1&&y>=0&&y<=1){
+        ImVec2 p{float(x*size.x),float(y*size.y)};draw->AddCircleFilled(p,5,IM_COL32(0,0,0,128),24);draw->AddCircleFilled(p,3,color,24);
+    }
+}
 bool draw_plane_hint(ImDrawList *draw,Point size){
     if(!camera.valid||!hint_preferences.style.visible()||!plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences))return false;
     const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return false;
@@ -987,7 +1006,7 @@ void overlay(effect_runtime*rt) {
         if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else if(!hint_drawn)draw_grid_preview(draw,mouse,size);}
         if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
-        if(editing&&foreground&&!over_ui&&!reshade_menu&&!ground_marking)draw_snap_marker(draw,mouse,size,rt->is_key_down(VK_SHIFT));
+        if(editing&&foreground&&!over_ui&&!reshade_menu&&!ground_marking){draw_height_guide(draw,size);draw_snap_marker(draw,mouse,size,rt->is_key_down(VK_SHIFT));}
         if(foreground&&!reshade_menu&&(doc.cursor||editing||free_camera_bridge::snapshot().camera.enabled)&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y)cursor(ImGui::GetForegroundDrawList(),mouse);
         if(!editing&&!reshade_menu){
             auto s=frame_ui;ui::FontScope font(s.ratio());ImDrawList*d=ImGui::GetForegroundDrawList();
