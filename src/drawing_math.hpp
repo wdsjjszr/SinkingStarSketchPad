@@ -13,6 +13,7 @@ constexpr Point nearest_grid_point(Point p){
     return a<=b?center:corner;
 }
 constexpr bool snaps_to_grid(Tool tool){return tool==Tool::Line||tool==Tool::Arrow||tool==Tool::Rectangle;}
+constexpr bool cross_height_shape(Tool tool){return tool==Tool::Line||tool==Tool::Arrow;}
 constexpr bool vertical_snap(Tool tool,Point start,float z,bool shift){return shift&&(tool==Tool::Line||tool==Tool::Arrow)&&z!=start.z;}
 constexpr Point grid_shape_end(Tool tool,Point a,Point b,bool shift){
     if(vertical_snap(tool,a,b.z,shift))return {a.x,a.y,b.z};

@@ -135,7 +135,7 @@ inline constexpr ShortcutEntry tool_shortcuts[]={
     {"Alt+O","Ellipse","椭圆"},{"Alt+T","Text","文字"},{"Alt+K","Eraser","橡皮"},{"Alt+H","Cell path","格子路径"},{"Alt+1-5","Ink color","笔色"}
 };
 inline constexpr ShortcutEntry drawing_shortcuts[]={
-    {"Middle click","Mark ground under the pointer once","快速标记指针下地面所在平面","鼠标中键"},
+    {"Middle click","Mark ground; keep world lines, arrows and paths in progress","快速标记地面；继续当前世界直线、箭头或路径","鼠标中键"},
     {"Wheel","Configured action; plane height by default","按设置执行，默认调整平面高度","滚轮"},
     {"Shift+wheel","Cycle color by default; change bindings in Settings","默认切色；可在设置中修改绑定","Shift + 滚轮"},
     {"Shift","Vertical across heights; same-plane 45-degree lines/arrows; square/circle constraint","跨层竖直线；同层 45 度直线 / 箭头；正方形 / 正圆约束"},

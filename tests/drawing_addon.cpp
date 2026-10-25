@@ -61,6 +61,21 @@ void compile_cross_height_shape(){
     Point target;assert(drawing_target(pending,{100,100},{1000,1000},false,target)&&target.z==1);
     pending.points[1]=target;shape_gesture.press();shape_gesture.release();commit();assert(page().size()==1&&page()[0]->points[1].z==1);
 }
+void compile_quick_mark_continuation(){
+    doc={};history={};data_path.clear();ground_scene_ready=false;path_active=false;doc.grids[0]=native_ground::lattice(3.25);
+    for(auto tool:{Tool::Line,Tool::Arrow}){
+        pending={};pending.tool=tool;pending.lattice=doc.grids[0];pending.points={{1,2},{3,4}};
+        dragging=true;shape_gesture.clear();shape_gesture.press();shape_gesture.move(true);
+        request_ground(GroundAction::Quick,{500,500},{1000,1000});assert(dragging&&shape_gesture.waiting()&&page().empty());
+        assert(!shape_gesture.release());set_ground(camera_plane()+1,grid::HintSource::Mark,true);
+        assert(dragging&&pending.points.front().x==1&&shape_gesture.waiting());cancel();
+    }
+    auto stroke=std::make_shared<Stroke>();stroke->tool=Tool::Path;stroke->lattice=doc.grids[0];stroke->points={{0,0}};page().push_back(stroke);path_active=true;
+    request_ground(GroundAction::Quick,{500,500},{1000,1000});assert(path_active&&page().back()==stroke);
+    ground_hit.result=native_ground::PickResult::Ground;ground_hit.center.z=camera_plane()+1;anchor_ground(true,true);assert(path_active&&page().back()==stroke);
+    ground_hit={};anchor_ground(true,true);assert(path_active&&page().back()==stroke);
+    undo();set_ground(camera_plane()+1,grid::HintSource::Mark,true);assert(!path_active&&!dragging);
+}
 void compile_settings_roundtrip(const std::filesystem::path &isolated_directory){
     data_path=isolated_directory/L"drafts.txt";auto ini=isolated_directory/L"settings.ini";
     WritePrivateProfileStringW(L"Interface",L"Language",L"en",ini.c_str());

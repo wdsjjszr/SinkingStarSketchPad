@@ -4,6 +4,7 @@
 
 - Pause the pointer grid while a visible plane-change preview is drawn, including its fade; keep snap markers and the saved preview preference.
 - Add configurable tool cycling in toolbar order, defaulting to Alt+wheel for missing preferences. Preserve every existing binding, including None.
+- Middle-click ground marking keeps active world lines/arrows and paths across its asynchronous reply. A held shape drag waits for a new endpoint click; failed picks keep the drawing and plane.
 - Retain preview geometry while caching circle offsets, emitting fixed quads directly and bypassing unnecessary polygon clipping. A 128x128 isolated comparison reduced dense center/cross generation plus clipping by 88-90%, with matching triangle positions, colors and opacity; actual game frame costs remain unmeasured.
 
 ## Unreleased — upstream integration and preview visibility (2026-10-25)

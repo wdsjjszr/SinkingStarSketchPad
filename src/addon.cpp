@@ -81,6 +81,7 @@ enum class GroundAction {None,Character,Manual,Quick};
 struct GroundRequest {
     native_ground::RequestTag tag;
     GroundAction action=GroundAction::None;
+    bool continue_drawing=false;
     grid::Camera camera;
     Point pointer;
 };
@@ -351,30 +352,34 @@ bool draw_plane_hint(ImDrawList *draw,Point size){
     draw_preview_mesh(draw,plane_visibility.mesh,hint_preferences.style.opacity*.01*grid::fade_weight(double(GetTickCount64()-plane_hint.started),hint_preferences.duration_ms));
     return !plane_visibility.mesh.triangles.empty();
 }
-bool preserve_z_shape(){return dragging&&pending.lattice.ready&&(pending.tool==Tool::Line||pending.tool==Tool::Arrow)&&shape_gesture.waiting();}
-void set_ground(double z,grid::HintSource source=grid::HintSource::Mark){
+bool preserve_z_shape(){return dragging&&pending.lattice.ready&&cross_height_shape(pending.tool)&&shape_gesture.waiting();}
+void set_ground(double z,grid::HintSource source=grid::HintSource::Mark,bool continue_drawing=false){
     auto &g=doc.grids[doc.page];
     bool different=!g.ready||g.origin.z!=z||g.origin.x!=0||g.origin.y!=0||g.u.x!=1||g.v.y!=-1;
-    if(different){if(source!=grid::HintSource::Wheel||!preserve_z_shape())settle_drawing();g=native_ground::lattice(z);if(source!=grid::HintSource::Wheel)finish_path();}
+    if(different){if(!continue_drawing&&(source!=grid::HintSource::Wheel||!preserve_z_shape()))settle_drawing();g=native_ground::lattice(z);if(!continue_drawing&&source!=grid::HintSource::Wheel)finish_path();}
     ground_user_set[doc.page]=true;plane_hint.show(g,GetTickCount64(),doc.page,ground_generation,source,hint_preferences);
     if(different)changed();else status();
 }
 void request_ground(GroundAction action,Point mouse={},Point size={}){
-    settle_drawing();finish_path();cancel_ground_marking();plane_hint.clear();
+    const bool keep_shape=action==GroundAction::Quick&&dragging&&pending.lattice.ready&&cross_height_shape(pending.tool);
+    const bool keep_path=action==GroundAction::Quick&&path_active;
+    if(keep_shape)shape_gesture.await_end();else settle_drawing();
+    if(!keep_path)finish_path();cancel_ground_marking();plane_hint.clear();
     if(action==GroundAction::Manual){select_tool(Tool::Path);ground_marking=true;}
     if(!ground_scene_ready){note(tr(Label::GroundLoading));status();return;}
     if(action==GroundAction::Quick&&!camera.valid){note(tr(Label::NoCamera));status();return;}
     auto kind=action==GroundAction::Character?native_ground_bridge::Read::Character:native_ground_bridge::Read::Ground;
     ground_request.tag={native_ground_bridge::request(kind,ground_generation),ground_generation,doc.page};
     ground_request.action=action;
+    ground_request.continue_drawing=keep_shape||keep_path;
     if(action==GroundAction::Quick){ground_request.camera=camera;ground_request.pointer={mouse.x/size.x,mouse.y/size.y};}
     status();
 }
 void update_ground_pick(Point mouse,Point size){
     ground_hit=!ground_request.tag.id&&ground_ready()?native_ground::pick(*native_ground_snapshot,camera,mouse.x/size.x,mouse.y/size.y):native_ground::Pick{};
 }
-void anchor_ground(bool quick=false){
-    if(ground_hit.result==native_ground::PickResult::Ground){set_ground(ground_hit.center.z);note(tr(Label::GroundAnchored),2500);}
+void anchor_ground(bool quick=false,bool continue_drawing=false){
+    if(ground_hit.result==native_ground::PickResult::Ground){set_ground(ground_hit.center.z,grid::HintSource::Mark,continue_drawing);note(tr(Label::GroundAnchored),2500);}
     else note(tr(!camera.valid?Label::NoCamera:!ground_ready()?Label::GroundLoading:
         ground_hit.result==native_ground::PickResult::Wall?Label::GroundWall:Label::GroundNoHit));
     ground_marking=native_ground::keep_marking(quick,ground_hit.result);status();
@@ -404,7 +409,7 @@ void poll_ground(){
         else note(tr(Label::GroundCharacterWait));
     }else if(requested.action==GroundAction::Quick){
         ground_hit=ground_ready()?native_ground::pick(*native_ground_snapshot,requested.camera,requested.pointer.x,requested.pointer.y):native_ground::Pick{};
-        anchor_ground(true);
+        anchor_ground(true,requested.continue_drawing);
     }else if(!ground_ready())note(tr(Label::GroundLoading));
     status();
 }
@@ -808,7 +813,6 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     if(suppress_right||erase_with_right)return;
     if(!text_open&&!over_ui&&!ImGui::IsAnyItemActive()&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y
        &&ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
-        commit();
         request_ground(GroundAction::Quick,mouse,size);
         return;
     }
