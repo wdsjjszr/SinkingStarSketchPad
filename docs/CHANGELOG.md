@@ -4,7 +4,7 @@
 
 - T/Esc now restores the game camera; only the explicit Hold camera button fixes the pose. Remove the automatic Keep view option while retaining speed/sensitivity/axis preferences.
 - Keep the compact E/G/B/T HUD hints; wheel up selects the previous ink color and wheel down selects the next. Drawing crosshair arms now use the selected ink.
-- Reduce white grid-center dots to a 2.5px radius, retaining the black 5.5px outer radius.
+- Reduce white grid-center dots to a 2.5px radius, retaining the 1.5px black outline thickness for a 4px outer radius.
 - Merge upstream 3.4.6 camera retention, speed/Y defaults and scene cleanup while retaining the full font-bearing package and all native-ground/v4/input extensions.
 - Put grid previews below saved/pending ink and snap markers above; expand persistent previews to 17×17 with an 8.5-cell radial fade, white cores and black outer outlines. New hint-opacity default is 15%, preserving saved values.
 - Shift locks the start world X/Y for cross-height grid lines/arrows. Same-height constraints, wheel bindings and draft v4 remain; invalid projected endpoints keep waiting.

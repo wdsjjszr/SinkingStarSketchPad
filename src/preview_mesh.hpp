@@ -3,7 +3,7 @@
 
 namespace sketch::grid {
 constexpr unsigned preview_batch_triangles=20000;
-constexpr double dot_radius=2.5,dot_outer_radius=5.5;
+constexpr double dot_radius=2.5,dot_outer_radius=dot_radius+1.5;
 static_assert(preview_batch_triangles*3<65536,"Each primitive reservation fits 16-bit indices before the SDK applies its vertex offset");
 struct PreviewVertex {double x=0,y=0,alpha=0;};
 constexpr PreviewVertex interpolate(PreviewVertex a,PreviewVertex b,double t){return {a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.alpha+(b.alpha-a.alpha)*t};}

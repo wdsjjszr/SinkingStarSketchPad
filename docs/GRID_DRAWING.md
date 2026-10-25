@@ -8,7 +8,7 @@
 
 **网格预览** 默认开启，初始仅显示中心点，透明度默认 45%。中心点、透视交点十字、边框和黑白棋盘可以叠加。范围为鼠标附近 **17×17 格**，普通绘画时路径显示，网格绘画时所有工具可显示，始终不检查墙体。沿平面空间距离使用 `1-smoothstep(0,8.5格,距离)` 径向渐隐；颜色和透明度按顶点插值。
 
-两类预览的白色点半径为 2.5 像素、边框宽 2 像素、十字宽 3 像素，每条十字臂长仍为 0.12 格。点、线框和交点十字使用白色主体与黑色外描边：点外圈半径 5.5 像素，线条两侧各加 1 像素描边，线框与十字主体尺寸不变。描边位于主体外侧，不用黑底盘压暗点中心。棋盘继续黑白交替。所有预览位于笔迹下方，吸附圈和鼠标指针在笔迹上方。网格直线、箭头、矩形和路径显示清晰的当前吸附点提示圈，关闭网格预览仍显示；有起点时采用实际 Shift 约束结果。
+两类预览的白色点半径为 2.5 像素、边框宽 2 像素、十字宽 3 像素，每条十字臂长仍为 0.12 格。点、线框和交点十字使用白色主体与黑色外描边：点描边厚度保持 1.5 像素，外半径为 4 像素；线条两侧各加 1 像素描边，线框与十字主体尺寸不变。描边位于主体外侧，不用黑底盘压暗点中心。棋盘继续黑白交替。所有预览位于笔迹下方，吸附圈和鼠标指针在笔迹上方。网格直线、箭头、矩形和路径显示清晰的当前吸附点提示圈，关闭网格预览仍显示；有起点时采用实际 Shift 约束结果。
 
 **设置** 窗口可移动、调整大小，修改即时生效并自动保存到 `settings.ini`。E 随绘图菜单隐藏 / 恢复它，保留本次会话打开状态。以下默认值只用于尚未保存对应偏好的情况，升级不会重置已有设置。
 
@@ -61,7 +61,7 @@ Shift 在跨层直线／箭头中锁定世界竖直方向；同层 45 度、正�
 
 Press **E**, then toggle **Grid drawing** to anchor new marks to the target plane. Ordinary drawing remains the default. Every mark captures its own plane, tool, ink and width; later mode/plane changes leave it in place. Missing camera/plane data rejects new grid marks.
 
-**Grid preview** defaults on with centers only at 45% opacity over 17×17 cells. A plane-space radial smoothstep fades from the pointer to an 8.5-cell radius, without wall cutting. Both previews use white points/lines/crosses with black outer outlines, plus equal-opacity black/white checker fill. The dot outer radius is 5.5 pixels; line outlines add 1 pixel on either side without changing core sizes. Previews are below saved/pending ink; snap markers and the cursor remain above it. White point radius is 2.5 pixels, borders 2 pixels, crosses 3 pixels with 0.12-cell arms. Line/arrow/rectangle/path snapping has a clear marker independent of the preview switch.
+**Grid preview** defaults on with centers only at 45% opacity over 17×17 cells. A plane-space radial smoothstep fades from the pointer to an 8.5-cell radius, without wall cutting. Both previews use white points/lines/crosses with black outer outlines, plus equal-opacity black/white checker fill. The dot outline stays 1.5 pixels thick, giving a 4-pixel outer radius; line outlines add 1 pixel on either side without changing core sizes. Previews are below saved/pending ink; snap markers and the cursor remain above it. White point radius is 2.5 pixels, borders 2 pixels, crosses 3 pixels with 0.12-cell arms. Line/arrow/rectangle/path snapping has a clear marker independent of the preview switch.
 
 **Settings** applies and saves immediately. New/missing hint preferences default to borders/checker, 15% opacity and a **0.75-second hold**, followed by an additional **30% cubic ease-out fade** (0.975 seconds total by default). Existing saved preferences remain. On/Off/Wheel-only and silent initialization remain; zero duration disables display. New intents replace old hints, and expired hints never revive.
 

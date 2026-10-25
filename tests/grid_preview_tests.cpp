@@ -31,7 +31,7 @@ static_assert(policies(),"On, off and wheel-only policies exclude automatic leve
 static_assert(Preview{}.centers&&!Preview{}.intersections&&!Preview{}.borders&&!Preview{}.checker&&Preview{}.opacity==45,"Preview defaults preserve center dots");
 static_assert(Preview{}.alpha()==115&&Preview{true,true,false,false,false,100}.alpha()==255&&Preview{true,true,false,false,false,0}.alpha()==0,"Opacity includes exact transparent and opaque endpoints");
 static_assert(preview_foreground==255&&preview_outline==0&&cross_arm==.12&&cross_width>border_width,"White crosses with black outlines follow the grid axes and retain their core size");
-static_assert(dot_radius==2.5&&dot_outer_radius==5.5,"Smaller white center dots retain the black outer radius");
+static_assert(dot_radius==2.5&&dot_outer_radius==4&&dot_outer_radius-dot_radius==1.5,"Smaller white center dots retain the 1.5-pixel black outline thickness");
 constexpr bool clipping(){
     Polygon p;p.count=4;p.points={ClipPoint{-2,-2,1},ClipPoint{2,-2,1},ClipPoint{2,2,1},ClipPoint{-2,2,1}};
     auto out=clip(p);if(out.count!=4)return false;
@@ -54,6 +54,6 @@ int main(){
     assert(painter.mesh.triangles.size()*3>65536);for(auto triangle:painter.mesh.triangles)for(auto vertex:triangle.points)assert(vertex.alpha>=0&&vertex.alpha<=.45);
     PreviewMesh border;border.line_outline({0,0,.4},{20,0,.4},2);
     for(auto triangle:border.triangles){assert(triangle.shade==0);for(auto p:triangle.points)assert(std::abs(p.y)>=1&&std::abs(p.y)<=2&&p.alpha==.4);}
-    PreviewMesh dot;dot.dot_outline({0,0,.4});for(auto triangle:dot.triangles){assert(triangle.shade==0);for(auto p:triangle.points)assert(std::hypot(p.x,p.y)>2.49&&std::hypot(p.x,p.y)<5.51);}
+    PreviewMesh dot;dot.dot_outline({0,0,.4});for(auto triangle:dot.triangles){assert(triangle.shade==0);for(auto p:triangle.points)assert(std::hypot(p.x,p.y)>2.49&&std::hypot(p.x,p.y)<4.01);}
     PreviewMesh body;body.line({0,0,.4},{20,0,.4},2);body.dot({0,0,.4});for(auto triangle:body.triangles)assert(triangle.shade==255);
 }
