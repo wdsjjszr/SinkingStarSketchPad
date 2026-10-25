@@ -18,8 +18,12 @@ inline PaintPolygon half_plane(const PaintPolygon &p,PreviewVertex a,PreviewVert
     return out;
 }
 struct ScreenBounds {double left=0,top=0,right=0,bottom=0;};
-inline ScreenBounds bounds(const PaintPolygon &p){ScreenBounds b{p[0].x,p[0].y,p[0].x,p[0].y};for(auto v:p){b.left=std::min(b.left,v.x);b.top=std::min(b.top,v.y);b.right=std::max(b.right,v.x);b.bottom=std::max(b.bottom,v.y);}return b;}
+template<class Points> inline ScreenBounds bounds(const Points &p){ScreenBounds b{p[0].x,p[0].y,p[0].x,p[0].y};for(auto v:p){b.left=std::min(b.left,v.x);b.top=std::min(b.top,v.y);b.right=std::max(b.right,v.x);b.bottom=std::max(b.bottom,v.y);}return b;}
 constexpr bool overlaps(ScreenBounds a,ScreenBounds b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}
+inline bool covers(const PaintPolygon &cover,const std::array<PreviewVertex,3> &points){
+    for(size_t n=0;n<cover.size();++n)for(auto point:points)if(edge(cover[n],cover[(n+1)%cover.size()],point)<0)return false;
+    return true;
+}
 inline std::vector<PaintPolygon> subtract(PaintPolygon subject,const PaintPolygon &cover){
     std::vector<PaintPolygon> out;
     if(!overlaps(bounds(subject),bounds(cover)))return {std::move(subject)};
@@ -31,20 +35,26 @@ inline std::vector<PaintPolygon> subtract(PaintPolygon subject,const PaintPolygo
 struct ScreenCuts {
     static constexpr int tile=64;
     std::vector<PaintPolygon> polygons;
+    std::vector<ScreenBounds> polygon_bounds;
     std::vector<std::vector<unsigned>> bins;
     int columns=0,rows=0;
-    void reset(double width,double height){polygons.clear();columns=int(std::ceil(width/tile));rows=int(std::ceil(height/tile));bins.assign(size_t(columns)*rows,{});}
+    void reset(double width,double height){polygons.clear();polygon_bounds.clear();columns=int(std::ceil(width/tile));rows=int(std::ceil(height/tile));bins.assign(size_t(columns)*rows,{});}
     std::array<int,4> tiles(ScreenBounds b)const{return {std::clamp(int(std::floor(b.left/tile)),0,columns-1),std::clamp(int(std::floor(b.top/tile)),0,rows-1),std::clamp(int(std::floor(b.right/tile)),0,columns-1),std::clamp(int(std::floor(b.bottom/tile)),0,rows-1)};}
     void add(PaintPolygon p){
-        if(p.size()<3||std::abs(area(p))<1e-8)return;if(area(p)<0)std::reverse(p.begin(),p.end());auto region=tiles(bounds(p));unsigned id=unsigned(polygons.size());polygons.push_back(std::move(p));
+        if(p.size()<3||std::abs(area(p))<1e-8)return;if(area(p)<0)std::reverse(p.begin(),p.end());auto b=bounds(p);auto region=tiles(b);unsigned id=unsigned(polygons.size());polygons.push_back(std::move(p));polygon_bounds.push_back(b);
         for(int y=region[1];y<=region[3];++y)for(int x=region[0];x<=region[2];++x)bins[size_t(y)*columns+x].push_back(id);
     }
-    PreviewMesh cut(const PreviewMesh &mesh)const{
-        if(polygons.empty())return mesh;PreviewMesh result;
-        for(const auto &triangle:mesh.triangles){PaintPolygon original(triangle.points.begin(),triangle.points.end());auto region=tiles(bounds(original));std::vector<unsigned> ids;
-            for(int y=region[1];y<=region[3];++y)for(int x=region[0];x<=region[2];++x){const auto &bin=bins[size_t(y)*columns+x];ids.insert(ids.end(),bin.begin(),bin.end());}
-            std::sort(ids.begin(),ids.end());ids.erase(std::unique(ids.begin(),ids.end()),ids.end());std::vector<PaintPolygon> pieces{std::move(original)};
-            for(auto id:ids){std::vector<PaintPolygon> next;for(auto &piece:pieces){auto difference=subtract(std::move(piece),polygons[id]);for(auto &p:difference)next.push_back(std::move(p));}pieces=std::move(next);if(pieces.empty())break;}
+    PreviewMesh cut(PreviewMesh mesh)const{
+        if(polygons.empty())return mesh;PreviewMesh result;result.triangles.reserve(mesh.triangles.size());
+        std::vector<unsigned> ids;std::vector<size_t> seen(polygons.size(),mesh.triangles.size());std::vector<PaintPolygon> pieces,next;
+        for(size_t n=0;n<mesh.triangles.size();++n){const auto &triangle=mesh.triangles[n];auto b=bounds(triangle.points);auto region=tiles(b);ids.clear();bool hidden=false;
+            for(int y=region[1];y<=region[3]&&!hidden;++y)for(int x=region[0];x<=region[2]&&!hidden;++x)for(auto id:bins[size_t(y)*columns+x]){
+                if(seen[id]==n)continue;seen[id]=n;if(!overlaps(b,polygon_bounds[id]))continue;
+                if(covers(polygons[id],triangle.points)){hidden=true;break;}ids.push_back(id);
+            }
+            if(hidden)continue;if(ids.empty()){result.triangles.push_back(triangle);continue;}
+            std::sort(ids.begin(),ids.end());pieces.clear();pieces.emplace_back(triangle.points.begin(),triangle.points.end());
+            for(auto id:ids){next.clear();for(auto &piece:pieces){auto difference=subtract(std::move(piece),polygons[id]);for(auto &p:difference)next.push_back(std::move(p));}pieces.swap(next);if(pieces.empty())break;}
             for(auto &p:pieces)result.polygon(p,triangle.shade);
         }
         return result;
@@ -112,7 +122,7 @@ struct OcclusionCache {
                 for(auto r:merge_faces(std::move(caps))){auto quad=face_quad({2,cut,r[0]-.5,r[1]-.5,r[2]-.5,r[3]-.5});project_cover(cuts,camera,std::vector<V>(quad.begin(),quad.end()),w,h);}
             }
         }
-        PreviewPainter painter{camera,lattice,w,h,1,0,0,false,{}};painter.layers(style,CellMask(x,y,128,128));mesh=cuts.cut(painter.mesh);return true;
+        PreviewPainter painter{camera,lattice,w,h,1,0,0,false,{}};painter.layers(style,CellMask(x,y,128,128));mesh=cuts.cut(std::move(painter.mesh));return true;
     }
 };
 }

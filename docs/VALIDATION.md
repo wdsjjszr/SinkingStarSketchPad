@@ -1,5 +1,12 @@
 # Validation — 3.4.6 Beta
 
+## Preview performance investigation — 26 October 2026
+
+- The user explicitly allowed runtime diagnostics for this performance investigation. Only an isolated native preview probe was executed; no game, rendering host or other functional test program was run, and no SHA checks were performed.
+- With all 128x128 cells visible and one rectangular cover, two before/after rounds measured center generation at 110-116ms versus 40-42ms and clipping at 673-858ms versus 45-53ms. Intersection generation was 36-40ms versus 11-13ms and clipping 219-232ms versus 16ms. Combined centers/intersections improved by about 88%; actual game timing is not established.
+- The diagnostic compared triangle counts, order, positions, colors and alpha within 1e-8, including overlapping/angled covers and radial previews. Unchanged-view cache calls stayed cache hits and height changes rebuilt. Mesh dimensions, dot segments, opacity, layering and native voxel occlusion remain unchanged.
+- Functional fixtures remain compile-only. The performance comparison source and original-header snapshots are local build artifacts.
+
 ## Genuine bold and compact windows — 25 October 2026
 
 - ReShade 6.8.0 exposes no add-on font registration API. Its existing EditorFont slot loads the independent Noto Sans CJK SC Bold face; UI font scopes select it only when OS/2 metadata reports a bold weight and it contains Chinese glyphs. All duplicated text strokes are removed. The official downloaded font's static metadata identifies Noto Sans CJK SC, Bold, weight 700; original OFL and copyright are retained.

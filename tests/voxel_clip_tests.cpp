@@ -3,12 +3,15 @@
 using namespace sketch::grid;
 static_assert(!in_front(2,2,1)&&!in_front(2.00005,2,1)&&in_front(2.001,2,1)&&in_front(1.999,2,-1),"World-space contact tolerance keeps coplanar surfaces stable on either viewing side");
 static_assert(interpolate({0,0,0},{4,2,1},.25).alpha==.25,"Clipped vertices interpolate opacity");
+static_assert(overlaps({0,0,10,10},{9,9,11,11})&&!overlaps({0,0,10,10},{10,0,20,10}),"Broad-phase clipping retains intersecting bounds and skips edge-only contact");
 int main(){
     PaintPolygon subject{{0,0,0},{10,0,1},{10,10,1},{0,10,0}},cover{{5,-1,1},{11,-1,1},{11,11,1},{5,11,1}};
+    assert(covers(cover,{{{6,0,1},{10,0,1},{10,10,1}}})&&!covers(cover,{{{0,0,1},{10,0,1},{10,10,1}}}));
     auto pieces=subtract(subject,cover);double remainder=0;for(auto p:pieces)remainder+=std::abs(area(p));assert(std::abs(remainder-50)<1e-6);
     assert(subtract(subject,{{-1,-1,1},{11,-1,1},{11,11,1},{-1,11,1}}).empty());
     ScreenCuts cuts;cuts.reset(100,100);cuts.add(cover);cuts.add(cover);PreviewMesh mesh;mesh.polygon(subject,255);auto cropped=cuts.cut(mesh);
     double total=0;for(auto t:cropped.triangles){total+=std::abs(edge(t.points[0],t.points[1],t.points[2]))*.5;for(auto p:t.points)assert(p.alpha<=.500001);}assert(std::abs(total-50)<1e-6);
+    ScreenCuts empty;empty.reset(100,100);auto retained=empty.cut(std::move(mesh));assert(retained.triangles.size()==2);
     auto merged=merge_faces({{0,0},{0,1},{1,0},{1,1}});assert(merged.size()==1&&merged[0][2]==2&&merged[0][3]==2);
     Camera camera;camera.valid=true;camera.eye={0,0,10};camera.forward={0,0,-1};
     camera.matrix={.1,0,0,0,0,.1,0,0,0,0,-.1,1,0,0,0,1};camera.inverse={10,0,0,0,0,10,0,0,0,0,-10,10,0,0,0,1};

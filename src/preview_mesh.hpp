@@ -4,6 +4,11 @@
 namespace sketch::grid {
 constexpr unsigned preview_batch_triangles=20000;
 constexpr double dot_radius=2.5,dot_outer_radius=dot_radius+1.5;
+inline const auto dot_circle=[]{
+    std::array<std::array<double,2>,25> points{};
+    for(unsigned n=0;n<points.size();++n){double a=n*6.283185307179586/24;points[n]={std::cos(a),std::sin(a)};}
+    return points;
+}();
 static_assert(preview_batch_triangles*3<65536,"Each primitive reservation fits 16-bit indices before the SDK applies its vertex offset");
 struct PreviewVertex {double x=0,y=0,alpha=0;};
 constexpr PreviewVertex interpolate(PreviewVertex a,PreviewVertex b,double t){return {a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.alpha+(b.alpha-a.alpha)*t};}
@@ -13,21 +18,24 @@ struct PreviewMesh {
     void polygon(const std::vector<PreviewVertex> &points,unsigned shade){
         for(size_t n=2;n<points.size();++n)triangles.push_back({{points[0],points[n-1],points[n]},shade});
     }
+    void quad(PreviewVertex a,PreviewVertex b,PreviewVertex c,PreviewVertex d,unsigned shade){
+        triangles.push_back({{a,b,c},shade});triangles.push_back({{a,c,d},shade});
+    }
     void strip(PreviewVertex a,PreviewVertex b,double low,double high,unsigned shade){
         double length=std::hypot(b.x-a.x,b.y-a.y);if(length<1e-8)return;
         double x=(b.y-a.y)/length,y=(a.x-b.x)/length;
-        polygon({{a.x+x*high,a.y+y*high,a.alpha},{b.x+x*high,b.y+y*high,b.alpha},{b.x+x*low,b.y+y*low,b.alpha},{a.x+x*low,a.y+y*low,a.alpha}},shade);
+        quad({a.x+x*high,a.y+y*high,a.alpha},{b.x+x*high,b.y+y*high,b.alpha},{b.x+x*low,b.y+y*low,b.alpha},{a.x+x*low,a.y+y*low,a.alpha},shade);
     }
     void line(PreviewVertex a,PreviewVertex b,double width){strip(a,b,-width*.5,width*.5,preview_foreground);}
     void line_outline(PreviewVertex a,PreviewVertex b,double width){strip(a,b,width*.5,width*.5+1,preview_outline);strip(a,b,-width*.5-1,-width*.5,preview_outline);}
     void dot(PreviewVertex center){
-        for(unsigned n=0;n<24;++n){double a=n*6.283185307179586/24,b=(n+1)*6.283185307179586/24;
-            triangles.push_back({{center,{center.x+dot_radius*std::cos(a),center.y+dot_radius*std::sin(a),center.alpha},{center.x+dot_radius*std::cos(b),center.y+dot_radius*std::sin(b),center.alpha}},preview_foreground});}
+        for(unsigned n=0;n<24;++n){auto a=dot_circle[n],b=dot_circle[n+1];
+            triangles.push_back({{center,{center.x+dot_radius*a[0],center.y+dot_radius*a[1],center.alpha},{center.x+dot_radius*b[0],center.y+dot_radius*b[1],center.alpha}},preview_foreground});}
     }
     void dot_outline(PreviewVertex center){
-        for(unsigned n=0;n<24;++n){double a=n*6.283185307179586/24,b=(n+1)*6.283185307179586/24;
-            polygon({{center.x+dot_radius*std::cos(a),center.y+dot_radius*std::sin(a),center.alpha},{center.x+dot_outer_radius*std::cos(a),center.y+dot_outer_radius*std::sin(a),center.alpha},
-                     {center.x+dot_outer_radius*std::cos(b),center.y+dot_outer_radius*std::sin(b),center.alpha},{center.x+dot_radius*std::cos(b),center.y+dot_radius*std::sin(b),center.alpha}},preview_outline);}
+        for(unsigned n=0;n<24;++n){auto a=dot_circle[n],b=dot_circle[n+1];
+            quad({center.x+dot_radius*a[0],center.y+dot_radius*a[1],center.alpha},{center.x+dot_outer_radius*a[0],center.y+dot_outer_radius*a[1],center.alpha},
+                 {center.x+dot_outer_radius*b[0],center.y+dot_outer_radius*b[1],center.alpha},{center.x+dot_radius*b[0],center.y+dot_radius*b[1],center.alpha},preview_outline);}
     }
 };
 struct PreviewPainter {
@@ -46,6 +54,9 @@ struct PreviewPainter {
     void dot(int i,int j){auto p=clip_point(camera,plane.world(i,j));if(p.w>1e-6&&p.x>=-p.w&&p.x<=p.w&&p.y>=-p.w&&p.y<=p.w){auto center=vertex(p);outlines.dot_outline(center);cores.dot(center);}}
     void layers(const Preview &style,const CellMask &mask){
         if(!style.visible())return;
+        size_t dots=style.centers?size_t(mask.width)*mask.height:0;
+        size_t lines=size_t(mask.width+1)*(mask.height+1)*(unsigned(style.borders)*2+unsigned(style.intersections)*4);
+        outlines.triangles.reserve(dots*48+lines*4);cores.triangles.reserve(dots*24+lines*2);
         if(style.checker||style.centers)for(int j=mask.y;j<mask.y+mask.height;++j)for(int i=mask.x;i<mask.x+mask.width;++i){
             if(!mask.at(i,j))continue;if(style.checker)cell(i,j);if(style.centers)dot(i,j);
         }
