@@ -1,5 +1,12 @@
 # Validation — 3.4.6 Beta
 
+## UI feedback fixes — 25 October 2026
+
+- Custom checkboxes/toggles use an 8-unit inset and suppress the native Button border; icon-only buttons also suppress that extra border. Help uses a Bezier question mark. Drawing crosshairs no longer contain gold highlight strokes.
+- UI font sizes, text positions and layout metrics are snapped to physical pixels. This avoids fractional padding exceeding ImGui's truncated auto-fit height; genuine height overflow retains scrolling. The packaged config explicitly sets both Font and LatinFont to the existing OFL-licensed Noto Sans CJK SC Regular.
+- Scale has separate pending/applied values. Only Apply scale changes the next frame and marks the applied value for persistence. Slider editing state is stored per widget and gated by that widget's activity, so editing the duration cannot restyle inactive sliders. Chinese help translates mouse key badges.
+- Compile-time assertions cover 97% pixel rounding, pending/apply/no-change/bounds, and Chinese/English mouse and keyboard labels. Validation remains static compilation, Clang analysis and add-on linking only; no game, rendered UI or SHA checks. Installed font configuration and visual/interaction results need user confirmation.
+
 ## UI refactor — 25 October 2026
 
 - The toolbar, Settings, two-column shortcut help and interactive grid flyout use scoped custom styling. Manual UI scale is 75–200%, default 100%; legacy camera controls retain their palette/layout. Ink, grid projection, annotations and cursor artwork are outside UI font scopes.
