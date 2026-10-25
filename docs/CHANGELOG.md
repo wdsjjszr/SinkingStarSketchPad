@@ -32,6 +32,13 @@
 - Read characters/terrain on demand, invalidate cancelled or stale requests, and disable duplicate backup GPU camera collection while keeping free camera.
 - Validation is static checks, compile-time assertions, static analysis and compilation/linking only; ground marking was subsequently confirmed by the user.
 
+## 3.4.6 — Faster movement and optional view retention (Beta)
+
+- Raise default movement speed from 3 to 5; preserve any explicitly saved speed.
+- Add Keep view when leaving camera controls, enabled by default and saved with other camera preferences. T/Esc releases input while holding the view; T resumes from the retained pose.
+- Keep an explicit Restore game view action in the camera panel and drawing toolbar. Disable the option for automatic restoration on exit.
+- Clear retained poses on restart or detected scene/camera discontinuity. Keep world-path projection active while the view is held.
+
 ## 3.4.5 — Camera controls and axis preferences (Beta)
 
 - Add independent mouse X/Y inversion and an adjustable mouse sensitivity slider, in English and Chinese.

@@ -1,4 +1,4 @@
-SinkingStarSketchPad 3.4.5 — Manual installation
+SinkingStarSketchPad 3.4.6 — Manual installation
 
 No CMD, batch, PowerShell or executable installer is included or required.
 
@@ -32,4 +32,8 @@ This release adds an experimental free camera to the native add-on. Read README_
 
 FREE CAMERA (EXPERIMENTAL): T toggles. WASD pans, Q/Z moves up/down, Shift speeds up, right drag rotates/tilts, wheel zooms, Esc restores the game view. E toggles drawing. Camera mode reserves keyboard/mouse input; Ctrl+Z undoes annotations. Large view changes can reveal original-game culling/shadow/reflection limits. Read README_EN.md.
 
-3.4.5: Gentler movement/rotation/zoom, tilt limits, and separate Invert mouse X / Invert mouse Y checkboxes in the camera panel. Speed, sensitivity and axis preferences save automatically.
+3.4.6: Gentler movement/rotation/zoom, tilt limits, and separate Invert mouse X / Invert mouse Y checkboxes in the camera panel. Speed, sensitivity and axis preferences save automatically.
+
+## Upstream camera integration — 3.4.6
+
+New or missing camera settings default to speed 5, Y inversion on and Keep view on. Existing speed and axis preferences remain. T/Esc leaves controls and releases input while retaining the view when enabled; T resumes. Restore game view always restores the native view, with a button in the drawing toolbar while held. Retained views reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.

@@ -70,3 +70,7 @@ The 3.3 input update is validated separately from the earlier rendering/grid wor
 UI preview images are from the synthetic DirectX 12 test host, not actual game levels. The preview build forces the toolbar open to inspect layout; the distributed add-on is the normal production build. Full visual alignment across actual game levels remains unverified. Keep the Beta label and check the cell-center preview in your level.
 
 Naming update: display strings now use SinkingStarSketchPad. Executable code, file size, PE headers, persistent paths and window IDs are unchanged. The production add-on and both localized UI previews passed native DX12 loading/rendering checks; upgrading from the preceding 3.2 package preserves existing data and preferences.
+
+## Upstream integration
+
+3.4.6 camera retention/defaults are integrated with native-scene resets, effective eye/forward projection and local drawing input. Full fonts/manual packaging are retained. Static compilation/analysis/linking only; no runtime test or packager is executed.

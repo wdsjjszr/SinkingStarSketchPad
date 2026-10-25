@@ -47,17 +47,20 @@ inline Frame decode(const float*p){
     f.width=uint32_t(std::round(1/p[216]));f.height=uint32_t(std::round(1/p[217]));std::memcpy(&f.frame,p+225,4);f.valid=true;return f;
 }
 struct Controller {
-    bool enabled=false;
+    bool enabled=false,holding=false,keep_view=true;
     Frame base;
     V pivot{},offset{};
-    double yaw=0,pitch=0,zoom=1,speed=3,sensitivity=.08;
-    bool invert_x=false,invert_y=false;
+    double yaw=0,pitch=0,zoom=1,speed=5,sensitivity=.08;
+    bool invert_x=false,invert_y=true;
     bool enable(const Frame&f,double plane_z){
         if(!f.valid)return false;base=f;offset={};yaw=pitch=0;zoom=1;
         double distance=std::abs(f.forward.z)>.01?(plane_z-f.eye.z)/f.forward.z:20;
         if(!std::isfinite(distance)||distance<=0||distance>10000)distance=20;
-        pivot=f.eye+f.forward*distance;enabled=true;return true;
+        pivot=f.eye+f.forward*distance;enabled=true;holding=false;return true;
     }
+    constexpr void leave(){holding=enabled&&keep_view;enabled=false;}
+    constexpr void restore(){enabled=false;holding=false;}
+    constexpr bool active_view() const{return enabled||holding;}
     Mat orient() const {constexpr double rad=3.141592653589793/180;return mul(rotation({0,0,1},yaw*rad),rotation(base.right,pitch*rad));}
     Mat world_transform() const {return mul(translation(pivot+offset),mul(orient(),translation(pivot*-1)));}
     std::array<double,2> pitch_limits() const {
@@ -86,7 +89,7 @@ struct Controller {
     }
     void magnify(double wheel){if(std::isfinite(wheel))zoom=std::clamp(zoom*std::pow(1.06,std::clamp(wheel,-20.,20.)),.05,20.);}
     bool apply(float*p) const {
-        if(!enabled||!base.valid||!std::isfinite(yaw)||!std::isfinite(pitch)||!std::isfinite(zoom)||!grid::finite(offset)||zoom<.05||zoom>20)return false;
+        if(!active_view()||!base.valid||!std::isfinite(yaw)||!std::isfinite(pitch)||!std::isfinite(zoom)||!grid::finite(offset)||zoom<.05||zoom>20)return false;
         Frame original=decode(p);if(!original.valid)return false;
         Mat delta=world_transform(),inv_delta;if(!inverse(delta,inv_delta))return false;
         auto view=mul(base.view,inv_delta),proj=original.proj;for(int c=0;c<4;++c){proj[c]*=zoom;proj[4+c]*=zoom;}

@@ -26,7 +26,9 @@ void test_overlay(effect_runtime*rt){
     }
     if(test_frame==30&&!free_camera_bridge::enable(true,0))std::ofstream("free-camera-test-error.txt")<<"Source camera unavailable";
     if(test_frame==70){auto s=free_camera_bridge::snapshot();auto c=s.camera;c.offset={2,1,1};c.rotate(25,35);c.magnify(3);free_camera_bridge::change(c);}
-    if(test_frame==170&&!camera_preview())free_camera_bridge::enable(false,0);
+    if(test_frame==110&&!camera_preview())free_camera_bridge::enable(false,0);
+    if(test_frame==150&&!camera_preview())free_camera_bridge::enable(true,0);
+    if(test_frame==170&&!camera_preview())free_camera_bridge::restore();
 }
 }
 extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE runtime){if(!ProductionAddonInit(addon,runtime))return false;reshade::unregister_event<reshade::addon_event::reshade_overlay>(overlay);reshade::register_event<reshade::addon_event::reshade_overlay>(test_overlay);return true;}

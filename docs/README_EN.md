@@ -1,4 +1,4 @@
-# SinkingStarSketchPad 3.4.5
+# SinkingStarSketchPad 3.4.6
 
 In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
 
@@ -94,11 +94,12 @@ Press the single key **T**, or the toolbar's **Free camera** button, after enter
 | Zoom the lens | Mouse wheel on canvas with drawing closed |
 | Show / hide drawing toolbar | E |
 | Undo an annotation while the camera is active | Ctrl+Z |
-| Restore the game view and disable the free camera | Esc, T, or Restore game view |
+| Leave camera controls (Keep view on by default) | Esc or T |
+| Restore the native game view | Restore game view button |
 
-The camera panel offers separate **Invert mouse X** and **Invert mouse Y** checkboxes. X reverses horizontal right-drag rotation; Y reverses vertical right-drag tilt. Neither changes WASD, height keys or the wheel. Both default off. Movement speed and mouse sensitivity are adjustable and are saved together with these checkboxes in `SinkingStarSketch-data/settings.ini`; reopening the camera or restarting the game retains them. Resetting the view keeps these preferences.
+The camera panel offers separate **Invert mouse X** and **Invert mouse Y** checkboxes. X reverses horizontal right-drag rotation; Y reverses vertical right-drag tilt. Neither changes WASD, height keys or the wheel. X defaults off and Y on; saved axis settings remain. Movement speed and mouse sensitivity are adjustable and are saved together with these checkboxes in `SinkingStarSketch-data/settings.ini`; reopening the camera or restarting the game retains them. Resetting the view keeps these preferences.
 
-Default movement speed is now 3 world units/second (previously 12), mouse sensitivity is 0.08 degrees/pixel (previously 0.30), Shift gives 2× speed, and wheel zoom changes by 6% per notch. Tilt stops at the overhead position and five degrees before the horizon, keeping the original side of the view. WASD directions follow yaw independently of tilt, preventing reversal when looking down.
+Default movement speed is now 5 world units/second (previously 3), mouse sensitivity is 0.08 degrees/pixel (previously 0.30), Shift gives 2× speed, and wheel zoom changes by 6% per notch. Tilt stops at the overhead position and five degrees before the horizon, keeping the original side of the view. WASD directions follow yaw independently of tilt, preventing reversal when looking down.
 
 The camera panel also offers X/Y/height offsets, yaw, tilt, zoom and reset-to-current-game-camera controls. While enabled, keyboard and mouse input are reserved for the camera and drawing, so WASD does not move the character. Text entry pauses camera movement. A scene/camera discontinuity may disable the override automatically. The normal 3.3-style keyboard/game coexistence returns when the free camera is disabled. Existing world paths use the same modified camera projection and remain anchored to cells; ordinary pen/text annotations remain in screen space unless created with Grid drawing enabled.
 
@@ -184,3 +185,7 @@ The project is open source under the **MIT License**.
 - Bug reports: [GitHub Issues](https://github.com/ouyangzhixuan/SinkingStarSketchPad/issues)
 
 Third-party components retain their original licenses.
+
+## Upstream camera integration — 3.4.6
+
+New or missing camera settings default to speed 5, Y inversion on and Keep view on. Existing speed and axis preferences remain. T/Esc leaves controls and releases input while retaining the view when enabled; T resumes. Restore game view always restores the native view, with a button in the drawing toolbar while held. Retained views reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.

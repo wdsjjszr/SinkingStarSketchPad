@@ -1,6 +1,6 @@
 # SinkingStarSketchPad — In-Game Drawing and Cell Paths
 
-**Version 3.4.5 Beta · English / Simplified Chinese · Windows, DirectX 12**
+**Version 3.4.6 Beta · English / Simplified Chinese · Windows, DirectX 12**
 
 An in-game scratchpad for Order of the Sinking Star: sketch ideas, place text notes, and plan routes snapped to cell centers. A themed crystal-blade cursor, star crosshair, and rune-ring eraser help keep annotations readable.
 
@@ -45,3 +45,7 @@ The project is open source under the **MIT License**.
 - Bug reports: [GitHub Issues](https://github.com/ouyangzhixuan/SinkingStarSketchPad/issues)
 
 Third-party components retain their original licenses.
+
+## Upstream camera integration — 3.4.6
+
+New or missing camera settings default to speed 5, Y inversion on and Keep view on. Existing speed and axis preferences remain. T/Esc leaves controls and releases input while retaining the view when enabled; T resumes. Restore game view always restores the native view, with a button in the drawing toolbar while held. Retained views reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.

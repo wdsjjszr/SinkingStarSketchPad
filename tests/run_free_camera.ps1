@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$Compiler,
     [Parameter(Mandatory=$true)][string]$Runtime,
-    [Parameter(Mandatory=$true)][string]$Font,
+    [string]$Font,
     [switch]$InputSuite,
     [switch]$Cached,
     [switch]$LateDescriptor,
@@ -15,8 +15,9 @@ $root = Split-Path -Parent $PSScriptRoot
 $case = Join-Path $root ('build\free-camera-test-' + [guid]::NewGuid().ToString('N').Substring(0,8))
 [IO.Directory]::CreateDirectory((Join-Path $case 'SinkingStarSketch-assets')) | Out-Null
 Copy-Item -LiteralPath $Runtime -Destination (Join-Path $case 'dxgi.dll')
-Copy-Item -LiteralPath $Font -Destination (Join-Path $case 'SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf')
+if ($Font) { Copy-Item -LiteralPath $Font -Destination (Join-Path $case 'SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf') }
 Copy-Item -LiteralPath (Join-Path $root 'config\ReShade.ini') -Destination $case
+if ($Font) { $cfg=Join-Path $case 'ReShade.ini'; (Get-Content -LiteralPath $cfg -Raw).Replace('Font=', 'Font=.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf') | Set-Content -LiteralPath $cfg -Encoding utf8 }
 & $Compiler -std=c++17 -O2 -static -municode -mwindows (Join-Path $PSScriptRoot 'dx12_host.cpp') -o (Join-Path $case 'SketchDX12Test.exe') -ld3d12 -ldxgi -ld3dcompiler -luser32 -lole32 -luuid
 if ($LASTEXITCODE -ne 0) { throw 'Camera host build failed.' }
 $fixture = if ($InputSuite) { 'free_camera_input_addon.cpp' } else { 'free_camera_addon.cpp' }
@@ -39,7 +40,7 @@ if ($InputSuite) {
     $results = Get-Content (Join-Path $case 'free-camera-input-result.txt')
 } else {
     $results = Get-Content (Join-Path $case 'free-camera-render-results.txt')
-    if ($results.Count -ne 3) { throw 'Missing GPU camera verification stages.' }
+    if ($results.Count -ne 5) { throw 'Missing GPU camera verification stages.' }
 }
 $results
 Get-Content (Join-Path $case 'dx12-test-result.txt')

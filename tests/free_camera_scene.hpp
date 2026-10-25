@@ -54,7 +54,7 @@ float4 ps(V i):SV_Target{return float4(i.color,1);})";
     }
     void verify(ID3D12Device*d,ID3D12CommandQueue*q,ID3D12Resource*back,ID3D12Resource*cb,unsigned frame){
         using namespace sketch;void*camera_data=nullptr;D3D12_RANGE cr{0,960};check(cb->Map(0,&cr,&camera_data),"camera verify Map");auto view=free_camera::decode(static_cast<float*>(camera_data));D3D12_RANGE none{0,0};cb->Unmap(0,&none);
-        if(!view.valid)throw std::runtime_error("GPU camera constants invalid");bool changed=frame==100;if(changed&&grid::length(view.eye-grid::V{0,0,14})<1)throw std::runtime_error("Free camera did not affect submitted constants");if(!changed&&grid::length(view.eye-grid::V{0,0,14})>.01)throw std::runtime_error("Game camera was not restored");
+        if(!view.valid)throw std::runtime_error("GPU camera constants invalid");bool changed=frame==100||frame==140||frame==160;if(changed&&grid::length(view.eye-grid::V{0,0,14})<1)throw std::runtime_error("Free camera did not affect submitted constants");if(!changed&&grid::length(view.eye-grid::V{0,0,14})>.01)throw std::runtime_error("Game camera was not restored");
         auto desc=back->GetDesc();D3D12_PLACED_SUBRESOURCE_FOOTPRINT fp{};UINT64 bytes=0;d->GetCopyableFootprints(&desc,0,1,0,&fp,nullptr,nullptr,&bytes);
         D3D12_HEAP_PROPERTIES hp{};hp.Type=D3D12_HEAP_TYPE_READBACK;D3D12_RESOURCE_DESC rd{};rd.Dimension=D3D12_RESOURCE_DIMENSION_BUFFER;rd.Width=bytes;rd.Height=1;rd.DepthOrArraySize=1;rd.MipLevels=1;rd.SampleDesc.Count=1;rd.Layout=D3D12_TEXTURE_LAYOUT_ROW_MAJOR;ComPtr<ID3D12Resource>read;
         check(d->CreateCommittedResource(&hp,D3D12_HEAP_FLAG_NONE,&rd,D3D12_RESOURCE_STATE_COPY_DEST,nullptr,IID_PPV_ARGS(&read)),"camera readback");

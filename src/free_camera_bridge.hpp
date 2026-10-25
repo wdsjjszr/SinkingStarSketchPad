@@ -125,7 +125,7 @@ inline void execute(api::command_queue*queue,api::command_list*cmd){
         {auto frame=free_camera::decode(original.data());
             if(frame.valid){
                 if((!viewport_width||(frame.width==viewport_width&&frame.height==viewport_height))&&(!source.valid||(b.rank>=source_rank&&int32_t(frame.frame-source.frame)>=0)||GetTickCount64()-source_tick>=2000)){
-                    if(control.enabled&&source.valid&&(grid::length(source.eye-frame.eye)>150||grid::dot(source.forward,frame.forward)<.5))control.enabled=false;
+                    if(control.active_view()&&source.valid&&(grid::length(source.eye-frame.eye)>150||grid::dot(source.forward,frame.forward)<.5))control.restore();
                     source=frame;source_rank=b.rank;source_tick=GetTickCount64();effective=frame;
                 }
                 auto output=original;const bool same_view=source.valid&&grid::length(source.eye-frame.eye)<.1&&grid::dot(source.forward,frame.forward)>.999;
@@ -137,9 +137,11 @@ inline void execute(api::command_queue*queue,api::command_list*cmd){
 }
 struct State {free_camera::Controller camera;bool ready=false;ULONGLONG last_patch=0;uint64_t patches=0;};
 inline State snapshot(){std::lock_guard<std::recursive_mutex> lock(mutex);return {control,source.valid&&GetTickCount64()-source_tick<2000,patch_tick,patched};}
-inline bool enable(bool value,double plane_z){std::lock_guard<std::recursive_mutex> lock(mutex);if(!value){control.enabled=false;return true;}if(!source.valid||GetTickCount64()-source_tick>=2000)return false;return control.enable(source,plane_z);}
+inline bool enable(bool value,double plane_z){std::lock_guard<std::recursive_mutex> lock(mutex);if(!value){control.leave();return true;}if(!source.valid||GetTickCount64()-source_tick>=2000)return false;if(control.holding){control.enabled=true;control.holding=false;return true;}return control.enable(source,plane_z);}
+inline void restore(){std::lock_guard<std::recursive_mutex> lock(mutex);control.restore();}
+inline bool reset_view(double plane_z){std::lock_guard<std::recursive_mutex> lock(mutex);if(!source.valid||GetTickCount64()-source_tick>=2000)return false;return control.enable(source,plane_z);}
 inline void change(const free_camera::Controller&value){std::lock_guard<std::recursive_mutex> lock(mutex);if(control.enabled)control=value;}
-inline void preferences(double speed,double sensitivity,bool invert_x,bool invert_y){std::lock_guard<std::recursive_mutex> lock(mutex);control.speed=std::clamp(speed,.1,30.);control.sensitivity=std::clamp(sensitivity,.01,.3);control.invert_x=invert_x;control.invert_y=invert_y;}
+inline void preferences(double speed,double sensitivity,bool invert_x,bool invert_y,bool keep_view=true){std::lock_guard<std::recursive_mutex> lock(mutex);control.speed=std::clamp(speed,.1,30.);control.sensitivity=std::clamp(sensitivity,.01,.3);control.invert_x=invert_x;control.invert_y=invert_y;control.keep_view=keep_view;}
 inline grid::Camera projection(uint32_t width,uint32_t height){std::lock_guard<std::recursive_mutex> lock(mutex);if(!effective.valid||effective.width!=width||effective.height!=height||GetTickCount64()-source_tick>=2000)return {};return {effective.vp,effective.inv,effective.frame,true,effective.eye,effective.forward};}
 inline void cleanup(){std::lock_guard<std::recursive_mutex> lock(mutex);commands.clear();command_tables.clear();command_copies.clear();source_rank=0;effective={};descriptors.clear();layouts.clear();stamps.clear();control={};source={};source_tick=patch_tick=patched=0;viewport_width=viewport_height=0;}
 }

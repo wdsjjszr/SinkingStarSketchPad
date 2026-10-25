@@ -40,9 +40,9 @@ void load_language(){
 }
 void load_camera_preferences(){
     auto path=data_path.parent_path()/L"settings.ini";
-    free_camera_bridge::preferences(GetPrivateProfileIntW(L"Camera",L"SpeedMilli",3000,path.c_str())/1000.,
+    free_camera_bridge::preferences(GetPrivateProfileIntW(L"Camera",L"SpeedMilli",5000,path.c_str())/1000.,
         GetPrivateProfileIntW(L"Camera",L"SensitivityMilli",80,path.c_str())/1000.,
-        GetPrivateProfileIntW(L"Camera",L"InvertX",0,path.c_str())!=0,GetPrivateProfileIntW(L"Camera",L"InvertY",0,path.c_str())!=0);
+        GetPrivateProfileIntW(L"Camera",L"InvertX",0,path.c_str())!=0,GetPrivateProfileIntW(L"Camera",L"InvertY",1,path.c_str())!=0,GetPrivateProfileIntW(L"Camera",L"KeepView",1,path.c_str())!=0);
 }
 bool loaded=false, editing=false, visible=true, dirty=false, disabled=false, reshade_menu=false;
 bool dragging=false, erasing=false, text_open=false, text_focus=false, protected_file=false;
@@ -112,7 +112,7 @@ void save_camera_preferences(){
     const auto c=free_camera_bridge::snapshot().camera;auto path=data_path.parent_path()/L"settings.ini";
     bool ok=true;
     auto write=[&](const wchar_t*key,int value){auto text=std::to_wstring(value);ok=WritePrivateProfileStringW(L"Camera",key,text.c_str(),path.c_str())!=FALSE&&ok;};
-    write(L"SpeedMilli",int(std::lround(c.speed*1000)));write(L"SensitivityMilli",int(std::lround(c.sensitivity*1000)));write(L"InvertX",c.invert_x);write(L"InvertY",c.invert_y);
+    write(L"SpeedMilli",int(std::lround(c.speed*1000)));write(L"SensitivityMilli",int(std::lround(c.sensitivity*1000)));write(L"InvertX",c.invert_x);write(L"InvertY",c.invert_y);write(L"KeepView",c.keep_view);
     if(ok)camera_preferences_dirty=false;else{note(tr(Label::CameraSettingsFailed));camera_preferences_due=GetTickCount64()+5000;}
 }
 void load_drawing_preferences(){
@@ -148,8 +148,8 @@ void status() {
     std::ofstream f(data_path.parent_path()/L"status.txt");
     auto free=free_camera_bridge::snapshot();
     f << "camera_offset=" << free.camera.offset.x << ',' << free.camera.offset.y << ',' << free.camera.offset.z
-      << "\ncamera_angles=" << free.camera.yaw << ',' << free.camera.pitch << "\ncamera_zoom=" << free.camera.zoom << '\n';
-    f << "version=3.4.5\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
+      << "\ncamera_held=" << free.camera.holding << "\ncamera_keep_view=" << free.camera.keep_view << "\ncamera_angles=" << free.camera.yaw << ',' << free.camera.pitch << "\ncamera_zoom=" << free.camera.zoom << '\n';
+    f << "version=3.4.6\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << doc.grids[doc.page].ready << "\ngrid_centers=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0) << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
     f << "grid_drawing=" << grid_drawing << "\ngrid_preview=" << grid_preview.enabled << "\ngrid_preview_centers=" << grid_preview.centers
@@ -358,6 +358,7 @@ void anchor_ground(bool quick=false){
 void poll_ground(){
     auto state=native_ground_bridge::snapshot();ground_character=state.character;ground_scene_ready=state.scene.ready;
     if(state.generation!=ground_generation){
+        if(ground_generation)free_camera_bridge::restore();
         settle_drawing();drawing_wheel.reset();
         ground_generation=state.generation;ground_scene=state.scene.id;ground_initialized=false;ground_user_set={};plane_hint.clear();plane_visibility={};
         for(auto &g:doc.grids)g={};cancel_ground_marking();finish_path();native_ground_height=std::numeric_limits<double>::quiet_NaN();
@@ -521,6 +522,7 @@ void controls(effect_runtime*rt,Point size,Point mouse,bool &over_ui) {
     ImGui::SameLine();if(ImGui::Button(tr(Label::Return)))set_edit(false);
     if(ImGui::Button(tr(Label::CameraToggle))){auto c=free_camera_bridge::snapshot();if(!free_camera_bridge::enable(!c.camera.enabled,camera_plane()))note(tr(Label::CameraUnavailable));}
     ImGui::TextUnformatted(tr(Label::Help));
+    if(free_camera_bridge::snapshot().camera.holding){ImGui::TextWrapped("%s",tr(Label::CameraHeld));if(ImGui::Button(tr(Label::CameraOff)))free_camera_bridge::restore();}
     ImGui::TextUnformatted(tr(Label::KeyboardHelp));
     if(grid_drawing)ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.12f,.42f,.5f,1));
     const bool toggle_grid=ImGui::Button(tr(Label::GridDrawing));if(grid_drawing)ImGui::PopStyleColor();
@@ -699,7 +701,7 @@ void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui
 }
 void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
-    ImGui::SetNextWindowPos(ImVec2(std::max(20.f,size.x-485),80),ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(std::max(24.f,size.x-24),std::max(24.f,size.y-24)),ImGuiCond_FirstUseEver,ImVec2(1,1));
     ImGui::SetNextWindowSize(ImVec2(460,0),ImGuiCond_FirstUseEver);
     ImGui::Begin(tr(Label::CameraTitle),nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs);
     ImGui::PushTextWrapPos(ImGui::GetFontSize()*28);
@@ -709,6 +711,7 @@ void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     preferences_changed|=slider(Label::CameraSensitivity,c.sensitivity,.01f,.3f);
     preferences_changed|=ImGui::Checkbox(tr(Label::CameraInvertX),&c.invert_x);
     preferences_changed|=ImGui::Checkbox(tr(Label::CameraInvertY),&c.invert_y);
+    preferences_changed|=ImGui::Checkbox(tr(Label::CameraKeepView),&c.keep_view);
     ImGui::TextWrapped("%s",tr(Label::CameraPrefsHelp));
     slider(Label::CameraX,c.offset.x,-1000,1000);slider(Label::CameraY,c.offset.y,-1000,1000);slider(Label::CameraZ,c.offset.z,-1000,1000);
     const auto limits=c.pitch_limits();
@@ -718,9 +721,9 @@ void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     ImGui::TextWrapped("%s",tr(Label::CameraLimits));ImGui::PopTextWrapPos();
     auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos),extent=gui_vec2(imgui_function_table_instance()->GetWindowSize);
     over_ui|=in_rect(mouse,pos,ImVec2(pos.x+extent.x,pos.y+extent.y));ImGui::End();
-    if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
-    if(off){free_camera_bridge::enable(false,camera_plane());status();return;}
-    if(reset){free_camera_bridge::enable(true,camera_plane());return;}
+    if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y,c.keep_view);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
+    if(off){free_camera_bridge::restore();status();return;}
+    if(reset){free_camera_bridge::reset_view(camera_plane());return;}
     free_camera_bridge::change(c);
 }
 void camera_navigation(effect_runtime*rt,bool foreground,bool over_ui){
@@ -836,7 +839,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     reshade::register_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::register_event<reshade::addon_event::reshade_open_overlay>(opened);
     reshade::register_event<reshade::addon_event::destroy_effect_runtime>(destroyed);
-    log("SinkingStarSketchPad 3.4.5 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
+    log("SinkingStarSketchPad 3.4.6 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
 }
 extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     {std::lock_guard<std::recursive_mutex> lock(state_mutex);settle_drawing();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();}

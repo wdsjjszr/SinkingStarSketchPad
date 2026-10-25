@@ -21,11 +21,13 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(CameraToggle,"Free camera T","自由相机 T") \
  X(CameraTitle,"Free camera (experimental)###SketchFreeCamera","自由相机（实验功能）###SketchFreeCamera") \
  X(CameraUnavailable,"Game camera constants are not ready. Enter a level and wait.","尚未连接可控制的游戏相机，请进入关卡后稍候。") \
- X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag with drawing closed: rotate. Wheel: configured drawing action while open, zoom while closed. E: drawing. Esc: restore.","WASD 平移 · Q/Z 升降 · Shift 加速 · 关闭绘图后右键拖动旋转。滚轮：绘图打开时按设置执行，关闭时缩放。E 绘图；Esc 恢复。") \
+ X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag with drawing closed: rotate. Wheel: configured drawing action while open, zoom while closed. E: drawing. T / Esc: leave controls, following Keep view.","WASD 平移 · Q/Z 升降 · Shift 加速 · 关闭绘图后右键拖动旋转。滚轮：绘图打开时按设置执行，关闭时缩放。E 绘图；T / Esc 按保留视角设置退出操作。") \
  X(CameraLimits,"Experimental render camera: original game culling, shadows, reflections and mouse picking may not follow large view changes.","实验性渲染相机：大幅变换时，游戏原有裁剪、阴影、反射及鼠标选取可能不随视角更新。") \
  X(CameraSpeed,"Movement speed","移动速度") X(CameraYaw,"Yaw","旋转") X(CameraPitch,"Tilt","俯仰") X(CameraZoom,"Zoom","缩放") \
  X(CameraSensitivity,"Mouse sensitivity","鼠标灵敏度") X(CameraInvertX,"Invert mouse X","反转鼠标 X 轴") X(CameraInvertY,"Invert mouse Y","反转鼠标 Y 轴") \
- X(CameraPrefsHelp,"Speed and axis settings are saved. Tilt stops at the top and before the horizon.","速度和轴向设置会自动保存；俯仰在顶部及地平线前停止，避免翻转。") \
+ X(CameraKeepView,"Keep view when leaving camera controls","退出自由相机时保留视角") \
+ X(CameraHeld,"View held. T resumes controls; Restore game view returns to the game camera.","视角已保留。T 继续调整；点击恢复游戏视角可归位。") \
+ X(CameraPrefsHelp,"Camera preferences are saved. T / Esc follows the keep-view option. Tilt stops at the top and before the horizon.","相机偏好自动保存；T / Esc 按保留视角选项退出。俯仰在顶部及地平线前停止，避免翻转。") \
  X(CameraSettingsFailed,"Could not save camera settings.","无法保存相机设置。") \
  X(CameraX,"Offset X","偏移 X") X(CameraY,"Offset Y","偏移 Y") X(CameraZ,"Height offset","高度偏移") \
  X(CameraReset,"Reset to current game camera","重置到当前游戏相机") X(CameraOff,"Restore game view / disable","恢复游戏视角 / 关闭") \

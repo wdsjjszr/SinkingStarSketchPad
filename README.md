@@ -32,9 +32,9 @@ Press **E** to open/close the toolbar, **G** for cursor visibility, and **B** fo
 
 The compatible add-on filename and persistent data folder remain `SinkingStarSketch.addon64` and `SinkingStarSketch-data` so existing drafts and preferences continue to work.
 
-Version 3.4.5 adds gentler defaults, tilt limits, adjustable mouse sensitivity and separate **Invert mouse X/Y** settings, saved across restarts.
+Version 3.4.6 adds gentler defaults, tilt limits, adjustable mouse sensitivity and separate **Invert mouse X/Y** settings, saved across restarts.
 
-Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt, wheel zoom with the drawing toolbar closed, Esc restore. With drawing open, wheel actions follow Settings; defaults are height changes and Shift+wheel color cycling. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
+Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt and wheel zoom with drawing closed; T/Esc leaves camera controls according to Keep view. With drawing open, wheel actions follow Settings; defaults are height changes and Shift+wheel color cycling. It defaults off and captures keyboard/mouse while active. This is a render-camera override; game-side culling, shadows, reflections and mouse picking may not follow large changes. The user confirmed actual-game camera movement with the 3.4.4 fix on 23 October 2026. This fixes the CPU-upload-to-GPU camera path missed by earlier builds; broader visual compatibility remains experimental.
 
 ## Build from source
 
@@ -87,3 +87,7 @@ The DX12 host is a rendering harness, not an automatic gameplay test. Local path
 Mod-specific source code and documentation are available under the **[MIT License](LICENSE)**, copyright 2026 **ouyangzhixuan**. Included third-party components keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 This is an unofficial community tool. Code, UI text and translations include generative-AI-produced content. No extracted game artwork or game files are distributed.
+
+## Upstream camera integration — 3.4.6
+
+New or missing camera settings default to speed 5, Y inversion on and Keep view on. Existing speed and axis preferences remain. T/Esc leaves controls and releases input while retaining the view when enabled; T resumes. Restore game view always restores the native view, with a button in the drawing toolbar while held. Retained views reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.

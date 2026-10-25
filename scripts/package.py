@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--font', type=Path, required=True)
     parser.add_argument('--font-license', type=Path, required=True)
     parser.add_argument('--addon', type=Path, default=ROOT/'build/SinkingStarSketch.addon64')
-    parser.add_argument('--staging', type=Path, default=ROOT/'build/package/SinkingStarSketchPad-3.4.5-Manual')
+    parser.add_argument('--staging', type=Path, default=ROOT/'build/package/SinkingStarSketchPad-3.4.6-Manual')
     args = parser.parse_args()
     for key, expected in PINNED.items():
         path = getattr(args, key)
@@ -45,7 +45,7 @@ def main():
         'ReShade.ini': ROOT/'config/ReShade.ini',
         'SinkingStarSketch-assets\\NotoSansCJKsc-Regular.otf': args.font,
     }
-    manifest = {'Name':'SinkingStarSketchPad', 'Version':'3.4.5', 'ReleaseStatus':'Beta',
+    manifest = {'Name':'SinkingStarSketchPad', 'Version':'3.4.6', 'ReleaseStatus':'Beta',
                 'Source':'https://github.com/ouyangzhixuan/SinkingStarSketchPad', 'License':'MIT',
                 'Languages':['en','zh-CN'], 'InstallMode':'Manual', 'PackagingRevision':1, 'Files':[]}
     for name, source in payload.items():
@@ -69,7 +69,7 @@ def main():
     forbidden = {'.cmd','.bat','.ps1','.exe','.msi','.vbs','.js','.zip','.7z','.rar'}
     if any(path.is_file() and path.suffix.lower() in forbidden for path in staging.rglob('*')):
         raise RuntimeError('Manual package must not contain installer scripts, executables or nested archives')
-    archive = dist/'SinkingStarSketchPad-3.4.5-Manual.zip'
+    archive = dist/'SinkingStarSketchPad-3.4.6-Manual.zip'
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as output:
         for path in sorted(staging.rglob('*')):
             if path.is_file():

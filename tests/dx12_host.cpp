@@ -105,7 +105,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
             if(gpu_camera_buffer)barrier(gpu_camera_buffer.Get(),D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,D3D12_RESOURCE_STATE_COPY_DEST);
             barrier(buffers[last].Get(),D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_PRESENT);check(list->Close(),"close frame");ID3D12CommandList*commands[]={list.Get()};queue->ExecuteCommandLists(1,commands);
             check(chain->Present(0,0),"Present");wait();Sleep(16);
-            if(camera_test&&wcsstr(args,L"--camera-preview")==nullptr&&wcsstr(args,L"--camera-input")==nullptr&&(frame==55||frame==100||frame==180))camera_scene.verify(device.Get(),queue.Get(),buffers[last].Get(),camera_buffer.Get(),frame);
+            if(camera_test&&wcsstr(args,L"--camera-preview")==nullptr&&wcsstr(args,L"--camera-input")==nullptr&&(frame==55||frame==100||frame==140||frame==160||frame==180))camera_scene.verify(device.Get(),queue.Get(),buffers[last].Get(),camera_buffer.Get(),frame);
         }
         auto desc=buffers[last]->GetDesc();D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};UINT64 bytes=0;device->GetCopyableFootprints(&desc,0,1,0,&footprint,nullptr,nullptr,&bytes);
         D3D12_HEAP_PROPERTIES hp{};hp.Type=D3D12_HEAP_TYPE_READBACK;D3D12_RESOURCE_DESC rd{};rd.Dimension=D3D12_RESOURCE_DIMENSION_BUFFER;rd.Width=bytes;rd.Height=1;rd.DepthOrArraySize=1;rd.MipLevels=1;rd.SampleDesc.Count=1;rd.Layout=D3D12_TEXTURE_LAYOUT_ROW_MAJOR;

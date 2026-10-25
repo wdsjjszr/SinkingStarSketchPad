@@ -3,6 +3,14 @@
 #include <cassert>
 #include <iostream>
 using namespace sketch;
+static_assert(free_camera::Controller{}.speed==5&&free_camera::Controller{}.invert_y&&free_camera::Controller{}.keep_view,"Upstream defaults: speed 5, inverted Y, retained view");
+constexpr bool retained_view_states(){
+    free_camera::Controller c;c.enabled=true;c.yaw=23;c.leave();
+    if(c.enabled||!c.holding||!c.active_view()||c.yaw!=23)return false;
+    c.restore();if(c.active_view())return false;
+    c.keep_view=false;c.enabled=true;c.leave();return !c.active_view();
+}
+static_assert(retained_view_states(),"Leaving controls may retain the pose; explicit restore always clears it");
 std::array<float,240> fixture(double eye_x=0){
     using namespace free_camera;std::array<float,240> p{};
     Mat view=translation({-eye_x,0,-30}),proj={1.2,0,0,0,0,1.8,0,0,0,0,-1.001,-.1001,0,0,-1,0},vp=mul(proj,view),inv;
@@ -14,7 +22,7 @@ int main(){
     using namespace free_camera;
     auto original=fixture();auto frame=decode(original.data());assert(frame.valid);
     Controller c;assert(c.enable(frame,0));auto p=original;assert(c.apply(p.data()));for(int i=0;i<32;++i)assert(std::abs(p[i]-original[i])<.0001);
-    c.move(1,1,1,.1,false);assert(std::abs(grid::length(c.offset)-.3)<1e-6);c.rotate(31,42);c.magnify(4);p=original;assert(c.apply(p.data()));
+    c.move(1,1,1,.1,false);assert(std::abs(grid::length(c.offset)-.5)<1e-6);c.rotate(31,42);c.magnify(4);p=original;assert(c.apply(p.data()));
     auto changed=decode(p.data());assert(changed.valid&&pair_valid(changed.vp,changed.inv));
     assert(grid::length(changed.eye-frame.eye)>1&&grid::length(changed.forward-frame.forward)>.1);
     grid::Camera camera{changed.vp,changed.inv,0,true,changed.eye,changed.forward};grid::Lattice cells{true,{.5,.5,0},{1,0,0},{0,1,0}};
@@ -28,6 +36,8 @@ int main(){
     assert(c.apply(reflected.data()));auto expected=mul(load(reflected.data()),mirror);for(int i=0;i<16;++i)assert(std::abs(reflected[32+i]-expected[i])<.001);assert(pair_valid(load(reflected.data()+32),load(reflected.data()+96)));
     c.enabled=false;p=original;assert(!c.apply(p.data())&&p==original);
     c.enable(frame,0);c.rotate(1e7,10000);assert(c.pitch==85&&std::abs(c.yaw)<=180);c.magnify(1e9);assert(c.zoom<=20);c.magnify(-1e9);assert(c.zoom>=.05);
+    c.keep_view=true;c.leave();assert(!c.enabled&&c.holding);p=original;assert(c.apply(p.data()));auto held=p;auto held_offset=c.offset;c.move(1,0,0,.1,false);assert(grid::length(c.offset-held_offset)<1e-9);p=original;assert(c.apply(p.data())&&p==held);
+    c.restore();p=original;assert(!c.apply(p.data())&&p==original);c.enable(frame,0);c.keep_view=false;c.leave();assert(!c.active_view());c.enable(frame,0);
     auto invalid=original;uint32_t type=1;std::memcpy(invalid.data()+226,&type,4);auto unchanged=invalid;assert(!c.apply(invalid.data())&&invalid==unchanged);
     invalid=original;invalid[0]=0;assert(!decode(invalid.data()).valid);invalid=original;invalid[160]=0;assert(!decode(invalid.data()).valid);
     // A game view already tilted 45 degrees must never pitch above the horizon
@@ -45,7 +55,7 @@ int main(){
     assert(std::abs(mirrored_low.pitch+40)<1e-6&&std::abs(mirrored_high.pitch-45)<1e-6);
     assert(direction(mirrored_low.orient(),mirrored.forward).z<-.08);
     assert(direction(mirrored_high.orient(),mirrored.forward).z<-.999);
-    Controller normal,x,y;normal.enable(angled,0);x=normal;y=normal;x.invert_x=true;y.invert_y=true;
+    Controller normal,x,y;assert(normal.invert_y&&!normal.invert_x);normal.invert_y=false;normal.enable(angled,0);x=normal;y=normal;x.invert_x=true;y.invert_y=true;
     normal.mouse_rotate(10,10);x.mouse_rotate(10,10);y.mouse_rotate(10,10);
     assert(std::abs(normal.yaw+.8)<1e-9&&std::abs(normal.pitch-.8)<1e-9);
     assert(x.yaw==-normal.yaw&&x.pitch==normal.pitch);assert(y.yaw==normal.yaw&&y.pitch==-normal.pitch);
