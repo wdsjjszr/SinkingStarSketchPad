@@ -25,6 +25,12 @@ struct Rect {
     float x=0,y=0,w=0,h=0;
     constexpr bool contains(float px,float py)const{return px>=x&&py>=y&&px<x+w&&py<y+h;}
 };
+struct WindowPosition {
+    Rect target;
+    bool pending=false;
+    constexpr void move(Rect current,float dx,float dy){target=current;target.x+=dx;target.y+=dy;pending=true;}
+    constexpr bool take(Rect &next){if(!pending)return false;next=target;pending=false;return true;}
+};
 constexpr Rect fit(Rect r,float width,float height,float margin){
     r.w=std::min(r.w,std::max(1.f,width-2*margin));r.h=std::min(r.h,std::max(1.f,height-2*margin));
     r.x=std::clamp(r.x,margin,std::max(margin,width-margin-r.w));

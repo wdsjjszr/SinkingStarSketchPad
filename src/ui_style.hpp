@@ -174,10 +174,17 @@ inline bool slider(const char *id,int &value,int lo,int hi,float width,UIScale s
 inline bool slider(const char *id,float &value,float lo,float hi,float width,UIScale s,const char *format="%.0f",ImU32 accent=gold){
     ImGui::SetNextItemWidth(width);SliderSkin skin(id);bool changed=ImGui::SliderFloat(id,&value,lo,hi,format,ImGuiSliderFlags_AlwaysClamp);skin.draw((value-lo)/(hi-lo),s,accent);return changed;
 }
-inline void header(const char *title,bool *open,UIScale s){
+inline void place_window(WindowPosition &position,ImVec2 initial,ImGuiCond condition=ImGuiCond_FirstUseEver,ImVec2 pivot=ImVec2(0,0)){
+    Rect next;if(position.take(next))ImGui::SetNextWindowPos(vec(next.x,next.y),ImGuiCond_Always);
+    else ImGui::SetNextWindowPos(initial,condition,pivot);
+}
+inline void drag_title(WindowPosition &position){
+    if(ImGui::IsItemActive()&&ImGui::IsMouseDragging(ImGuiMouseButton_Left)){auto delta=ImGui::GetIO().MouseDelta;position.move(window_rect(),delta.x,delta.y);}
+}
+inline void header(const char *title,bool *open,UIScale s,WindowPosition &position){
     float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
     ImGui::InvisibleButton("##title",vec(std::max(s.px(1),available-(open?s.px(34):0)),s.px(28)));auto r=item_rect();text(vec(r.x,r.y+s.px(6)),title,s,typography::title.size,ink,typography::title.bold);
-    if(ImGui::IsItemActive()&&ImGui::IsMouseDragging(ImGuiMouseButton_Left)){auto w=window_rect();auto delta=ImGui::GetIO().MouseDelta;ImGui::SetWindowPos(vec(w.x+delta.x,w.y+delta.y));}
+    drag_title(position);
     if(open){ImGui::SameLine();if(button("##close",Icon::Close,nullptr,s.px(28),s.px(28),s))*open=false;}
     ImGui::Separator();
 }
@@ -189,8 +196,12 @@ inline bool begin_body(float max_height,ImGuiWindowFlags flags=ImGuiWindowFlags_
     return ImGui::BeginChild("##body",vec(0,0),ImGuiChildFlags_AutoResizeY,ImGuiWindowFlags_NoSavedSettings|flags);
 }
 inline constexpr ImGuiWindowFlags panel_flags=ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs|ImGuiWindowFlags_NoDocking|ImGuiWindowFlags_AlwaysAutoResize;
-inline Rect finish_panel(float viewport_width,float viewport_height,UIScale s){
-    auto r=window_rect(),f=fit(r,viewport_width,viewport_height,s.px(8));
-    if(r.x!=f.x||r.y!=f.y)ImGui::SetWindowPos(vec(f.x,f.y));ImGui::End();return f;
+inline Rect finish_panel(float viewport_width,float viewport_height,UIScale s,WindowPosition *position=nullptr){
+    auto r=window_rect();
+    if(position){
+        auto next=position->pending?position->target:r;next.w=r.w;next.h=r.h;next=fit(next,viewport_width,viewport_height,s.px(8));
+        position->target=next;position->pending=next.x!=r.x||next.y!=r.y;
+    }
+    ImGui::End();return r;
 }
 }

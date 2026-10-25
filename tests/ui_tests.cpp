@@ -36,6 +36,14 @@ constexpr bool dismissal(){
 }
 static_assert(dismissal(),"Closing clicks stay blocked through release; the next intentional click reaches the canvas");
 static_assert(Rect{10,20,30,40}.contains(10,20)&&!Rect{10,20,30,40}.contains(40,20),"UI hit regions use the same bounds as drawing");
+constexpr bool queued_move(){
+    WindowPosition position;Rect current{30,40,360,500},next;
+    position.move(current,120,-10);
+    if(current.x!=30||current.w!=360||!position.take(next)||next.x!=150||next.y!=30||next.w!=360)return false;
+    if(position.take(next))return false;
+    position.move(next,-60,20);return position.take(next)&&next.x==90&&next.y==50&&next.w==360;
+}
+static_assert(queued_move(),"Dragging queues the next window origin without changing current-frame content width or hit bounds");
 constexpr bool font_weights(){
     std::array<unsigned char,34> font{{'O','T','T','O',0,1,0,0,0,0,0,0,'O','S','/','2',0,0,0,0,0,0,0,28,0,0,0,6,0,0,0,0,2,188}};
     if(font_weight(font.data(),font.size())!=700||font_weight(font.data(),33)!=0||font_weight(nullptr,0)!=0)return false;

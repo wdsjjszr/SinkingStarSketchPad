@@ -1,5 +1,12 @@
 # Validation — 3.4.6 Beta
 
+## Genuine bold and compact windows — 25 October 2026
+
+- ReShade 6.8.0 exposes no add-on font registration API. Its existing EditorFont slot loads the independent Noto Sans CJK SC Bold face; UI font scopes select it only when OS/2 metadata reports a bold weight and it contains Chinese glyphs. All duplicated text strokes are removed. The official downloaded font's static metadata identifies Noto Sans CJK SC, Bold, weight 700; original OFL and copyright are retained.
+- Settings/help logical widths are 360/560 instead of 400/620. Help columns are General + While drawing and Tools + Free camera.
+- Dragging and viewport clamping queue positions for SetNextWindowPos before Begin on the next frame. No SetWindowPos calls remain in the add-on UI, so content widths and hit regions stay consistent during layout. Compile-time assertions cover queued movement and OpenType table bounds/Regular-versus-Bold selection.
+- Validation is core/production fixture syntax checks, compile-time assertions, Clang analysis, Python syntax inspection and add-on linking only. The packager is not executed. Actual font rendering, drag behavior and resulting window heights remain unverified in game; no runtime or SHA checks are performed.
+
 ## Annotated copy and typography — 25 October 2026
 
 - Applied the five submitted EditHere annotations: removed the settings/save/apply paragraph and plane-hint explanation; removed palette direction and camera pitch-limit prose; replaced the help footer with the requested short movement sentence. English copy follows the same edits.

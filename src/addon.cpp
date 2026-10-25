@@ -36,6 +36,7 @@ bool ui_preferences_dirty=false,grid_panel_open=false;
 ULONGLONG ui_preferences_due=0;
 ui::DismissClick ui_dismiss;
 ui::Rect toolbar_bounds,grid_button_bounds,grid_panel_bounds;
+ui::WindowPosition toolbar_position,settings_position,shortcuts_position,text_window_position,camera_position;
 i18n::Language language=i18n::Language::System;
 bool chinese(){return i18n::use_chinese(language,PRIMARYLANGID(GetUserDefaultUILanguage())==LANG_CHINESE);}
 const char *tr(i18n::Text text){return i18n::get(text,chinese());}
@@ -523,24 +524,24 @@ template<size_t N> void help_section(Label title,const i18n::ShortcutEntry (&row
 void shortcut_help(Point size,Point mouse,bool &over_ui) {
     if(!shortcuts_open)return;
     auto s=frame_ui;ui::FontScope font(s.ratio());ui::Style style(s);
-    ImGui::SetNextWindowPos(ui::vec(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ui::vec(.5f,.5f));
-    ui::panel_size(std::min(s.px(620),size.x-s.px(16)),size.y-s.px(16));
+    ui::place_window(shortcuts_position,ui::vec(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ui::vec(.5f,.5f));
+    ui::panel_size(std::min(s.px(560),size.x-s.px(16)),size.y-s.px(16));
     if(ImGui::Begin(tr(Label::ShortcutsTitle),nullptr,ui::panel_flags|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse)){
-        ui::header(tr(Label::ShortcutsTitle),&shortcuts_open,s);
+        ui::header(tr(Label::ShortcutsTitle),&shortcuts_open,s,shortcuts_position);
         if(ui::begin_body(size.y-s.px(80))){
             if(ImGui::BeginTable("##columns",2,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_SizingStretchSame|ImGuiTableFlags_NoSavedSettings)){
                 ImGui::TableNextRow();ImGui::TableNextColumn();
                 help_section(Label::ShortcutGeneralTitle,i18n::general_shortcuts,s);ImGui::Spacing();ImGui::Separator();
-                help_section(Label::ShortcutCameraTitle,i18n::camera_shortcuts,s);ui::label(tr(Label::CameraPrefsHelp),s,ui::typography::note,ui::muted,true);
-                ImGui::TableNextColumn();help_section(Label::ShortcutToolsTitle,i18n::tool_shortcuts,s);ImGui::Spacing();ImGui::Separator();
                 help_section(Label::ShortcutDrawingTitle,i18n::drawing_shortcuts,s);ui::label(tr(Label::DrawingGestures),s,ui::typography::note,ui::muted,true);
+                ImGui::TableNextColumn();help_section(Label::ShortcutToolsTitle,i18n::tool_shortcuts,s);ImGui::Spacing();ImGui::Separator();
+                help_section(Label::ShortcutCameraTitle,i18n::camera_shortcuts,s);ui::label(tr(Label::CameraPrefsHelp),s,ui::typography::note,ui::muted,true);
                 ImGui::EndTable();
             }
             ImGui::Separator();ui::label(tr(Label::KeyboardHelp),s,ui::typography::note,ui::muted,true);ui::label(tr(Label::WindowMoveHelp),s,ui::typography::caption,ui::muted,true);
         }
         ImGui::EndChild();
     }
-    auto r=ui::finish_panel(size.x,size.y,s);over_ui|=r.contains(mouse.x,mouse.y);
+    auto r=ui::finish_panel(size.x,size.y,s,&shortcuts_position);over_ui|=r.contains(mouse.x,mouse.y);
 }
 bool segmented(const char *id,const char *const *labels,int count,int &selected,ui::UIScale s){
     bool changed=false;ImGui::PushID(id);ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ui::vec(s.px(6),s.px(4)));
@@ -584,10 +585,10 @@ void native_debug_settings(){
 void drawing_settings(Point size,Point mouse,bool &over_ui){
     if(!settings_open)return;
     auto s=frame_ui;ui::FontScope font(s.ratio());ui::Style theme(s);
-    ImGui::SetNextWindowPos(ui::vec(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ui::vec(.5f,.5f));
-    ui::panel_size(std::min(s.px(400),size.x-s.px(16)),size.y-s.px(16));
+    ui::place_window(settings_position,ui::vec(size.x*.5f,size.y*.5f),ImGuiCond_FirstUseEver,ui::vec(.5f,.5f));
+    ui::panel_size(std::min(s.px(360),size.x-s.px(16)),size.y-s.px(16));
     if(ImGui::Begin(tr(Label::SettingsTitle),nullptr,(ui::panel_flags&~ImGuiWindowFlags_NoNavInputs)|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse)){
-        ui::header(tr(Label::SettingsTitle),&settings_open,s);
+        ui::header(tr(Label::SettingsTitle),&settings_open,s,settings_position);
         if(ui::begin_body(size.y-s.px(80),0)){
             if(setting_rows("##interface")){
                 setting_label(Label::Language);int choice=int(language);const char *languages[]={tr(Label::LanguageSystem),"English",tr(Label::LanguageChinese)};
@@ -632,7 +633,7 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
         }
         ImGui::EndChild();
     }
-    auto r=ui::finish_panel(size.x,size.y,s);over_ui|=r.contains(mouse.x,mouse.y);
+    auto r=ui::finish_panel(size.x,size.y,s,&settings_position);over_ui|=r.contains(mouse.x,mouse.y);
 }
 void grid_preview_controls(Point size,Point mouse,bool &over_ui){
     if(!grid_panel_open)return;
@@ -660,13 +661,13 @@ void grid_preview_controls(Point size,Point mouse,bool &over_ui){
 }
 void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
     auto s=frame_ui;ui::FontScope font(s.ratio());ui::Style style(s);
-    ImGui::SetNextWindowPos(ui::vec(s.px(16),std::max(s.px(8),size.y-s.px(455))),ImGuiCond_FirstUseEver);
+    ui::place_window(toolbar_position,ui::vec(s.px(16),std::max(s.px(8),size.y-s.px(455))));
     ui::panel_size(std::min(s.px(256),size.x-s.px(16)),size.y-s.px(16));
     if(ImGui::Begin(tr(Label::Title),nullptr,ui::panel_flags)){
         float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
         ImGui::InvisibleButton("##title",ui::vec(std::max(s.px(1),available-s.px(114)),s.px(28)));
         auto title=ui::item_rect();ui::text(ui::vec(title.x,title.y+s.px(6)),"SketchPad",s,ui::typography::title.size,ui::ink,ui::typography::title.bold);
-        if(ImGui::IsItemActive()&&ImGui::IsMouseDragging(ImGuiMouseButton_Left)){auto r=ui::window_rect();auto delta=ImGui::GetIO().MouseDelta;ImGui::SetWindowPos(ui::vec(r.x+delta.x,r.y+delta.y));}
+        ui::drag_title(toolbar_position);
         for(unsigned i=0;i<3;++i){
             ImGui::SameLine(0,s.px(2));ImGui::PushID(int(i));
             bool active=doc.page==i;
@@ -745,19 +746,19 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
         const char *saved=tr(dirty?Label::Saving:Label::Saved);float saved_width=gui_text_size(saved).x;
         ImGui::SameLine(std::max(0.f,available-saved_width+s.px(10)));ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(dirty?ui::muted:ui::teal),"%s",saved);
     }
-    toolbar_bounds=ui::finish_panel(size.x,size.y,s);over_ui|=toolbar_bounds.contains(mouse.x,mouse.y);
+    toolbar_bounds=ui::finish_panel(size.x,size.y,s,&toolbar_position);over_ui|=toolbar_bounds.contains(mouse.x,mouse.y);
     grid_preview_controls(size,mouse,over_ui);
     if(text_open){
         float w=std::min(s.legacy(440),size.x-s.px(16)),h=std::min(s.legacy(220),size.y-s.px(16));
         auto position=ui::fit({mouse.x,mouse.y,w,h},size.x,size.y,s.px(8));
-        ImGui::SetNextWindowPos(ui::vec(position.x,position.y),ImGuiCond_Appearing);ui::panel_size(w,size.y-s.px(16));
+        ui::place_window(text_window_position,ui::vec(position.x,position.y),ImGuiCond_Appearing);ui::panel_size(w,size.y-s.px(16));
         if(ImGui::Begin(tr(Label::TextTitle),nullptr,ui::panel_flags)){
-            ui::header(tr(Label::TextTitle),nullptr,s);
+            ui::header(tr(Label::TextTitle),nullptr,s,text_window_position);
             if(text_focus){ImGui::SetKeyboardFocusHere();text_focus=false;}
             ImGui::InputTextMultiline("##text",text_buffer,sizeof(text_buffer),ui::vec(std::max(s.px(20),w-s.px(20)),std::min(s.legacy(120),size.y*.4f)));
             if(ImGui::Button(tr(Label::Done)))finish_text();ui::hint(tr(Label::Done),"Ctrl+Enter");ImGui::SameLine();if(ImGui::Button(tr(Label::Cancel))){text_open=false;text_buffer[0]=0;}ui::hint(tr(Label::Cancel),"Esc");
         }
-        auto r=ui::finish_panel(size.x,size.y,s);over_ui|=r.contains(mouse.x,mouse.y);
+        auto r=ui::finish_panel(size.x,size.y,s,&text_window_position);over_ui|=r.contains(mouse.x,mouse.y);
     }
 }
 void keys(effect_runtime*rt) {
@@ -883,7 +884,7 @@ void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui
 void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
     auto s=frame_ui;ui::FontScope font(s.ratio());ui::LegacyStyle style(s);
-    ImGui::SetNextWindowPos(ImVec2(std::max(s.legacy(24),size.x-s.legacy(24)),std::max(s.legacy(24),size.y-s.legacy(24))),ImGuiCond_FirstUseEver,ImVec2(1,1));
+    ui::place_window(camera_position,ImVec2(std::max(s.legacy(24),size.x-s.legacy(24)),std::max(s.legacy(24),size.y-s.legacy(24))),ImGuiCond_FirstUseEver,ImVec2(1,1));
     ui::panel_size(std::min(s.legacy(460),size.x-s.px(16)),size.y-s.px(16));
     ImGui::Begin(tr(Label::CameraTitle),nullptr,ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoNavInputs);
     ImGui::PushTextWrapPos(ImGui::GetFontSize()*28);
@@ -900,7 +901,7 @@ void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     bool reset=ImGui::Button(tr(Label::CameraReset));bool hold=ImGui::Button(tr(Label::CameraHold));ImGui::SameLine();bool off=ImGui::Button(tr(Label::CameraOff));
     ImGui::TextUnformatted(state.last_patch&&GetTickCount64()-state.last_patch<1500?tr(Label::CameraLive):tr(Label::CameraWaiting));
     ImGui::TextWrapped("%s",tr(Label::CameraLimits));ImGui::PopTextWrapPos();
-    auto r=ui::finish_panel(size.x,size.y,s);over_ui|=r.contains(mouse.x,mouse.y);
+    auto r=ui::finish_panel(size.x,size.y,s,&camera_position);over_ui|=r.contains(mouse.x,mouse.y);
     if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
     if(off){free_camera_bridge::restore();status();return;}
     if(reset){free_camera_bridge::reset_view(camera_plane());return;}
