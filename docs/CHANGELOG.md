@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — drawing interaction and path numbering (2026-10-26)
+
+- Pause the pointer grid while a visible plane-change preview is drawn, including its fade; keep snap markers and the saved preview preference.
+
 ## Unreleased — upstream integration and preview visibility (2026-10-25)
 
 - T/Esc now restores the game camera; only the explicit Hold camera button fixes the pose. Remove the automatic Keep view option while retaining speed/sensitivity/axis preferences.

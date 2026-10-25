@@ -343,12 +343,13 @@ void draw_snap_marker(ImDrawList *draw,Point mouse,Point size,bool shift){
 bool ground_ready(){
     return ground_scene_ready&&native_ground_snapshot&&native_ground_snapshot->ready&&native_ground_snapshot->scene_id==ground_scene;
 }
-void draw_plane_hint(ImDrawList *draw,Point size){
-    if(!camera.valid||!hint_preferences.style.visible()||!plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences))return;
-    const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return;
+bool draw_plane_hint(ImDrawList *draw,Point size){
+    if(!camera.valid||!hint_preferences.style.visible()||!plane_hint.active(GetTickCount64(),doc.page,ground_generation,hint_preferences))return false;
+    const auto &g=plane_hint.lattice;double i,j;if(!grid::preview_focus(camera,g,i,j))return false;
     int x=int(std::floor(i+.5)),y=int(std::floor(j+.5));
     plane_visibility.update(camera,g,ground_ready()?native_ground_snapshot:nullptr,x-64,y-64,size.x,size.y,hint_preferences.style);
     draw_preview_mesh(draw,plane_visibility.mesh,hint_preferences.style.opacity*.01*grid::fade_weight(double(GetTickCount64()-plane_hint.started),hint_preferences.duration_ms));
+    return !plane_visibility.mesh.triangles.empty();
 }
 bool preserve_z_shape(){return dragging&&pending.lattice.ready&&(pending.tool==Tool::Line||pending.tool==Tool::Arrow)&&shape_gesture.waiting();}
 void set_ground(double z,grid::HintSource source=grid::HintSource::Mark){
@@ -977,8 +978,8 @@ void overlay(effect_runtime*rt) {
             ImGui::SetNextFrameWantCaptureMouse(capture_mouse);ImGui::SetNextFrameWantCaptureKeyboard(capture_keys);
         }
         ImDrawList *draw=ImGui::GetBackgroundDrawList();
-        if(visible&&foreground&&!reshade_menu)draw_plane_hint(draw,size);
-        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else draw_grid_preview(draw,mouse,size);}
+        const bool hint_drawn=visible&&foreground&&!reshade_menu&&draw_plane_hint(draw,size);
+        if(editing&&foreground&&!over_ui&&!reshade_menu){if(ground_marking)draw_ground_preview(draw,size);else if(!hint_drawn)draw_grid_preview(draw,mouse,size);}
         if(native_ground_debug&&visible&&foreground&&!reshade_menu)draw_native_ground_debug(draw,mouse,size,over_ui);else native_ground_visible=0;
         if(visible){for(const auto&s:page())draw_stroke(draw,*s,size);if(dragging)draw_stroke(draw,pending,size);}
         if(editing&&foreground&&!over_ui&&!reshade_menu&&!ground_marking)draw_snap_marker(draw,mouse,size,rt->is_key_down(VK_SHIFT));
