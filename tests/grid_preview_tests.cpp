@@ -9,6 +9,7 @@ constexpr bool hints(){
     if(!hint.active(1309,0,1,preferences)||hint.active(1310,0,1,preferences)||hint.active(20,1,1,preferences))return false;
     hint.show(b,100,0,1,HintSource::Wheel,preferences);if(hint.lattice.origin.z!=3||!hint.active(1099,0,1,preferences))return false;
     hint.show(b,200,0,1,HintSource::Mark,preferences);if(!hint.active(1199,0,1,preferences)||hint.active(201,0,2,preferences))return false;
+    if(!hint.active(1499,0,1,preferences)||hint.active(1500,0,1,preferences))return false;
     preferences.duration_ms=5000;if(!hint.active(6699,0,1,preferences)||hint.active(6700,0,1,preferences))return false;
     preferences.mode=HintMode::WheelOnly;hint.expire(201,0,1,preferences);if(hint.showing)return false;
     preferences.mode=HintMode::On;if(hint.active(202,0,1,preferences))return false;

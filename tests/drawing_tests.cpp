@@ -44,4 +44,8 @@ int main(){
     auto after=project_stroke(*doc.pages[0][3],camera,{1000,1000});assert(before[0].x!=after[0].x);
     const auto &anchor=*doc.pages[0][5];assert(project_stroke(anchor,camera,{1000,1000}).size()==1&&anchor.width==3);
     camera.matrix[14]=.1;auto spatial=project_stroke(*doc.pages[0][1],camera,{1000,1000});assert(spatial.size()==2&&projected_hit(spatial,spatial.back(),3));
+    Document invalid;auto bad=std::make_shared<Stroke>();bad->lattice=g;bad->points={{0,0,0},{0,0,1}};invalid.pages[0].push_back(bad);
+    for(auto tool:{Tool::Pen,Tool::Rectangle}){bad->tool=tool;bool rejected=false;try{invalid.validate();}catch(...){rejected=true;}assert(rejected);}
+    bad->tool=Tool::Path;bad->points[1].z=.5f;bool rejected=false;try{invalid.validate();}catch(...){rejected=true;}assert(rejected);
+    bad->tool=Tool::Line;bad->points[1].z=std::numeric_limits<float>::infinity();rejected=false;try{invalid.validate();}catch(...){rejected=true;}assert(rejected);
 }

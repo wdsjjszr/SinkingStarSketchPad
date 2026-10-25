@@ -70,7 +70,8 @@ Other accepted values are `zh-CN` and `auto`. The setting changes the mod interf
 | Cycle ink color | Default: Shift+wheel on drawing canvas |
 | Choose one of five ink colors | Alt+1-5 |
 | Snap a line/arrow to 45 degrees; constrain rectangle/ellipse | Hold Shift |
-| Undo | Ctrl+Z; right-click when no shape is pending and free camera is off |
+| Undo | Ctrl+Z |
+| Temporary whole-mark eraser | Hold right button; pending shape cancellation / active path finish takes priority |
 | Redo | Ctrl+Y, or Ctrl+Shift+Z |
 | Switch among three scratch pages | Ctrl+1 / Ctrl+2 / Ctrl+3 |
 | Save | Ctrl+S |
@@ -89,7 +90,7 @@ Press the single key **T**, or the toolbar's **Free camera** button, after enter
 | Pan on the world plane | W/A/S/D |
 | Move up / down | Q / Z |
 | Move faster | Hold Shift |
-| Orbit the view around its captured focus | Hold right mouse button and drag |
+| Orbit the view around its captured focus | Close drawing, then hold right mouse button and drag |
 | Zoom the lens | Mouse wheel on canvas with drawing closed |
 | Show / hide drawing toolbar | E |
 | Undo an annotation while the camera is active | Ctrl+Z |
@@ -107,23 +108,23 @@ The camera panel also offers X/Y/height offsets, yaw, tilt, zoom and reset-to-cu
 
 Toggle **Grid drawing** to create new marks on the target plane. Pen/ellipse use continuous plane coordinates; line/arrow/rectangle endpoints snap to the nearest center or intersection, with Shift constraints calculated on that plane. Text anchors follow the world while letters stay upright and fixed in screen size. Erasing uses the current projection; paths retain their existing rules. Each mark keeps its own plane, ink and width.
 
-**Grid preview** combines centers, perspective crosses, borders and checker fill over 11×11 cells, with adjustable opacity and no wall cutting. Both previews are gray. **Settings** configures the separate plane-change hint: default borders/checker, 25% opacity and 1 second, with On/Off/Height adjustment only and 0–5-second duration. Automatic level initialization is silent; hints hide cells blocked by native walls along the current camera view and remain capped at 128×128 cells. Settings apply immediately and persist automatically. See [the full behavior and draft-upgrade guide](GRID_DRAWING.md).
+**Grid preview** uses radial fading, thicker gray points/lines and black/white checker fill. Grid line/arrow/rectangle tools show the actual snapped endpoint. **Settings** configures hints: new defaults are 45% opacity and a 0.75-second hold followed by a 30% ease-out fade; saved preferences remain. Hints clip against projected native voxel faces at sub-cell boundaries, retaining self-contact surfaces without shifting Z. Initialization stays silent, and the 128×128 cap remains. See [the full behavior and draft-upgrade guide](GRID_DRAWING.md).
 
 ## Cell paths that follow the camera
 
 1. Enter a level, press **E**, then **Alt+H** or click **Path**.
 2. The level initializes all three pages once from the controlled character logical Z, without requiring ground below. **Set plane to character** reads the character again for the current page. Targets stay fixed until another mark; wait for a valid game camera to draw paths.
 3. Enable **Grid preview → Cell centers** to inspect the snap points near your mouse.
-4. Click a cell center to start a path. Click another cell in the same row or column to connect the intermediate centers.
+4. Click a cell center to start a path. Click along one of X, Y or Z to connect intermediate centers; use wheel height changes for vertical runs.
 5. Place a point at each corner. A diagonal target is rejected until you add the corner.
-6. Click **Finish / New path** to begin a separate route.
+6. Click the same XYZ endpoint again, right-click, or use **Finish / New path** to finish before starting another route.
 7. Press **E** to return to the game. The path is stored using a world-space grid reference and is reprojected with the camera as it moves or zooms.
 
 Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click requests fresh terrain and marks once using the pointer and camera captured at the click, then exits even on failure. It preserves the selected tool and adds no path point. Esc, switching pages/tools and a newer marking request invalidate a pending result. With drawing open, the wheel follows four configurable bindings. Defaults are height adjustment for plain wheel and color cycling for Shift+wheel; Ctrl/Alt+wheel do nothing, as do multiple modifiers. Height changes preserve fractional Z; close drawing for free-camera zoom. Switching levels initializes all pages from one character sample and retains existing paths. See [ground marking](MANUAL_GROUND.md).
 
 The background reader only probes level identity about once per second while idle. Terrain refreshes on level entry and manual/middle-click requests; characters are sampled for initialization and the character-plane button. Initialization retries until a valid character is available, then stops. The duplicate backup GPU camera collector is disabled; effective-camera and free-camera processing remain active.
 
-With the free camera disabled, right-click/Ctrl+Z undoes the most recent path addition and ends the active path. Alt+K selects the whole-path/whole-mark eraser. A path retains its own grid reference, so a later change in automatic detection does not move existing marks.
+Ctrl+Z undoes a path addition and ends the active path. Right-click finishes an active path without erasing; otherwise it temporarily erases, after pending-shape cancellation. Alt+K selects the whole-path/whole-mark eraser. A path retains its own grid reference, so a later change in automatic detection does not move existing marks.
 
 This tool marks routes only: it does not move the player, push boxes, check obstacles, or solve puzzles. Ordinary drawing stays in screen space; enable Grid drawing for new pen/shapes and text anchors to follow the world. Use a different scratch page for another level; pages are not automatically assigned to level names.
 
@@ -138,7 +139,7 @@ Normal mode uses a pale gold crystal-blade pointer with a dark edge and a small 
 - Language, camera, grid drawing and preview preferences: `settings.ini` in the same folder.
 - **Export SVG** writes a transparent vector image to `SinkingStarSketch-data/exports`. World marks use the same current-camera projection as display and erasing; without a valid camera they are omitted. Unfinished shape previews are never exported.
 - Up to 2,000 marks per page, 120,000 total points, and 60 undo steps. Undo history does not survive a restart.
-- Draft format **v3** reads v1/v2 and stores each mark’s own grid. Before upgrading an old draft, `drafts.pre-v3.txt` is preserved once without overwriting it; backup failure blocks saving. Restore that file before using an older add-on. The regular `.bak` continues to track the previous save.
+- Draft format **v4** reads v1/v2/v3, stores each mark’s grid and relative point Z. Before upgrading an old draft, `drafts.pre-v4.txt` is preserved once without overwriting it; backup failure blocks saving. Restore that file before using an older add-on. The regular `.bak` continues to track the previous save.
 
 ## Uninstall
 

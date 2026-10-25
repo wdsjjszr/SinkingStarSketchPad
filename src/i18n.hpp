@@ -16,12 +16,12 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(Undo,"Undo","撤销") X(Redo,"Redo","重做") X(Clear,"Clear page","清空本页") X(Page,"Page ","草稿 ") \
  X(Save,"Save","保存") X(Saved,"Saved","已保存") X(Saving,"Saving...","正在保存") X(Export,"Export SVG","导出 SVG") \
  X(Return,"Return to game E","返回游戏 E") \
- X(Help,"Shapes: drag or click start/end | Right click: cancel shape, otherwise undo | Wheel: configured action | Shift+wheel: color by default | Middle: mark ground","图形可拖绘或点击起终点 · 右键取消图形，否则撤销 · 滚轮按设置执行 · 默认 Shift+滚轮切色 · 中键标记地面") \
+ X(Help,"Shapes: drag or click start/end | Right: cancel shape / finish path / hold to erase | Wheel: configured action | Shift+wheel: color by default | Middle: mark ground","图形可拖绘或点击起终点 · 右键取消图形 / 结束路径 / 按住擦除 · 滚轮按设置执行 · 默认 Shift+滚轮切色 · 中键标记地面") \
  X(KeyboardHelp,"Keyboard: game | Alt+letter: tool | Alt+1-5: color | Alt+Tab: keep drawing mode","键盘操作游戏 · Alt+字母选工具 · Alt+1-5 选色 · 切出后保留绘图模式") \
  X(CameraToggle,"Free camera T","自由相机 T") \
  X(CameraTitle,"Free camera (experimental)###SketchFreeCamera","自由相机（实验功能）###SketchFreeCamera") \
  X(CameraUnavailable,"Game camera constants are not ready. Enter a level and wait.","尚未连接可控制的游戏相机，请进入关卡后稍候。") \
- X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag: rotate (pending shapes cancel first). Wheel: configured drawing action while open, zoom while closed. E: drawing. Esc: restore.","WASD 平移 · Q/Z 升降 · Shift 加速 · 右键拖动旋转（优先取消未完成图形）。滚轮：绘图打开时按设置执行，关闭时缩放。E 绘图；Esc 恢复。") \
+ X(CameraHelp,"WASD: pan | Q/Z: up/down | Shift: faster | Right drag with drawing closed: rotate. Wheel: configured drawing action while open, zoom while closed. E: drawing. Esc: restore.","WASD 平移 · Q/Z 升降 · Shift 加速 · 关闭绘图后右键拖动旋转。滚轮：绘图打开时按设置执行，关闭时缩放。E 绘图；Esc 恢复。") \
  X(CameraLimits,"Experimental render camera: original game culling, shadows, reflections and mouse picking may not follow large view changes.","实验性渲染相机：大幅变换时，游戏原有裁剪、阴影、反射及鼠标选取可能不随视角更新。") \
  X(CameraSpeed,"Movement speed","移动速度") X(CameraYaw,"Yaw","旋转") X(CameraPitch,"Tilt","俯仰") X(CameraZoom,"Zoom","缩放") \
  X(CameraSensitivity,"Mouse sensitivity","鼠标灵敏度") X(CameraInvertX,"Invert mouse X","反转鼠标 X 轴") X(CameraInvertY,"Invert mouse Y","反转鼠标 Y 轴") \
@@ -39,14 +39,15 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(SettingsHelp,"Changes apply immediately and are saved automatically. E hides/restores this window with drawing.","修改即时生效并自动保存。E 随绘图菜单隐藏 / 恢复本窗口。") \
  X(HintSettings,"Plane change preview","平面变动预览") X(HintMode,"Show on plane changes","在平面变动时显示预览") \
  X(HintOn,"On","开") X(HintOff,"Off","关") X(HintWheelOnly,"Height adjustment only","仅微调") \
- X(HintDuration,"Preview duration (seconds)","预览时长（秒）") \
+ X(HintDuration,"Hold duration (seconds)","保持时长（秒）") \
  X(HintHelp,"Initial level entry stays silent. Height adjustment only means wheel height changes. Ctrl+click to enter the hold duration; an ease-out fade lasting another 30 percent follows. Zero disables the preview.","进入关卡首次初始化不提示。仅微调指滚轮改高。Ctrl+点击可输入保持时长，随后另有三成时长的缓出渐隐；0 秒不显示。") \
  X(WheelSettings,"Wheel behavior while drawing","绘图时滚轮行为") X(Wheel,"Wheel","滚轮") X(CtrlWheel,"Ctrl + wheel","Ctrl + 滚轮") \
  X(ShiftWheel,"Shift + wheel","Shift + 滚轮") X(AltWheel,"Alt + wheel","Alt + 滚轮") \
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
  X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the next/previous color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择下一色 / 上一色。关闭绘图后滚轮用于相机缩放。") \
+ X(PathFinished,"Path finished.","本条路径已结束。") \
  X(GridDrawing,"Grid drawing","网格绘画") \
- X(PathHelp,"Click centers along X, Y or Z. Add a point at each turn.","沿 X、Y、Z 点击格心加点，转弯处加点。") \
+ X(PathHelp,"Click centers along X, Y or Z; click the endpoint again or right-click to finish.","沿 X、Y、Z 点击格心，转弯处加点；重复点击终点或右键结束。") \
  X(GridWait,"Waiting for the initial character plane. Set the character plane or mark ground manually.","等待角色初始平面，也可设为角色所在平面或手动标记。") \
  X(GroundMark,"Manual marking","手动标记") X(GroundFinish,"Cancel marking","取消标记") \
  X(GroundHelp,"Left-click a visible ground cell to set the plane and finish. A wall or empty space keeps marking active. Esc cancels.","左键点击可见地面格，成功后自动结束标记；命中墙面或空处会保持标记。Esc 取消。") \

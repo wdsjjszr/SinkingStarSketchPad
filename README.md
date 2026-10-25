@@ -17,7 +17,9 @@ An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text not
 - World-space paths and optional grid drawing: plane pen/shapes and camera-following text anchors.
 - Gray grid previews, camera-occluded plane hints and configurable wheel/Shift/Ctrl/Alt actions.
 - A live Settings window with persistent hint layers, duration and wheel bindings.
-- Drag shapes or click their start/end points; right-click cancels an unfinished shape.
+- Cross-height grid lines/arrows and three-axis orthogonal paths, stored in backward-readable draft v4.
+- Radial previews, hold-plus-fade hints, black/white checker fill and projected voxel clipping.
+- Right click cancels shapes or finishes paths first, otherwise temporarily erases; Ctrl+Z undoes.
 - Persistent System / English / Simplified Chinese language selection.
 
 **Beta:** the user confirmed native previews and ground marking in the levels they checked. The user reported the preceding grid drawing extension works well. This settings/preview revision has received static checks and compilation only. Inspect alignment in your level; routes do not check obstacles, solve puzzles, or control the player. See [grid drawing, previews and draft upgrades](docs/GRID_DRAWING.md).

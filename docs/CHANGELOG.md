@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — preview readability and cross-height drawing (2026-10-25)
+
+- Add hold-plus-30%-ease-out hint fading, radial persistent previews, thicker points/lines, black/white checker fill and snapped-point markers for grid shapes. New missing-preference defaults are 750ms/45%; saved choices remain.
+- Replace center-cell hiding with projected voxel polygon subtraction, stable coplanar contact handling and cached clipped meshes.
+- Preserve waiting grid lines/arrows and active orthogonal XYZ paths across wheel height changes. Draft v4 adds relative Z, reads v1–v3 and preserves `drafts.pre-v4.txt` before overwrite.
+- Right press cancels a pending shape, finishes an active path, then temporarily erases; repeated XYZ endpoints finish paths. Camera right rotation requires drawing closed. Degenerate rectangles use a single line/point.
+- Static assertions/checks, analysis and compilation/linking only; no game/test programs or SHA checks.
+
 ## Unreleased — preview settings and wheel bindings (2026-10-25)
 
 - Hide hinted cells whose centers are behind native walls in the current camera view; keep own-top contact visible and cache unchanged view/plane/terrain masks. Initial level-plane setup stays silent.

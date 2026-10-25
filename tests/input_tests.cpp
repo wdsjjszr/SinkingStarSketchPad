@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 using namespace sketch::input;
+static_assert(right_action(true,true,true)==RightAction::CancelShape&&right_action(true,false,true)==RightAction::FinishPath&&right_action(true,false,false)==RightAction::Erase&&right_action(false,true,true)==RightAction::None,"Right-click cancels shapes, finishes paths, then erases only on an available canvas");
 constexpr bool drawing_wheel_checks(){
     WheelState wheel;
     if(wheel.consume(.25,0,WheelAction::Plane,true)||wheel.consume(.5,0,WheelAction::Plane,true)||wheel.consume(.25,0,WheelAction::Plane,true)!=1)return false;

@@ -53,7 +53,7 @@ float width=3;
 Stroke pending;
 input::ShapeGesture shape_gesture;
 Point shape_press;
-bool suppress_right=false;
+bool suppress_right=false,erase_with_right=false;
 void settle_drawing();
 bool drawing_target(const Stroke &,Point,Point,bool,Point &);
 grid::Camera camera;
@@ -161,6 +161,7 @@ void status() {
     f << "settings_open=" << settings_open << "\nhint_mode=" << unsigned(hint_preferences.mode) << "\nhint_duration_ms=" << hint_preferences.duration_ms
       << "\nhint_centers=" << hint_preferences.style.centers << "\nhint_intersections=" << hint_preferences.style.intersections
       << "\nhint_borders=" << hint_preferences.style.borders << "\nhint_checker=" << hint_preferences.style.checker << "\nhint_opacity=" << hint_preferences.style.opacity
+      << "\npath_active=" << path_active << "\nright_erasing=" << erase_with_right
       << "\nhint_source=" << unsigned(plane_hint.source) << "\nhint_started=" << plane_hint.started << '\n';
     for(unsigned i=0;i<4;++i)f << "wheel_binding_" << i << '=' << unsigned(wheel_actions[i]) << '\n';
     f << "ground_marking=" << ground_marking << "\nground_request_pending=" << bool(ground_request.tag.id)
@@ -242,9 +243,9 @@ void commit() {
         } else note(tr(Label::Full));
         dragging=false;shape_gesture.clear();
     }
-    if(erasing) { if(page().size()!=erase_before.size()) { history[doc.page].record(erase_before); changed(); } erasing=false; erase_before.clear(); }
+    if(erasing) { if(page().size()!=erase_before.size()) { history[doc.page].record(erase_before); changed(); } erasing=false;erase_with_right=false; erase_before.clear(); }
 }
-void cancel() { dragging=false;shape_gesture.clear(); if(erasing) {page()=std::move(erase_before); erasing=false;} }
+void cancel() { dragging=false;shape_gesture.clear(); if(erasing) {page()=std::move(erase_before); erasing=false;erase_with_right=false;} }
 void settle_drawing(){commit();if(dragging)cancel();}
 void finish_text() {
     if(text_buffer[0] && page().size()<2000 && doc.point_count()<120000) {
@@ -253,7 +254,7 @@ void finish_text() {
     }
     text_open=false; text_buffer[0]=0;
 }
-void set_edit(bool value) { settle_drawing(); if(text_open) finish_text(); editing=value;if(value)visible=true;else cancel_ground_marking();status();if(!value)save(); }
+void set_edit(bool value) { settle_drawing(); if(text_open) finish_text(); editing=value;if(value)visible=true;else{cancel_ground_marking();finish_path();}status();if(!value)save(); }
 void undo() { finish_path(); cancel(); if(history[doc.page].back(page()))changed(); }
 void redo() { finish_path(); cancel(); if(history[doc.page].forward(page()))changed(); }
 void clear() { finish_path(); settle_drawing(); if(!page().empty()){history[doc.page].record(page());page().clear();changed();note(tr(Label::Cleared));} }
@@ -279,7 +280,7 @@ void path_click(Point mouse,Point size){
     if(append){
         target.z=float(std::round(g.origin.z-stroke->lattice.origin.z));
         auto last=stroke->points.back();int dx=int(target.x-last.x),dy=int(target.y-last.y),dz=int(target.z-last.z);
-        if(!dx&&!dy&&!dz)return;
+        if(!dx&&!dy&&!dz){finish_path();note(tr(Label::PathFinished),1500);status();return;}
         if(path_axes(last,target)>1){note(tr(Label::NeedCorner));return;}
         extra=size_t(std::abs(dx)+std::abs(dy)+std::abs(dz));
         if(extra>1000){note(tr(Label::TooFar));return;}
@@ -307,6 +308,7 @@ void draw_grid_preview(ImDrawList *draw,Point mouse,Point size,bool shift){
     if((selected!=Tool::Path&&!grid_drawing)||!camera.valid)return;
     const auto &g=doc.grids[doc.page];double i,j;if(!g.coordinates(camera,mouse.x/size.x,mouse.y/size.y,i,j))return;
     if(grid_preview.enabled)draw_preview_mesh(draw,preview_mesh(grid_preview,g,grid::CellMask(int(std::round(i))-5,int(std::round(j))-5,11,11),size,1,true,i,j));
+    if(erasing)return;
     Point target;auto lattice=g;unsigned color=selected_color;
     if(selected==Tool::Path)target={float(std::round(i)),float(std::round(j))};
     else if(snaps_to_grid(selected)){
@@ -622,6 +624,7 @@ bool drawing_target(const Stroke &stroke,Point mouse,Point size,bool shift,Point
     target=normal(mouse,size);return true;
 }
 void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
+    if(suppress_right||erase_with_right)return;
     if(!text_open&&!over_ui&&!ImGui::IsAnyItemActive()&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y
        &&ImGui::IsMouseClicked(ImGuiMouseButton_Middle)){
         commit();
@@ -636,13 +639,12 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     }
     if(ground_request.tag.id)return;
     bool left=ImGui::IsMouseDown(ImGuiMouseButton_Left);
-    if(!text_open && !suppress_right && !free_camera_bridge::snapshot().camera.enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !over_ui){undo();return;}
     if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)&&shape_gesture.waiting()){
         Point target;if(!drawing_target(pending,mouse,size,rt->is_key_down(VK_SHIFT),target)){note(tr(Label::NoPlane));return;}
         pending.points[1]=target;shape_gesture.press();
     }else if(!text_open&&!over_ui&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         if(selected==Tool::Path){path_click(mouse,size);return;}
-        if(selected==Tool::Eraser){erase_before=page();erasing=true;}
+        if(selected==Tool::Eraser){erase_before=page();erasing=true;erase_with_right=false;}
         else{
             auto lattice=grid_drawing?doc.grids[doc.page]:grid::Lattice{};
             if(grid_drawing&&(!lattice.ready||!camera.valid)){note(tr(!camera.valid?Label::NoCamera:Label::Detecting));return;}
@@ -666,15 +668,22 @@ void canvas(effect_runtime*rt,Point size,Point mouse,bool over_ui) {
     }
     if(!left&&(dragging||erasing)){if(!shape_gesture.active()||shape_gesture.release())commit();}
 }
-void cancel_shape_right(Point mouse,Point size,bool over_ui){
-    if(!ImGui::IsMouseDown(ImGuiMouseButton_Right))suppress_right=false;
-    if(shape_gesture.active()&&editing&&input_focus.canvas_ready()&&!reshade_menu&&!text_open&&!over_ui
-        &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y&&ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
-        cancel();suppress_right=true;status();
+void handle_right_button(Point mouse,Point size,bool over_ui){
+    bool down=ImGui::IsMouseDown(ImGuiMouseButton_Right);
+    if(!down){suppress_right=false;if(erasing&&erase_with_right){commit();status();}}
+    bool owns=editing&&input_focus.canvas_ready()&&!reshade_menu&&!text_open&&!over_ui&&!ImGui::IsAnyItemActive()
+        &&!ground_marking&&!ground_request.tag.id&&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y;
+    if(down&&owns&&ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
+        auto action=input::right_action(owns,shape_gesture.active(),path_active);
+        if(action==input::RightAction::CancelShape)cancel();
+        else if(action==input::RightAction::FinishPath){finish_path();note(tr(Label::PathFinished),1500);}
+        else if(action==input::RightAction::Erase){settle_drawing();erase_before=page();erasing=true;erase_with_right=true;}
+        suppress_right=true;status();
     }
+    if(down&&owns&&erasing&&erase_with_right)erase_at(mouse,size);
 }
 void cursor(ImDrawList*draw,Point p) {
-    const auto mode=!editing?cursor_style::Mode::Pointer:(selected==Tool::Eraser?cursor_style::Mode::Eraser:cursor_style::Mode::Drawing);
+    const auto mode=!editing?cursor_style::Mode::Pointer:((selected==Tool::Eraser||erase_with_right)?cursor_style::Mode::Eraser:cursor_style::Mode::Drawing);
     float scale=std::clamp(ImGui::GetIO().DisplaySize.y/1440.f,1.f,1.5f);
     cursor_style::draw(draw,v(p),mode,colors[selected_color],scale);
 }
@@ -688,7 +697,7 @@ void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui
     if(action==input::WheelAction::Color){selected_color=input::cycle_color(selected_color,steps,std::size(colors));status();return;}
     if(!preserve_z_shape())settle_drawing();cancel_ground_marking();plane_hint.clear();set_ground(camera_plane()+steps,grid::HintSource::Wheel);
 }
-void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bool &over_ui){
+void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
     auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
     ImGui::SetNextWindowPos(ImVec2(std::max(20.f,size.x-485),80),ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(460,0),ImGuiCond_FirstUseEver);
@@ -712,6 +721,10 @@ void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bo
     if(preferences_changed){free_camera_bridge::preferences(c.speed,c.sensitivity,c.invert_x,c.invert_y);camera_preferences_dirty=true;camera_preferences_due=GetTickCount64()+500;}
     if(off){free_camera_bridge::enable(false,camera_plane());status();return;}
     if(reset){free_camera_bridge::enable(true,camera_plane());return;}
+    free_camera_bridge::change(c);
+}
+void camera_navigation(effect_runtime*rt,bool foreground,bool over_ui){
+    auto state=free_camera_bridge::snapshot();if(!state.camera.enabled||!foreground)return;auto c=state.camera;
     const bool chord=rt->is_key_down(VK_CONTROL)||rt->is_key_down(VK_MENU);
     // Hovering a panel must not disable keyboard navigation. Only an active
     // widget (including Ctrl-click numeric entry) owns these keys.
@@ -719,7 +732,7 @@ void camera_controls(effect_runtime*rt,Point size,Point mouse,bool foreground,bo
         c.move((rt->is_key_down('D')?1:0)-(rt->is_key_down('A')?1:0),(rt->is_key_down('W')?1:0)-(rt->is_key_down('S')?1:0),
                (rt->is_key_down('Q')?1:0)-(rt->is_key_down('Z')?1:0),ImGui::GetIO().DeltaTime,rt->is_key_down(VK_SHIFT));
         if(!over_ui&&input_focus.canvas_ready()){
-            if(!suppress_right&&!(shape_gesture.active()&&ImGui::IsMouseClicked(ImGuiMouseButton_Right))&&ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
+            if(!editing&&!suppress_right&&ImGui::IsMouseDown(ImGuiMouseButton_Right))c.mouse_rotate(ImGui::GetIO().MouseDelta.x,ImGui::GetIO().MouseDelta.y);
             if(!editing)c.magnify(ImGui::GetIO().MouseWheel);
         }
     }
@@ -744,7 +757,7 @@ void overlay(effect_runtime*rt) {
         Point mouse={io.MousePos.x,io.MousePos.y};
         const bool mouse_down=ImGui::IsMouseDown(ImGuiMouseButton_Left)||ImGui::IsMouseDown(ImGuiMouseButton_Right)||ImGui::IsMouseDown(ImGuiMouseButton_Middle);
         const bool was_foreground=input_focus.active;
-        if(input_focus.update(foreground,mouse_down)&&editing){settle_drawing();save();status();}
+        if(input_focus.update(foreground,mouse_down)&&editing){settle_drawing();finish_path();save();status();}
         if(foreground&&!was_foreground)status();
         // Ignore activation-frame keys (including an Alt+Tab chord), and keep
         // an unfinished text dialog intact while another application has focus.
@@ -755,9 +768,10 @@ void overlay(effect_runtime*rt) {
             drawing_settings(size,mouse,over_ui);
         }
         over_ui|=ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopup);
-        if(!reshade_menu)camera_controls(rt,size,mouse,foreground,over_ui);
-        cancel_shape_right(mouse,size,over_ui);
+        if(!reshade_menu)camera_controls(size,mouse,foreground,over_ui);
         poll_ground();
+        handle_right_button(mouse,size,over_ui);
+        if(!reshade_menu)camera_navigation(rt,foreground,over_ui);
         handle_drawing_wheel(rt,mouse,size,over_ui);
         if(ground_marking&&editing&&foreground&&!over_ui&&!reshade_menu&&input_focus.canvas_ready())update_ground_pick(mouse,size);
         else ground_hit={};

@@ -27,6 +27,21 @@ void compile_legacy_backup_failure(const std::filesystem::path &draft){
     assert(!save()&&dirty&&doc.format_version==2);
 }
 void compile_world_export(Point size){export_svg(size);}
+void compile_right_erase_transaction(){
+    doc={};history={};data_path.clear();selected=Tool::Line;shape_gesture.clear();dragging=false;
+    auto stroke=std::make_shared<Stroke>();stroke->points={{.2f,.2f},{.4f,.4f}};page().push_back(stroke);
+    erase_before=page();erasing=true;erase_with_right=true;erase_at({200,200},{1000,1000});
+    assert(page().empty()&&history[0].undo.empty());commit();assert(history[0].undo.size()==1&&selected==Tool::Line&&!erase_with_right);
+    undo();assert(page().size()==1);
+}
+void compile_repeated_path_endpoint(){
+    doc={};history={};data_path.clear();doc.grids[0]=native_ground::lattice(3.25);
+    auto stroke=std::make_shared<Stroke>();stroke->tool=Tool::Path;stroke->lattice=doc.grids[0];stroke->points={{0,0,0}};page().push_back(stroke);path_active=true;
+    camera.valid=true;camera.eye={0,0,10};camera.forward={0,0,-1};
+    camera.matrix={.1,0,0,0,0,.1,0,0,0,0,-.1,1,0,0,0,1};camera.inverse={10,0,0,0,0,10,0,0,0,0,-10,10,0,0,0,1};
+    path_click({500,500},{1000,1000});assert(!path_active&&page().size()==1&&history[0].undo.empty());
+    doc.grids[0].origin.z=4.25;path_active=true;path_click({500,500},{1000,1000});assert(path_active&&page()[0]->points.back().z==1);
+}
 void compile_cross_height_shape(){
     doc={};history={};data_path.clear();doc.grids[0]=native_ground::lattice(3.25);pending={};pending.tool=Tool::Line;pending.lattice=doc.grids[0];pending.points={{0,0},{2,2}};
     dragging=true;shape_gesture.press();shape_gesture.release();set_ground(4.25,grid::HintSource::Wheel);

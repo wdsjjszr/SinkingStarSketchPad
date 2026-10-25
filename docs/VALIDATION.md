@@ -1,5 +1,13 @@
 # Validation — 3.4.5 Beta
 
+## Readability and cross-height revision — 25 October 2026
+
+- Static assertions cover hold/fade timing, radial weights, checker parity, batching/index bounds, contact tolerance, three-axis path classification and right-button priority.
+- Compile-only assertion fixtures cover partial/overlapping polygon subtraction and alpha interpolation, merged voxel faces, coplanar contact under camera jitter, reverse depth/cache invalidation, preview layers, degenerate rectangles, v1–v4 storage, relative-Z projection/erasing/SVG call paths, failed upgrade backup, preserved pending shapes, vertical paths and erase history. Non-constexpr assertions are not executed.
+- Verification is C++17 syntax/static compilation, Clang static analysis and add-on compilation/linking. No game sessions or test binaries are run; no SHA checks are performed.
+- Unverified on hardware: reported flicker elimination, clipped-edge appearance/performance, gesture feel and upgrade persistence/recovery. Native voxels alone determine hint occlusion; restore `drafts.pre-v4.txt` before downgrading.
+
+
 ## Preview settings revision — 25 October 2026
 
 - The user reported the preceding drawing revision works well. This revision receives static compilation/assertions, Clang static analysis and production compilation/linking only. No test programs or game sessions are run, and no SHA checks are performed.
