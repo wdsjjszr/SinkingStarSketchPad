@@ -44,14 +44,14 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(GridPlane,"Grid / plane","网格 · 平面") X(PlaneHeight,"Height %.3g","高度 %.3g") X(PlaneUnset,"Not set","未确定") \
  X(CharacterPlaneButton,"Character\nplane","设为角色\n所在平面") X(MarkPlaneButton,"Mark ground\nplane","手动标记\n网格平面") \
  X(Language,"Language","语言 / Language") X(LanguageSystem,"System","跟随系统") X(LanguageChinese,"Chinese","中文") \
- X(UIScale,"UI scale","界面缩放") X(HintStyle,"Preview grid style","预览网格样式") X(DebugTitle,"Debug","Debug") X(DeveloperOnly,"Developer tools","开发用") \
+ X(UIScale,"UI scale","界面缩放") X(ApplyUIScale,"Apply scale","应用缩放") X(HintStyle,"Preview grid style","预览网格样式") X(DebugTitle,"Debug","Debug") X(DeveloperOnly,"Developer tools","开发用") \
  X(UISettingsFailed,"Could not save UI settings.","无法保存界面设置。") \
  X(NewPath,"Finish / New path","结束路径 / 新路径") X(GridPreview,"Grid preview","网格预览") \
  X(GridCenters,"Cell centers","中心点") X(GridIntersections,"Grid intersections","网格交点") \
  X(GridBorders,"Cell borders","网格边框") X(GridChecker,"Checkerboard","棋盘填充") X(GridOpacity,"Preview opacity","预览透明度") \
  X(DrawingSettingsFailed,"Could not save drawing settings.","无法保存绘图设置。") \
  X(Settings,"Settings","设置") X(SettingsTitle,"Settings###SketchSettings","设置###SketchSettings") \
- X(SettingsHelp,"Changes apply immediately and are saved automatically. E hides/restores this window with drawing.","修改即时生效并自动保存。E 随绘图菜单隐藏 / 恢复本窗口。") \
+ X(SettingsHelp,"Drawing settings apply and save immediately. Click Apply scale to apply UI size changes.","绘图设置即时生效并自动保存；界面缩放点击“应用缩放”后生效。") \
  X(HintSettings,"Plane change preview","平面变动预览") X(HintMode,"Show on plane changes","在平面变动时显示预览") \
  X(HintOn,"On","开") X(HintOff,"Off","关") X(HintWheelOnly,"Height only","仅微调") \
  X(HintDuration,"Hold duration (seconds)","保持时长（秒）") \
@@ -120,8 +120,9 @@ SKETCH_TEXTS(ITEM)
 inline const char *get(Text text,bool chinese){auto &entry=catalog[static_cast<size_t>(text)];return chinese?entry.zh:entry.en;}
 #undef SKETCH_TEXTS
 
-struct ShortcutEntry {const char *key,*en,*zh;};
+struct ShortcutEntry {const char *key,*en,*zh;const char *zh_key=nullptr;};
 inline const char *get(const ShortcutEntry &entry,bool chinese){return chinese?entry.zh:entry.en;}
+inline constexpr const char *shortcut_key(const ShortcutEntry &entry,bool chinese){return chinese&&entry.zh_key?entry.zh_key:entry.key;}
 inline constexpr ShortcutEntry general_shortcuts[]={
     {"E","Enter / leave drawing","进入 / 退出绘图"},
     {"G","Show / hide cursor","指针显示 / 隐藏"},
@@ -135,19 +136,19 @@ inline constexpr ShortcutEntry tool_shortcuts[]={
     {"Alt+O","Ellipse","椭圆"},{"Alt+T","Text","文字"},{"Alt+K","Eraser","橡皮"},{"Alt+H","Cell path","格子路径"},{"Alt+1-5","Ink color","笔色"}
 };
 inline constexpr ShortcutEntry drawing_shortcuts[]={
-    {"Middle click","Mark ground under the pointer once","快速标记指针下地面所在平面"},
-    {"Wheel","Configured action; plane height by default","按设置执行，默认调整平面高度"},
-    {"Shift+wheel","Cycle color by default; change bindings in Settings","默认切色；可在设置中修改绑定"},
+    {"Middle click","Mark ground under the pointer once","快速标记指针下地面所在平面","鼠标中键"},
+    {"Wheel","Configured action; plane height by default","按设置执行，默认调整平面高度","滚轮"},
+    {"Shift+wheel","Cycle color by default; change bindings in Settings","默认切色；可在设置中修改绑定","Shift + 滚轮"},
     {"Shift","Vertical across heights; same-plane 45-degree lines/arrows; square/circle constraint","跨层竖直线；同层 45 度直线 / 箭头；正方形 / 正圆约束"},
-    {"Right click","Cancel shape, finish path, otherwise hold to erase","取消图形、结束路径，否则按住擦除"},
+    {"Right click","Cancel shape, finish path, otherwise hold to erase","取消图形、结束路径，否则按住擦除","鼠标右键"},
     {"Ctrl+Z","Undo","撤销"},{"Ctrl+Y / Ctrl+Shift+Z","Redo","重做"},
     {"Ctrl+1 / Ctrl+2 / Ctrl+3","Switch scratch page","切换草稿"},{"Ctrl+S","Save completed marks","保存已完成笔迹"},
     {"Ctrl+Shift+Delete","Clear page (undoable)","清空本页（可撤销）"},{"Ctrl+Enter","Finish text","完成文字"}
 };
 inline constexpr ShortcutEntry camera_shortcuts[]={
     {"W/A/S/D","Pan","平移"},{"Q / Z","Up / down; Shift speeds up","升高 / 降低，Shift 加速"},
-    {"Right drag","Rotate / tilt with drawing closed","旋转 / 俯仰（绘图关闭时）"},
-    {"Wheel","Configured action while drawing; zoom while closed","绘图打开时按设置执行，关闭时缩放"},
+    {"Right drag","Rotate / tilt with drawing closed","旋转 / 俯仰（绘图关闭时）","右键拖动"},
+    {"Wheel","Configured action while drawing; zoom while closed","绘图打开时按设置执行，关闭时缩放","滚轮"},
     {"Esc / T","Restore game view","恢复游戏视角"}
 };
 }

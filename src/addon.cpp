@@ -30,7 +30,7 @@ std::recursive_mutex state_mutex;
 Document doc;
 std::array<History,3> history;
 std::filesystem::path data_path,legacy_draft_source;
-int ui_scale_percent=100;
+ui::ScaleSetting ui_scale;
 ui::UIScale frame_ui;
 bool ui_preferences_dirty=false,grid_panel_open=false;
 ULONGLONG ui_preferences_due=0;
@@ -117,11 +117,11 @@ void note(const std::string &s, unsigned ms=4500) { toast=s; toast_until=GetTick
 void log(const std::string &s) { reshade::log::message(reshade::log::level::info,s.c_str()); }
 void load_ui_preferences(){
     auto path=data_path.parent_path()/L"settings.ini";
-    ui_scale_percent=ui::UIScale(int(GetPrivateProfileIntW(L"Interface",L"UIScalePercent",100,path.c_str()))).percent;
+    ui_scale=ui::ScaleSetting(int(GetPrivateProfileIntW(L"Interface",L"UIScalePercent",100,path.c_str())));
 }
 void save_ui_preferences(){
     if(!ui_preferences_dirty||data_path.empty())return;
-    auto path=data_path.parent_path()/L"settings.ini";auto value=std::to_wstring(ui_scale_percent);
+    auto path=data_path.parent_path()/L"settings.ini";auto value=std::to_wstring(ui_scale.applied);
     if(WritePrivateProfileStringW(L"Interface",L"UIScalePercent",value.c_str(),path.c_str()))ui_preferences_dirty=false;
     else{note(tr(Label::UISettingsFailed));ui_preferences_due=GetTickCount64()+5000;}
 }
@@ -503,14 +503,15 @@ template<size_t N> void help_section(Label title,const i18n::ShortcutEntry (&row
         ImGui::TableSetupColumn("",ImGuiTableColumnFlags_WidthFixed,std::min(s.px(115),width*.42f));
         ImGui::TableSetupColumn("",ImGuiTableColumnFlags_WidthStretch);
         for(const auto &row:rows){
+            const char *key=i18n::shortcut_key(row,chinese());
             ImGui::TableNextRow();ImGui::TableNextColumn();
             {
                 ui::FontScope small(11.f/12);auto p=gui_vec2(imgui_function_table_instance()->GetCursorScreenPos);
                 float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x,wrap=std::max(1.f,available-s.px(10));
-                auto measure=gui_text_size(row.key,wrap);auto *draw=ImGui::GetWindowDrawList();
+                auto measure=gui_text_size(key,wrap);auto *draw=ImGui::GetWindowDrawList();
                 ImVec2 end=ui::vec(p.x+std::min(available,measure.x+s.px(10)),p.y+measure.y+s.px(4));
                 draw->AddRectFilled(p,end,IM_COL32(18,20,26,255),s.px(5));draw->AddRect(p,end,ui::border,s.px(5),0,s.px(1));
-                draw->AddText(ImGui::GetFont(),s.px(11),ui::vec(p.x+s.px(5),p.y+s.px(2)),ui::ink,row.key,nullptr,wrap);
+                draw->AddText(ImGui::GetFont(),ImGui::GetFontSize(),ui::vec(ui::pixel_round(p.x+s.px(5)),ui::pixel_round(p.y+s.px(2))),ui::ink,key,nullptr,wrap);
                 ImGui::Dummy(ui::vec(available,measure.y+s.px(4)));
             }
             ImGui::TableNextColumn();ImGui::TextWrapped("%s",i18n::get(row,chinese()));
@@ -590,10 +591,11 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
                 setting_label(Label::Language);int choice=int(language);const char *languages[]={tr(Label::LanguageSystem),"English",tr(Label::LanguageChinese)};
                 if(segmented("##language",languages,3,choice,s))set_language(i18n::Language(choice));
                 setting_label(Label::UIScale);float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;
-                if(ui::slider("##scale",ui_scale_percent,75,200,available-s.px(45),s)){
-                    ui_preferences_dirty=true;ui_preferences_due=GetTickCount64()+500;
-                }
-                ImGui::SameLine();ImGui::Text("%d%%",ui_scale_percent);ImGui::EndTable();
+                ui::slider("##scale",ui_scale.pending,75,200,available-s.px(45),s);
+                ImGui::SameLine();ImGui::Text("%d%%",ui_scale.pending);
+                ImGui::TableNextRow();ImGui::TableSetColumnIndex(1);ImGui::BeginDisabled(ui_scale.pending==ui_scale.applied);
+                if(ImGui::Button(tr(Label::ApplyUIScale))&&ui_scale.apply()){ui_preferences_dirty=true;ui_preferences_due=GetTickCount64()+500;}
+                ImGui::EndDisabled();ImGui::EndTable();
             }
             ImGui::TextWrapped("%s",tr(Label::SettingsHelp));ImGui::Separator();ImGui::TextDisabled("%s",tr(Label::WheelSettings));
             bool changed=false;
@@ -675,7 +677,7 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
         ImGui::SameLine(0,s.px(2));if(ui::button("##return",ui::Icon::Return,nullptr,s.px(28),s.px(28),s))set_edit(false);ui::hint(tr(Label::Return),"E");
         ImGui::Separator();
         constexpr Label tools[]={Label::Pen,Label::Line,Label::Arrow,Label::Rectangle,Label::Ellipse,Label::Text,Label::Eraser,Label::Path};
-        float tool_width=(available-s.px(18))/4;
+        float tool_width=(available-3*ImGui::GetStyle().ItemSpacing.x)/4;
         for(unsigned i=0;i<8;++i){
             if(i%4)ImGui::SameLine();ImGui::PushID(int(i));
             if(ui::button("##tool",ui::Icon(i),tr(tools[i]),tool_width,s.px(50),s,selected==Tool(i),ui::Tone::Gold,true)){commit();select_tool(Tool(i));}
@@ -724,7 +726,7 @@ void controls(effect_runtime*,Point size,Point mouse,bool &over_ui) {
         constexpr Label labels[]={Label::Undo,Label::Redo,Label::Clear,Label::Save,Label::Export,Label::CameraToggle,Label::Shortcuts,Label::Settings};
         constexpr const char *shortcuts[]={"Ctrl+Z","Ctrl+Y / Ctrl+Shift+Z","Ctrl+Shift+Delete","Ctrl+S",nullptr,"T",nullptr,nullptr};
         for(unsigned i=0;i<8;++i){
-            if(i)ImGui::SameLine(0,std::max(0.f,(available-s.px(224))/7));ImGui::PushID(int(i));
+            if(i)ImGui::SameLine(0,std::max(0.f,(available-8*s.px(28))/7));ImGui::PushID(int(i));
             bool active=i==5?free.active_view():i==6?shortcuts_open:i==7?settings_open:false;
             if(ui::button("##action",icons[i],nullptr,s.px(28),s.px(28),s,active,ui::Tone::Teal))switch(i){
             case 0:undo();break;case 1:redo();break;case 2:clear();break;
@@ -926,7 +928,7 @@ void overlay(effect_runtime*rt) {
         ImGuiIO &io=ImGui::GetIO();Point size={io.DisplaySize.x,io.DisplaySize.y};if(size.x<1||size.y<1)return;
         free_camera_bridge::viewport(uint32_t(size.x),uint32_t(size.y));
         camera=free_camera_bridge::projection(uint32_t(size.x),uint32_t(size.y));
-        frame_ui=ui::UIScale(ui_scale_percent,ImGui::GetFontSize());
+        frame_ui=ui::UIScale(ui_scale.applied,ImGui::GetFontSize());
         if(frame_count%120==0)status();
         HWND window=static_cast<HWND>(rt->get_hwnd());bool foreground=GetForegroundWindow()==window;
         // ReShade virtualizes Win32 GetCursorPos while it blocks game input.

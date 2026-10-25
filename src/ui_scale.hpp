@@ -2,13 +2,20 @@
 #include <algorithm>
 
 namespace sketch::ui {
+constexpr float pixel_round(float value){return float(value<0?int(value-.5f):int(value+.5f));}
 struct UIScale {
     int percent;
     float font_pixels;
     constexpr UIScale(int value=100,float font=18):percent(std::clamp(value,75,200)),font_pixels(font){}
     constexpr float ratio()const{return percent*.01f;}
-    constexpr float px(float value)const{return value*font_pixels/12*ratio();}
-    constexpr float legacy(float value)const{return value*ratio();}
+    // ImGui truncates auto-fit sizes; fractional padding can create a spurious scrollbar.
+    constexpr float px(float value)const{return pixel_round(value*font_pixels/12*ratio());}
+    constexpr float legacy(float value)const{return pixel_round(value*ratio());}
+};
+struct ScaleSetting {
+    int applied,pending;
+    constexpr ScaleSetting(int value=100):applied(UIScale(value).percent),pending(applied){}
+    constexpr bool apply(){pending=UIScale(pending).percent;bool changed=applied!=pending;applied=pending;return changed;}
 };
 struct Rect {
     float x=0,y=0,w=0,h=0;

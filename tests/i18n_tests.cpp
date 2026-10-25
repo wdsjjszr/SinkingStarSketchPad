@@ -42,6 +42,8 @@ constexpr bool all_shortcuts(){
     return true;
 }
 static_assert(all_shortcuts(),"The rendered help tables retain all production shortcuts");
+static_assert(std::string_view(shortcut_key(drawing_shortcuts[0],true))=="鼠标中键"&&std::string_view(shortcut_key(drawing_shortcuts[1],true))=="滚轮"&&std::string_view(shortcut_key(drawing_shortcuts[2],true))=="Shift + 滚轮"&&std::string_view(shortcut_key(drawing_shortcuts[4],true))=="鼠标右键"&&std::string_view(shortcut_key(camera_shortcuts[2],true))=="右键拖动","Chinese help translates mouse key badges and retains modifier names");
+static_assert(std::string_view(shortcut_key(drawing_shortcuts[0],false))=="Middle click"&&std::string_view(shortcut_key(tool_shortcuts[0],true))=="Alt+P","English mouse badges and physical keyboard shortcuts remain unchanged");
 constexpr bool stable_windows(){
     for(auto label:{Text::Title,Text::ShortcutsTitle,Text::SettingsTitle,Text::CameraTitle,Text::TextTitle}){
         std::string_view en=catalog[size_t(label)].en,zh=catalog[size_t(label)].zh;auto a=en.find("###"),b=zh.find("###");

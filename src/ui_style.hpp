@@ -10,7 +10,7 @@ inline ImVec2 vec(float x,float y){return ImVec2(x,y);}
 inline Rect window_rect(){auto p=gui_vec2(imgui_function_table_instance()->GetWindowPos),s=gui_vec2(imgui_function_table_instance()->GetWindowSize);return {p.x,p.y,s.x,s.y};}
 inline Rect item_rect(){auto a=gui_vec2(imgui_function_table_instance()->GetItemRectMin),b=gui_vec2(imgui_function_table_instance()->GetItemRectMax);return {a.x,a.y,b.x-a.x,b.y-a.y};}
 struct FontScope {
-    explicit FontScope(float ratio){ImGui::PushFont(nullptr,ImGui::GetStyle().FontSizeBase*ratio);}
+    explicit FontScope(float ratio){float current=ImGui::GetFontSize();ImGui::PushFont(nullptr,ImGui::GetStyle().FontSizeBase*pixel_round(current*ratio)/current);}
     ~FontScope(){ImGui::PopFont();}
 };
 struct Style {
@@ -38,10 +38,11 @@ struct Style {
 struct LegacyStyle {
     explicit LegacyStyle(UIScale s){
         const auto &v=ImGui::GetStyle();float r=s.ratio();
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,vec(v.WindowPadding.x*r,v.WindowPadding.y*r));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,vec(v.FramePadding.x*r,v.FramePadding.y*r));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,vec(v.ItemSpacing.x*r,v.ItemSpacing.y*r));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,vec(v.ItemInnerSpacing.x*r,v.ItemInnerSpacing.y*r));
+        auto padding=[&](ImVec2 p){return vec(pixel_round(p.x*r),pixel_round(p.y*r));};
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,padding(v.WindowPadding));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,padding(v.FramePadding));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,padding(v.ItemSpacing));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,padding(v.ItemInnerSpacing));
         ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,v.ScrollbarSize*r);ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize,v.GrabMinSize*r);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,v.WindowRounding*r);ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,v.WindowBorderSize*r);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,v.FrameRounding*r);ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,v.FrameBorderSize*r);
@@ -71,7 +72,7 @@ inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
     case Icon::Save:rect(5,4,19,20,1);rect(8,4,15,9);rect(8,14,16,20);break;
     case Icon::Export:line(12,4,12,15);line(7,10,12,15);line(12,15,17,10);line(5,18,5,21);line(5,21,19,21);line(19,21,19,18);break;
     case Icon::Camera:rect(3,7,21,20,2);rect(8,4,15,7,1);circle(12,13,3.5f);break;
-    case Icon::Help:circle(12,12,9);line(9,8,11,6.5f);line(11,6.5f,14,7);line(14,7,15,10);line(15,10,12,13);line(12,13,12,14);circle(12,17.5f,.5f);break;
+    case Icon::Help:circle(12,12,9);d->PathLineTo(at(8.5f,9));d->PathBezierCubicCurveTo(at(8.5f,4.5f),at(16.5f,4.5f),at(16.5f,9));d->PathBezierCubicCurveTo(at(16.5f,12),at(12,12),at(12,14.5f));d->PathStroke(c,0,t);d->AddCircleFilled(at(12,18),k, c,12);break;
     case Icon::Settings:line(4,7,12,7);line(18,7,21,7);circle(15,7,2.5f);line(4,17,6,17);line(12,17,21,17);circle(9,17,2.5f);break;
     case Icon::Return:line(10,5,5,5);line(5,5,5,20);line(5,20,10,20);line(10,12,21,12);line(16,7,21,12);line(21,12,16,17);break;
     case Icon::Grid:rect(4,4,20,20);line(4,12,20,12);line(12,4,12,20);break;
@@ -82,15 +83,16 @@ inline void icon(Icon id,ImVec2 p,float size,ImU32 c){
     case Icon::Chevron:line(9,6,15,12);line(15,12,9,18);break;
     }
 }
-inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink){ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),s.px(size),p,c,label,std::strstr(label,"###"));}
+inline void text(ImVec2 p,const char *label,UIScale s,float size=12,ImU32 c=ink){ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(),s.px(size),vec(pixel_round(p.x),pixel_round(p.y)),c,label,std::strstr(label,"###"));}
 inline void hint(const char *label,const char *keys=nullptr){
     if(!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))return;
     ImGui::BeginTooltip();ImGui::TextUnformatted(label);if(keys&&*keys)ImGui::TextDisabled("%s",keys);ImGui::EndTooltip();
 }
 enum class Tone {Plain,Gold,Teal,Primary};
 inline bool button(const char *id,Icon glyph,const char *label,float w,float h,UIScale s,bool active=false,Tone tone=Tone::Plain,bool stacked=false){
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
     ImGui::PushStyleColor(ImGuiCol_Button,0);ImGui::PushStyleColor(ImGuiCol_ButtonHovered,0);ImGui::PushStyleColor(ImGuiCol_ButtonActive,0);
-    bool clicked=ImGui::Button(id,vec(w,h));ImGui::PopStyleColor(3);auto r=item_rect();auto *d=ImGui::GetWindowDrawList();
+    bool clicked=ImGui::Button(id,vec(w,h));ImGui::PopStyleColor(3);ImGui::PopStyleVar();auto r=item_rect();auto *d=ImGui::GetWindowDrawList();
     bool hover=ImGui::IsItemHovered();ImU32 fill=hover?IM_COL32(44,49,62,255):IM_COL32(34,38,49,255),edge=border,fg=ink;
     if(active&&tone==Tone::Gold){fill=gold;edge=gold;fg=IM_COL32(26,20,5,255);}
     if(active&&tone==Tone::Teal){fill=IM_COL32(18,48,45,255);edge=teal;}
@@ -106,35 +108,45 @@ inline bool button(const char *id,Icon glyph,const char *label,float w,float h,U
     icon(glyph,vec(ix,iy),sz,active&&tone==Tone::Teal?teal:fg);return clicked;
 }
 inline bool checkbox(const char *label,bool &value,UIScale s){
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
     ImGui::PushID(label);ImGui::PushStyleColor(ImGuiCol_Button,0);ImGui::PushStyleColor(ImGuiCol_ButtonHovered,0);ImGui::PushStyleColor(ImGuiCol_ButtonActive,0);
-    bool clicked=ImGui::Button("##check",vec(gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x,s.px(22)));ImGui::PopStyleColor(3);ImGui::PopID();
-    if(clicked)value=!value;auto r=item_rect();auto *d=ImGui::GetWindowDrawList();float y=r.y+(r.h-s.px(14))*.5f;
-    if(value)d->AddRectFilled(vec(r.x,y),vec(r.x+s.px(14),y+s.px(14)),teal,s.px(3));
-    else d->AddRect(vec(r.x,y),vec(r.x+s.px(14),y+s.px(14)),ImGui::IsItemHovered()?teal:muted,s.px(3),0,s.px(1));
-    text(vec(r.x+s.px(22),r.y+(r.h-s.px(12))*.5f),label,s);return clicked;
+    bool clicked=ImGui::Button("##check",vec(gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x,s.px(22)));ImGui::PopStyleColor(3);ImGui::PopStyleVar();ImGui::PopID();
+    if(clicked)value=!value;auto r=item_rect();auto *d=ImGui::GetWindowDrawList();float x=r.x+s.px(8),y=r.y+(r.h-s.px(14))*.5f;
+    if(value)d->AddRectFilled(vec(x,y),vec(x+s.px(14),y+s.px(14)),teal,s.px(3));
+    else d->AddRect(vec(x,y),vec(x+s.px(14),y+s.px(14)),ImGui::IsItemHovered()?teal:muted,s.px(3),0,s.px(1));
+    text(vec(x+s.px(22),r.y+(r.h-s.px(12))*.5f),label,s);return clicked;
 }
 inline bool toggle(const char *label,bool &value,UIScale s){
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
     ImGui::PushID(label);ImGui::PushStyleColor(ImGuiCol_Button,0);ImGui::PushStyleColor(ImGuiCol_ButtonHovered,0);ImGui::PushStyleColor(ImGuiCol_ButtonActive,0);
-    bool clicked=ImGui::Button("##toggle",vec(gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x,s.px(28)));ImGui::PopStyleColor(3);ImGui::PopID();
-    if(clicked)value=!value;auto r=item_rect();auto *d=ImGui::GetWindowDrawList();float x=r.x+r.w-s.px(34),y=r.y+(r.h-s.px(18))*.5f;
+    bool clicked=ImGui::Button("##toggle",vec(gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x,s.px(28)));ImGui::PopStyleColor(3);ImGui::PopStyleVar();ImGui::PopID();
+    if(clicked)value=!value;auto r=item_rect();auto *d=ImGui::GetWindowDrawList();float x=r.x+r.w-s.px(42),y=r.y+(r.h-s.px(18))*.5f;
     d->AddRectFilled(vec(x,y),vec(x+s.px(34),y+s.px(18)),value?teal:border,s.px(9));
     d->AddCircleFilled(vec(x+s.px(value?25:9),y+s.px(9)),s.px(7),value?IM_COL32(6,35,31,255):ink,20);
-    text(vec(r.x,r.y+(r.h-s.px(12))*.5f),label,s);return clicked;
+    text(vec(r.x+s.px(8),r.y+(r.h-s.px(12))*.5f),label,s);return clicked;
 }
 struct SliderSkin {
-    bool input=ImGui::GetIO().KeyCtrl||ImGui::GetIO().WantTextInput;
-    SliderSkin(){ImGui::PushStyleColor(ImGuiCol_FrameBg,input?IM_COL32(34,38,49,255):0);ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,input?IM_COL32(44,49,62,255):0);ImGui::PushStyleColor(ImGuiCol_FrameBgActive,input?IM_COL32(51,56,71,255):0);ImGui::PushStyleColor(ImGuiCol_SliderGrab,0);ImGui::PushStyleColor(ImGuiCol_SliderGrabActive,0);ImGui::PushStyleColor(ImGuiCol_Text,input?ink:0);ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);}
+    ImGuiID id;
+    bool input;
+    explicit SliderSkin(const char *label):id(ImGui::GetID(label)){
+        auto p=gui_vec2(imgui_function_table_instance()->GetCursorScreenPos);auto &io=ImGui::GetIO();
+        bool start=io.KeyCtrl&&ImGui::IsMouseClicked(ImGuiMouseButton_Left)&&ImGui::IsWindowHovered()
+            &&ImGui::IsMouseHoveringRect(p,vec(p.x+ImGui::CalcItemWidth(),p.y+ImGui::GetFrameHeight()));
+        input=ImGui::GetStateStorage()->GetBool(id,false)||start;
+        ImGui::PushStyleColor(ImGuiCol_FrameBg,input?IM_COL32(34,38,49,255):0);ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,input?IM_COL32(44,49,62,255):0);ImGui::PushStyleColor(ImGuiCol_FrameBgActive,input?IM_COL32(51,56,71,255):0);ImGui::PushStyleColor(ImGuiCol_SliderGrab,0);ImGui::PushStyleColor(ImGuiCol_SliderGrabActive,0);ImGui::PushStyleColor(ImGuiCol_Text,input?ink:0);ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+    }
     ~SliderSkin(){ImGui::PopStyleVar();ImGui::PopStyleColor(6);}
     void draw(float fraction,UIScale s,ImU32 accent)const{
+        ImGui::GetStateStorage()->SetBool(id,ImGui::IsItemActive()&&(input||ImGui::GetIO().WantTextInput));
         if(input)return;auto r=item_rect();auto *d=ImGui::GetWindowDrawList();float lo=r.x+s.px(7),hi=r.x+r.w-s.px(7),x=lo+(hi-lo)*std::clamp(fraction,0.f,1.f),y=r.y+r.h*.5f;
         d->AddRectFilled(vec(lo,y-s.px(2)),vec(hi,y+s.px(2)),border,s.px(2));d->AddRectFilled(vec(lo,y-s.px(2)),vec(x,y+s.px(2)),accent,s.px(2));d->AddCircleFilled(vec(x,y),s.px(7),ink,20);
     }
 };
 inline bool slider(const char *id,int &value,int lo,int hi,float width,UIScale s,const char *format="%d%%",ImU32 accent=teal){
-    ImGui::SetNextItemWidth(width);SliderSkin skin;bool changed=ImGui::SliderInt(id,&value,lo,hi,format,ImGuiSliderFlags_AlwaysClamp);skin.draw(float(value-lo)/(hi-lo),s,accent);return changed;
+    ImGui::SetNextItemWidth(width);SliderSkin skin(id);bool changed=ImGui::SliderInt(id,&value,lo,hi,format,ImGuiSliderFlags_AlwaysClamp);skin.draw(float(value-lo)/(hi-lo),s,accent);return changed;
 }
 inline bool slider(const char *id,float &value,float lo,float hi,float width,UIScale s,const char *format="%.0f",ImU32 accent=gold){
-    ImGui::SetNextItemWidth(width);SliderSkin skin;bool changed=ImGui::SliderFloat(id,&value,lo,hi,format,ImGuiSliderFlags_AlwaysClamp);skin.draw((value-lo)/(hi-lo),s,accent);return changed;
+    ImGui::SetNextItemWidth(width);SliderSkin skin(id);bool changed=ImGui::SliderFloat(id,&value,lo,hi,format,ImGuiSliderFlags_AlwaysClamp);skin.draw((value-lo)/(hi-lo),s,accent);return changed;
 }
 inline void header(const char *title,bool *open,UIScale s){
     float available=gui_vec2(imgui_function_table_instance()->GetContentRegionAvail).x;

@@ -45,7 +45,6 @@ inline void draw(ImDrawList *d,ImVec2 mouse,Mode mode,ImU32 paint,float scale=1)
         auto arm=[&](float u,float v){return p(c*u-s*v,s*u+c*v);};
         ImVec2 ray[]={arm(4.5f,0),arm(10,-2),arm(16,0),arm(10,2)};
         d->AddConvexPolyFilled(ray,4,paint);d->AddPolyline(ray,4,ink,ImDrawFlags_Closed,1.7f*scale);
-        d->AddLine(arm(6,0),arm(13,0),light,scale);
         d->AddCircleFilled(arm(20,0),1.3f*scale,paint,12);
     }
     // A tiny diamond reports the selected ink colour at the exact hotspot.
