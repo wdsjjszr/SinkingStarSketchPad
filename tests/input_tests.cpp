@@ -18,8 +18,10 @@ constexpr bool drawing_wheel_checks(){
 static_assert(drawing_wheel_checks(),"Fractional steps only combine within the same enabled binding/action; UI, multiple modifiers and disabled actions reset them");
 static_assert(wheel_binding(false,false,false)==0&&wheel_binding(true,false,false)==1&&wheel_binding(false,true,false)==2&&wheel_binding(false,false,true)==3,"Four independent modifier bindings");
 static_assert(wheel_binding(true,true,false)==-1&&wheel_binding(true,false,true)==-1&&wheel_binding(false,true,true)==-1&&wheel_binding(true,true,true)==-1,"Multiple modifiers never dispatch an action");
-static_assert(default_wheel[0]==WheelAction::Plane&&default_wheel[1]==WheelAction::None&&default_wheel[2]==WheelAction::Color&&default_wheel[3]==WheelAction::None,"Default wheel bindings preserve height adjustment and add Shift color cycling");
-static_assert(cycle_color(0,1,5)==4&&cycle_color(4,-1,5)==0&&cycle_color(2,12,5)==0&&cycle_color(2,-12,5)==4,"Wheel up selects the previous color; wheel down selects the next, with wrapping and multiple steps");
+static_assert(default_wheel[0]==WheelAction::Plane&&default_wheel[1]==WheelAction::None&&default_wheel[2]==WheelAction::Color&&default_wheel[3]==WheelAction::Tool,"Default wheel bindings use plain height, Shift color and Alt tool cycling");
+static_assert(cycle_index(0,1,5)==4&&cycle_index(4,-1,5)==0&&cycle_index(2,12,5)==0&&cycle_index(2,-12,5)==4,"Wheel up selects the previous color; wheel down selects the next, with wrapping and multiple steps");
+static_assert(cycle_index(0,1,8)==7&&cycle_index(7,-1,8)==0&&cycle_index(3,18,8)==1&&cycle_index(3,-18,8)==5,"All eight tools cycle in toolbar order in either direction");
+static_assert(int(WheelAction::None)==0&&int(WheelAction::Plane)==1&&int(WheelAction::Color)==2&&int(WheelAction::Tool)==3,"Saved wheel action values remain compatible");
 constexpr bool held_middle_focus(){
     Focus focus;focus.update(true,true);if(focus.canvas_ready())return false;
     focus.update(true,false);if(!focus.canvas_ready())return false;

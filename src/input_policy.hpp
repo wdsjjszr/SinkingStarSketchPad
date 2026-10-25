@@ -2,12 +2,12 @@
 #include <array>
 
 namespace sketch::input {
-enum class WheelAction {None,Plane,Color};
+enum class WheelAction {None,Plane,Color,Tool};
 enum class RightAction {None,CancelShape,FinishPath,Erase};
 constexpr RightAction right_action(bool canvas,bool shape,bool path){return !canvas?RightAction::None:shape?RightAction::CancelShape:path?RightAction::FinishPath:RightAction::Erase;}
-inline constexpr std::array<WheelAction,4> default_wheel={WheelAction::Plane,WheelAction::None,WheelAction::Color,WheelAction::None};
+inline constexpr std::array<WheelAction,4> default_wheel={WheelAction::Plane,WheelAction::None,WheelAction::Color,WheelAction::Tool};
 constexpr int wheel_binding(bool ctrl,bool shift,bool alt){return int(ctrl)+int(shift)+int(alt)>1?-1:ctrl?1:shift?2:alt?3:0;}
-constexpr unsigned cycle_color(unsigned color,int steps,unsigned count){int next=(int(color)-steps)%int(count);return unsigned(next<0?next+int(count):next);}
+constexpr unsigned cycle_index(unsigned current,int steps,unsigned count){int next=(int(current)-steps)%int(count);return unsigned(next<0?next+int(count):next);}
 struct WheelState {
     double remainder=0;
     int binding=-1;

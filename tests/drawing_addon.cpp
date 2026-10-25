@@ -65,12 +65,14 @@ void compile_settings_roundtrip(const std::filesystem::path &isolated_directory)
     data_path=isolated_directory/L"drafts.txt";auto ini=isolated_directory/L"settings.ini";
     WritePrivateProfileStringW(L"Interface",L"Language",L"en",ini.c_str());
     hint_preferences.mode=grid::HintMode::WheelOnly;hint_preferences.duration_ms=1250;
-    hint_preferences.style={true,true,true,false,false,37};wheel_actions[0]=input::WheelAction::Color;
+    hint_preferences.style={true,true,true,false,false,37};wheel_actions[0]=input::WheelAction::Color;wheel_actions[3]=input::WheelAction::None;
     drawing_preferences_dirty=true;save_drawing_preferences();assert(!drawing_preferences_dirty);
     hint_preferences={};wheel_actions=input::default_wheel;load_drawing_preferences();
     assert(hint_preferences.duration_ms==1250&&hint_preferences.mode==grid::HintMode::WheelOnly&&hint_preferences.style.opacity==37);
     assert(hint_preferences.style.centers&&hint_preferences.style.intersections&&!hint_preferences.style.borders&&!hint_preferences.style.checker);
-    assert(wheel_actions[0]==input::WheelAction::Color);
+    assert(wheel_actions[0]==input::WheelAction::Color&&wheel_actions[3]==input::WheelAction::None);
+    WritePrivateProfileStringW(L"Drawing",L"AltWheel",nullptr,ini.c_str());load_drawing_preferences();assert(wheel_actions[3]==input::WheelAction::Tool);
+    wheel_actions[3]=input::WheelAction::Tool;drawing_preferences_dirty=true;save_drawing_preferences();load_drawing_preferences();assert(wheel_actions[3]==input::WheelAction::Tool);
     wchar_t language[16];GetPrivateProfileStringW(L"Interface",L"Language",L"",language,16,ini.c_str());assert(std::wstring(language)==L"en");
 }
 void compile_vertical_target_without_pointer_intersection(){

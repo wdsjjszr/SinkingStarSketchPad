@@ -3,6 +3,7 @@
 ## Unreleased — drawing interaction and path numbering (2026-10-26)
 
 - Pause the pointer grid while a visible plane-change preview is drawn, including its fade; keep snap markers and the saved preview preference.
+- Add configurable tool cycling in toolbar order, defaulting to Alt+wheel for missing preferences. Preserve every existing binding, including None.
 
 ## Unreleased — upstream integration and preview visibility (2026-10-25)
 

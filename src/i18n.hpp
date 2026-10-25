@@ -57,6 +57,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(WheelSettings,"Wheel behavior while drawing","绘图时滚轮行为") X(Wheel,"Wheel","滚轮") X(CtrlWheel,"Ctrl + wheel","Ctrl + 滚轮") \
  X(ShiftWheel,"Shift + wheel","Shift + 滚轮") X(AltWheel,"Alt + wheel","Alt + 滚轮") \
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
+ X(WheelTool,"Cycle drawing tool","切换绘画工具") \
  X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。关闭绘图后滚轮用于相机缩放。") \
  X(PathFinished,"Path finished.","本条路径已结束。") \
  X(VerticalSnapHelp,"Shift: lock start X/Y across heights for a vertical line. Same-plane Shift keeps angle snapping.","Shift：跨层时锁定起点 X/Y，快速绘制竖直线；同层保持角度约束。") \
@@ -139,6 +140,7 @@ inline constexpr ShortcutEntry drawing_shortcuts[]={
     {"Shift+wheel","Cycle color by default; change bindings in Settings","默认切色；可在设置中修改绑定","Shift + 滚轮"},
     {"Shift","Vertical across heights; same-plane 45-degree lines/arrows; square/circle constraint","跨层竖直线；同层 45 度直线 / 箭头；正方形 / 正圆约束"},
     {"Right click","Cancel shape, finish path, otherwise hold to erase","取消图形、结束路径，否则按住擦除","鼠标右键"},
+    {"Alt+wheel","Cycle tool by default; existing bindings are kept","默认切换工具；保留已有绑定","Alt + 滚轮"},
     {"Ctrl+Z","Undo","撤销"},{"Ctrl+Y / Ctrl+Shift+Z","Redo","重做"},
     {"Ctrl+1 / Ctrl+2 / Ctrl+3","Switch scratch page","切换草稿"},{"Ctrl+S","Save completed marks","保存已完成笔迹"},
     {"Ctrl+Shift+Delete","Clear page (undoable)","清空本页（可撤销）"},{"Ctrl+Enter","Finish text","完成文字"}

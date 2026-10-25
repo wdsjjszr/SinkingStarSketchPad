@@ -147,7 +147,7 @@ void load_drawing_preferences(){
     int mode=read(L"HintMode",0);hint_preferences.mode=mode>=0&&mode<=2?grid::HintMode(mode):grid::HintMode::On;
     hint_preferences.duration_ms=unsigned(std::clamp(read(L"HintDurationMs",750),0,5000));
     const wchar_t *keys[]={L"Wheel",L"CtrlWheel",L"ShiftWheel",L"AltWheel"};
-    for(unsigned i=0;i<4;++i){int value=read(keys[i],int(input::default_wheel[i]));wheel_actions[i]=value>=0&&value<=2?input::WheelAction(value):input::default_wheel[i];}
+    for(unsigned i=0;i<4;++i){int value=read(keys[i],int(input::default_wheel[i]));wheel_actions[i]=value>=0&&value<=3?input::WheelAction(value):input::default_wheel[i];}
     drawing_wheel.reset();
 }
 void drawing_preferences_changed(){drawing_preferences_dirty=true;drawing_preferences_due=GetTickCount64()+500;}
@@ -604,10 +604,10 @@ void drawing_settings(Point size,Point mouse,bool &over_ui){
             ImGui::Separator();ui::label(tr(Label::WheelSettings),s,ui::typography::section,ui::muted);
             bool changed=false;
             if(setting_rows("##wheel")){
-                const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor)};constexpr Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
+                const char *actions[]={tr(Label::WheelNone),tr(Label::WheelPlane),tr(Label::WheelColor),tr(Label::WheelTool)};constexpr Label bindings[]={Label::Wheel,Label::CtrlWheel,Label::ShiftWheel,Label::AltWheel};
                 for(unsigned i=0;i<4;++i){
                     setting_label(bindings[i]);ImGui::PushID(int(i));int action=int(wheel_actions[i]);ImGui::SetNextItemWidth(-FLT_MIN);
-                    if(ImGui::Combo("##action",&action,actions,3)){wheel_actions[i]=input::WheelAction(action);drawing_wheel.reset();changed=true;}ImGui::PopID();
+                    if(ImGui::Combo("##action",&action,actions,4)){wheel_actions[i]=input::WheelAction(action);drawing_wheel.reset();changed=true;}ImGui::PopID();
                 }
                 ImGui::EndTable();
             }
@@ -879,7 +879,8 @@ void handle_drawing_wheel(effect_runtime *rt,Point mouse,Point size,bool over_ui
         &&mouse.x>=0&&mouse.y>=0&&mouse.x<size.x&&mouse.y<size.y;
     if(action==input::WheelAction::Plane&&!doc.grids[doc.page].ready)owns=false;
     int steps=drawing_wheel.consume(ImGui::GetIO().MouseWheel,binding,action,owns);if(!steps)return;
-    if(action==input::WheelAction::Color){selected_color=input::cycle_color(selected_color,steps,std::size(colors));status();return;}
+    if(action==input::WheelAction::Color){selected_color=input::cycle_index(selected_color,steps,std::size(colors));status();return;}
+    if(action==input::WheelAction::Tool){auto tool=Tool(input::cycle_index(unsigned(selected),steps,unsigned(Tool::Path)+1));if(tool!=selected)select_tool(tool);status();return;}
     if(!preserve_z_shape())settle_drawing();cancel_ground_marking();plane_hint.clear();set_ground(camera_plane()+steps,grid::HintSource::Wheel);
 }
 void camera_controls(Point size,Point mouse,bool foreground,bool &over_ui){
