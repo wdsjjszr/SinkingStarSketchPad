@@ -3,6 +3,7 @@
 #include <string>
 #include <stdexcept>
 using namespace sketch::i18n;
+static_assert(std::string_view(catalog[static_cast<size_t>(Text::Hud)].en).find("E Draw | G Cursor | B Marks | T Camera")!=std::string_view::npos&&std::string_view(catalog[static_cast<size_t>(Text::Hud)].zh).find("E绘图 G指针 B草稿 T相机")!=std::string_view::npos,"Compact HUD retains all four shortcut hints in both languages");
 void check(bool ok,const char *name){if(!ok)throw std::runtime_error(name);std::cout<<"PASS: "<<name<<'\n';}
 constexpr bool same_formats(std::string_view a,std::string_view b){
     while(true){

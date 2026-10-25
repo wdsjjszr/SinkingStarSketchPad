@@ -46,7 +46,7 @@ inline bool use_chinese(Language l,bool system_chinese){return l==Language::Chin
  X(WheelSettings,"Wheel behavior while drawing","绘图时滚轮行为") X(Wheel,"Wheel","滚轮") X(CtrlWheel,"Ctrl + wheel","Ctrl + 滚轮") \
  X(ShiftWheel,"Shift + wheel","Shift + 滚轮") X(AltWheel,"Alt + wheel","Alt + 滚轮") \
  X(WheelNone,"None","无") X(WheelPlane,"Adjust reference plane height","调整参考平面高度") X(WheelColor,"Cycle ink color","切换画笔颜色") \
- X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the next/previous color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择下一色 / 上一色。关闭绘图后滚轮用于相机缩放。") \
+ X(WheelHelp,"Only on the drawing canvas. Multiple modifiers do nothing. Wheel up/down selects the previous/next color, wrapping through the palette. Close drawing for camera zoom.","仅在绘图画布生效；多个修饰键同时按下不触发。滚轮向上 / 向下循环选择上一色 / 下一色。关闭绘图后滚轮用于相机缩放。") \
  X(PathFinished,"Path finished.","本条路径已结束。") \
  X(VerticalSnapHelp,"Shift: lock start X/Y across heights for a vertical line. Same-plane Shift keeps angle snapping.","Shift：跨层时锁定起点 X/Y，快速绘制竖直线；同层保持角度约束。") \
  X(GridDrawing,"Grid drawing","网格绘画") \

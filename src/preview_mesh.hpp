@@ -3,6 +3,7 @@
 
 namespace sketch::grid {
 constexpr unsigned preview_batch_triangles=20000;
+constexpr double dot_radius=2.5,dot_outer_radius=5.5;
 static_assert(preview_batch_triangles*3<65536,"Each primitive reservation fits 16-bit indices before the SDK applies its vertex offset");
 struct PreviewVertex {double x=0,y=0,alpha=0;};
 constexpr PreviewVertex interpolate(PreviewVertex a,PreviewVertex b,double t){return {a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.alpha+(b.alpha-a.alpha)*t};}
@@ -21,12 +22,12 @@ struct PreviewMesh {
     void line_outline(PreviewVertex a,PreviewVertex b,double width){strip(a,b,width*.5,width*.5+1,preview_outline);strip(a,b,-width*.5-1,-width*.5,preview_outline);}
     void dot(PreviewVertex center){
         for(unsigned n=0;n<24;++n){double a=n*6.283185307179586/24,b=(n+1)*6.283185307179586/24;
-            triangles.push_back({{center,{center.x+4*std::cos(a),center.y+4*std::sin(a),center.alpha},{center.x+4*std::cos(b),center.y+4*std::sin(b),center.alpha}},preview_foreground});}
+            triangles.push_back({{center,{center.x+dot_radius*std::cos(a),center.y+dot_radius*std::sin(a),center.alpha},{center.x+dot_radius*std::cos(b),center.y+dot_radius*std::sin(b),center.alpha}},preview_foreground});}
     }
     void dot_outline(PreviewVertex center){
         for(unsigned n=0;n<24;++n){double a=n*6.283185307179586/24,b=(n+1)*6.283185307179586/24;
-            polygon({{center.x+4*std::cos(a),center.y+4*std::sin(a),center.alpha},{center.x+5.5*std::cos(a),center.y+5.5*std::sin(a),center.alpha},
-                     {center.x+5.5*std::cos(b),center.y+5.5*std::sin(b),center.alpha},{center.x+4*std::cos(b),center.y+4*std::sin(b),center.alpha}},preview_outline);}
+            polygon({{center.x+dot_radius*std::cos(a),center.y+dot_radius*std::sin(a),center.alpha},{center.x+dot_outer_radius*std::cos(a),center.y+dot_outer_radius*std::sin(a),center.alpha},
+                     {center.x+dot_outer_radius*std::cos(b),center.y+dot_outer_radius*std::sin(b),center.alpha},{center.x+dot_radius*std::cos(b),center.y+dot_radius*std::sin(b),center.alpha}},preview_outline);}
     }
 };
 struct PreviewPainter {
