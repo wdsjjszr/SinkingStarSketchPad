@@ -1,5 +1,6 @@
 #include "../src/model.hpp"
 #include "../src/native_ground_pick.hpp"
+#include "../src/depth_pick.hpp"
 #include <iostream>
 #include <sstream>
 using namespace sketch;
@@ -27,6 +28,13 @@ int main(int argc,char **argv){try{
     native_ground::Scene scene;scene.floors={{{0,0,0},native_ground::Source::Fence,1},{{0,0,3},native_ground::Source::Fence,2}};
     native_ground::Snapshot ground;ground.set_geometry(scene);
     const auto picking_camera=perspective(0,0,10,1);
+    std::array<float,4> depth_sample={float((picking_camera.matrix[10]*3+picking_camera.matrix[11])/(picking_camera.matrix[14]*3+picking_camera.matrix[15])),.5f,.5f,1};
+    grid::V surface;
+    check(grid::depth_world(picking_camera,depth_sample,surface)&&std::abs(surface.z-3)<.001,"Raw scene depth reconstructs the visible upper surface instead of the instance base");
+    auto surface_grid=grid::surface_grid(surface,native_ground::lattice(0));
+    check(std::abs(surface_grid.origin.z-3)<.001&&surface_grid.u.x==native_ground::lattice(0).u.x&&surface_grid.origin.x==native_ground::lattice(0).origin.x,"Depth changes plane height while retaining inferred grid spacing and phase");
+    check(grid::surface_grid(surface,{}).u.x==1,"Depth picking remains available without an inferred grid");
+    depth_sample[3]=0;check(!grid::depth_world(picking_camera,depth_sample,surface),"Unavailable scene depth cannot create a ground anchor");
     native_ground::Scene solid_scene;native_ground::add_wall(solid_scene,{0,0,2},{1,1,1},{1},3);
     native_ground::Snapshot solid_ground;solid_ground.set_geometry(solid_scene);
     for(auto c:{picking_camera,perspective(0,0,10,1,true)}){
