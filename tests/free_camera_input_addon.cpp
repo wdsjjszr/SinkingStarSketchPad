@@ -12,6 +12,8 @@ static HWND WINAPI test_foreground(){return test_window;}
 #undef GetForegroundWindow
 namespace {
 unsigned tick=0;
+free_camera::Controller help_camera;
+size_t help_marks=0;
 void require(bool ok,const char*message){if(!ok)std::ofstream("free-camera-input-error.txt",std::ios::app)<<message<<'\n';}
 void test_overlay(effect_runtime*rt){
     ++tick;test_window=static_cast<HWND>(rt->get_hwnd());
@@ -27,6 +29,22 @@ void test_overlay(effect_runtime*rt){
     if(tick>=90&&tick<=100)test_window=nullptr;
     if(tick==105){text_open=true;text_buffer[0]='x';text_buffer[1]=0;}
     if(tick==110)text_open=false;
+    if(tick==165){
+        editing=true;selected=Tool::Pen;language=i18n::Language::English;
+        free_camera_bridge::enable(true,camera_plane());help_camera=free_camera_bridge::snapshot().camera;
+        help_marks=page().size();shortcuts_open=true;
+        PostMessageW(test_window,WM_KEYDOWN,'W',1);PostMessageW(test_window,WM_KEYDOWN,'E',1);
+    }
+    if(tick==167)ImGui::SetWindowPos(tr(Label::ShortcutsTitle),ImVec2(80,120),ImGuiCond_Always);
+    if(tick==170){PostMessageW(test_window,WM_KEYUP,'W',1);PostMessageW(test_window,WM_KEYUP,'E',1);}
+    if(tick==172){
+        language=i18n::Language::Chinese;help_camera=free_camera_bridge::snapshot().camera;
+        PostMessageW(test_window,WM_KEYDOWN,'W',1);PostMessageW(test_window,WM_KEYDOWN,'E',1);
+    }
+    if(tick==174){io.MouseClicked[ImGuiMouseButton_Left]=true;io.MousePos={20,20};}
+    if(tick==175)PostMessageW(test_window,WM_KEYDOWN,VK_ESCAPE,1);
+    if(tick==178){PostMessageW(test_window,WM_KEYUP,VK_ESCAPE,1);PostMessageW(test_window,WM_KEYUP,'W',1);PostMessageW(test_window,WM_KEYUP,'E',1);}
+    if(tick==182){shortcuts_open=false;set_edit(false);set_edit(true);}
     overlay(rt);
     auto c=free_camera_bridge::snapshot().camera;
     if(tick==51)require(grid::length(c.offset)>.6&&grid::length(c.offset)<1.1,"WASD blocked or default speed too fast");
@@ -48,6 +66,27 @@ void test_overlay(effect_runtime*rt){
         require(restored.speed==2&&restored.sensitivity==.12&&restored.invert_x&&!restored.invert_y,"Camera preferences did not round-trip");
         require(language==i18n::Language::English,"Camera settings overwrote language");
         std::ofstream("free-camera-input-result.txt",std::ios::app)<<"PASS: speed/sensitivity/X/Y settings persist independently of language\n";
+    }
+    if(tick==170){
+        require(shortcuts_open&&!editing,"E did not hide drawing while retaining the help's open state");
+        require(grid::length(c.offset-help_camera.offset)>.05,"Help blocked camera movement");
+    }
+    if(tick==174){
+        require(shortcuts_open&&editing,"E did not restore drawing with help still open");
+        require(page().size()==help_marks+1&&!dragging,"Help blocked drawing outside its window");
+        require(grid::length(c.offset-help_camera.offset)>.01,"Visible help blocked camera movement");
+        ImGui::Begin(tr(Label::ShortcutsTitle),nullptr,ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoNav|ImGuiWindowFlags_NoFocusOnAppearing);
+        auto pos=gui_vec2(imgui_function_table_instance()->GetWindowPos);
+        require(std::abs(pos.x-80)<1&&std::abs(pos.y-120)<1,"Help position changed after E toggles or a language change");
+        ImGui::End();
+    }
+    if(tick==180){
+        require(shortcuts_open&&editing&&!c.enabled,"Help consumed Esc instead of restoring the game camera");
+        require(!io.WantCaptureKeyboard&&io.WantCaptureMouse,"Help captured ordinary game keys");
+    }
+    if(tick==183){
+        require(!shortcuts_open&&editing,"Manually closed help reopened with the toolbar");
+        std::ofstream("free-camera-input-result.txt",std::ios::app)<<"PASS: movable help preserves position/open state across E; camera, drawing and keyboard input remain available\n";
     }
 }
 }
