@@ -163,3 +163,16 @@ E/G/B 只在不按 Ctrl/Shift/Alt 且没有文字输入框时触发。已核对�
 ## 上游相机整合 — 3.4.6
 
 尚未保存对应设置时，速度默认 5、反转 Y 开启；已有速度及轴向偏好保留。T/Esc 退出操作并恢复游戏视角，只有“固定相机”按钮会保留机位并释放输入；T 可继续调整，Esc 或“恢复游戏视角”可归位。机位不跨重启保留，切换原生关卡会清除。绘画、地面标记及体素裁剪继续使用有效相机的位置和朝向。仍采用附字体的完整手动包。
+
+## 本地编译
+
+需要 64 位 Windows。从 [LLVM-MinGW 官方发布页](https://github.com/mstorsjo/llvm-mingw/releases/tag/20261006)下载 `llvm-mingw-20261006-ucrt-x86_64.zip`，保留压缩包顶层目录并解压到项目根目录的 `.tools/`。编译器路径应为 `.tools/llvm-mingw-20261006-ucrt-x86_64/bin/clang++.exe`。ReShade 编译头文件已包含在仓库中，无需另装 Visual Studio 或修改系统 PATH。
+
+在项目根目录的 PowerShell 中运行：
+
+```powershell
+.\build.ps1
+.\test.ps1
+```
+
+产物为 `build/SinkingStarSketch.addon64`；核心用例仅做静态编译检查，不执行程序。两个脚本默认使用上述本地编译器，也可通过 `-Compiler '其他路径\clang++.exe'` 指定编译器。`.tools/` 和 `build/` 已被 Git 忽略。游戏内验证另需兼容的 ReShade 运行库、字体和游戏环境，详见根目录 README。

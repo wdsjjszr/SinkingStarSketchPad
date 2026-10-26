@@ -41,16 +41,18 @@ Free camera: **T**, WASD pan, Q/Z up/down, right-drag orbit/tilt even while draw
 
 Requirements: 64-bit Windows and an x86-64 **LLVM-MinGW** toolchain. The retained build was validated with `llvm-mingw-20261006-ucrt-x86_64`. The ReShade 6.8.0 / Dear ImGui 1.92.5 docking headers used by the add-on are included in `third_party/reshade-sdk` with their original notices.
 
+For a project-local environment, download `llvm-mingw-20261006-ucrt-x86_64.zip` from the [official release](https://github.com/mstorsjo/llvm-mingw/releases/tag/20261006). Extract it into `.tools/`, keeping the archive's top-level directory. The compiler should be at `.tools/llvm-mingw-20261006-ucrt-x86_64/bin/clang++.exe`. No global PATH changes or Visual Studio installation are needed. `.tools/` and `build/` are ignored by Git.
+
 ```powershell
 git clone https://github.com/ouyangzhixuan/SinkingStarSketchPad.git
 cd SinkingStarSketchPad
-.\build.ps1 -Compiler 'C:\path\to\llvm-mingw\bin\clang++.exe'
-.\test.ps1 -Compiler 'C:\path\to\llvm-mingw\bin\clang++.exe'
+.\build.ps1
+.\test.ps1
 ```
 
 `test.ps1` performs static compilation checks only; it does not execute test programs. Ground marking no longer observes or scores GPU instance uploads. Native terrain is refreshed on level entry and marking requests; character positions are read for initialization and the character-plane button. The duplicate backup camera collector is disabled, while effective-camera/free-camera GPU processing remains active.
 
-The add-on is written to `build/SinkingStarSketch.addon64`. Do not substitute an arbitrary MSVC-targeting `clang++`: the ImGui ABI adapter is explicitly designed for the MinGW/MSVC boundary used by this project.
+Both scripts use the project-local compiler by default; pass `-Compiler 'C:\path\to\llvm-mingw\bin\clang++.exe'` to override it. The add-on is written to `build/SinkingStarSketch.addon64`. Do not substitute an arbitrary MSVC-targeting `clang++`: the ImGui ABI adapter is explicitly designed for the MinGW/MSVC boundary used by this project.
 
 To test in game, exit the game, back up an existing setup, install the compatible **ReShade 6.8.0 full add-on support** runtime, then place the built add-on beside `sinking_star.exe`. Keep compatible ReShade settings and a suitable UI font. The source repository does not include runtime DLLs, font binaries, game files, or a compiler. See [third-party components](THIRD_PARTY_NOTICES.md) for their official sources.
 

@@ -1,5 +1,7 @@
 param([string]$Compiler,[string]$Sdk)
 $ErrorActionPreference = 'Stop'
+$localCompiler = Join-Path $PSScriptRoot '.tools\llvm-mingw-20261006-ucrt-x86_64\bin\clang++.exe'
+if (-not $Compiler -and (Test-Path -LiteralPath $localCompiler -PathType Leaf)) { $Compiler = $localCompiler }
 if (-not $Compiler) {
     $command = Get-Command x86_64-w64-mingw32-clang++ -ErrorAction SilentlyContinue
     if ($command) { $Compiler = $command.Source }
