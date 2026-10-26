@@ -5,6 +5,7 @@
 - Identify wdsjjszr's maintained fork separately from upstream 3.4.6, preserving original copyright and MIT permissions.
 - Include the native-ground/grid drawing, camera, interface and numbered-path changes documented below.
 - Build a complete manual-install ZIP with the freshly compiled add-on, ReShade 6.8.0, both original Noto fonts, initial configuration and complete license attachments.
+- Keep the player ZIP limited to runtime files, TXT installation instructions and required license notices; Markdown guides, development records and package metadata remain outside the archive.
 - Keep all dependencies, build outputs and ZIP archives outside Git. Source publishing pushes only committed main; Release assets are uploaded separately.
 - Retire the unused legacy automatic installer. The current package uses manual installation and no SHA checks.
 

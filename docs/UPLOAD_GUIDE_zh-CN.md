@@ -1,6 +1,6 @@
 # Nexus Mods 发布说明
 
-发布文件：`SinkingStarSketchPad-3.4.6-fork.1-Manual.zip`。这是提供给玩家的手动安装完整包，不含 CMD、批处理、PowerShell 或 EXE 安装程序。作者材料目录无需一起上传，也不要上传本机安装后生成的 `installation.json`、存档、日志、诊断 DLL、游戏资源或开发用压缩包。
+发布文件：`SinkingStarSketchPad-3.4.6-fork.1.zip`。这是提供给玩家的手动安装完整包，不含 CMD、批处理、PowerShell 或 EXE 安装程序。作者材料目录无需一起上传，也不要上传本机安装后生成的 `installation.json`、存档、日志、诊断 DLL、游戏资源或开发用压缩包。
 
 建议标题：**SinkingStarSketchPad - In-Game Drawing and Cell Paths**
 

@@ -15,4 +15,4 @@ ReShade and Dear ImGui notices are retained separately in `../reshade-sdk/` and 
 - [DirectX-Headers](https://github.com/microsoft/DirectX-Headers/blob/9e393d6d8a3b30dcc6f2806ef604ec16a27b0d7e/LICENSE) — `DirectX-Headers-LICENSE.txt`
 - [OpenVR](https://github.com/crosire/reshade/blob/v6.8.0/deps/openvr/LICENSE) — `OpenVR-LICENSE.txt`
 
-Additional embedded notices: [EMBEDDED_NOTICES.md](EMBEDDED_NOTICES.md). The original DLL also exposes its embedded notices through ReShade's About panel.
+Additional embedded notices: [EMBEDDED_NOTICES.txt](EMBEDDED_NOTICES.txt). The original DLL also exposes its embedded notices through ReShade's About panel.

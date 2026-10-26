@@ -1,0 +1,15 @@
+SinkingStarSketchPad - third-party notices
+
+Original project: https://github.com/ouyangzhixuan/SinkingStarSketchPad
+Maintained fork: https://github.com/wdsjjszr/SinkingStarSketchPad
+Project copyright and MIT terms: LICENSE
+
+ReShade 6.8.0 by Patrick Mours and contributors: licenses/ReShade-BSD-3-Clause.txt
+Dear ImGui by Omar Cornut and contributors: licenses/ImGui-MIT.txt
+Noto Sans CJK SC Regular/Bold by Adobe and contributors: licenses/Noto-SIL-OFL-1.1.txt
+Original font copyright is retained in both font files' metadata.
+ReShade library and embedded font notices: licenses/reshade-runtime/
+LLVM-MinGW runtime notices: licenses/runtime-notices/
+ootss-cmd and joric/ootss reference licenses: licenses/reference-notices/
+
+Third-party components retain their own licenses.

@@ -74,7 +74,7 @@ Prepare the ReShade 6.8.0 full add-on x64 runtime and original Noto Regular/Bold
 .\package.ps1
 ```
 
-This rebuilds the add-on and creates `dist/SinkingStarSketchPad-3.4.6-fork.1-Manual.zip` with the runtime, both fonts, clean initial configuration, bilingual instructions and original licenses. `build/`, `dist/`, dependencies and ZIP files are ignored by Git. Packaging does not download dependencies or perform SHA checks. It copies an explicit file list and replaces the output ZIP only after writing completes.
+This rebuilds the add-on and creates `dist/SinkingStarSketchPad-3.4.6-fork.1.zip` containing only runtime files, both fonts, clean initial configuration, bilingual TXT installation instructions and required license notices. Full Markdown guides and development records stay in the repository. `build/`, `dist/`, dependencies and ZIP files are ignored by Git. Packaging does not download dependencies or perform SHA checks. It copies an explicit file list and replaces the output ZIP only after writing completes.
 
 To package an existing build with dependencies elsewhere, use `python scripts/package.py --runtime 'C:\deps\ReShade64.dll' --font 'C:\deps\NotoSansCJKsc-Regular.otf' --bold-font 'C:\deps\NotoSansCJKsc-Bold.otf'`. `Publish-To-GitHub.ps1` only pushes already committed `main` to this fork; it does not commit files, build assets or create a GitHub Release. Upload the ZIP as a Release asset separately. [Nexus publishing notes](docs/UPLOAD_GUIDE_zh-CN.md) and an [English page draft](docs/NEXUS_DESCRIPTION_EN.md) are included.
 
