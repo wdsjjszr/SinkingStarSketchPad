@@ -169,7 +169,7 @@ void status() {
     auto free=free_camera_bridge::snapshot();
     f << "camera_offset=" << free.camera.offset.x << ',' << free.camera.offset.y << ',' << free.camera.offset.z
       << "\ncamera_held=" << free.camera.holding << "\ncamera_angles=" << free.camera.yaw << ',' << free.camera.pitch << "\ncamera_zoom=" << free.camera.zoom << '\n';
-    f << "version=3.4.6\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
+    f << "version=3.4.6-fork.1\nprocess=" << GetCurrentProcessId() << "\nrenderer=DirectX12\nediting=" << editing
       << "\npage=" << doc.page+1 << "\nstrokes=" << page().size() << "\ncursor=" << doc.cursor
       << "\nlanguage=" << i18n::language_code(language) << "\nui_language=" << (chinese()?"zh-CN":"en") << "\nvisible=" << visible << "\nforeground=" << input_focus.active << "\nframes=" << frame_count << "\ncamera=" << camera.valid << "\ncamera_frame=" << camera.frame << "\ngrid=" << doc.grids[doc.page].ready << "\ngrid_centers=" << (native_ground_snapshot?native_ground_snapshot->cells.size():0) << "\nfree_camera=" << free.camera.enabled << "\nfree_camera_ready=" << free.ready << "\nfree_camera_patches=" << free.patches << "\n";
     f << "grid_drawing=" << grid_drawing << "\ngrid_preview=" << grid_preview.enabled << "\ngrid_preview_centers=" << grid_preview.centers
@@ -1097,7 +1097,7 @@ extern "C" __declspec(dllexport) bool AddonInit(HMODULE addon,HMODULE reshade_mo
     reshade::register_event<reshade::addon_event::reshade_overlay>(overlay);
     reshade::register_event<reshade::addon_event::reshade_open_overlay>(opened);
     reshade::register_event<reshade::addon_event::destroy_effect_runtime>(destroyed);
-    log("SinkingStarSketchPad 3.4.6 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
+    log("SinkingStarSketchPad 3.4.6-fork.1 loaded (E: draw, G: cursor, B: visibility; T: experimental camera).");return true;
 }
 extern "C" __declspec(dllexport) void AddonUninit(HMODULE addon,HMODULE) {
     {std::lock_guard<std::recursive_mutex> lock(state_mutex);settle_drawing();if(text_open)finish_text();save();save_camera_preferences();save_drawing_preferences();save_ui_preferences();}

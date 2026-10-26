@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.6-fork.1 — Fork release packaging (2026-10-26)
+
+- Identify wdsjjszr's maintained fork separately from upstream 3.4.6, preserving original copyright and MIT permissions.
+- Include the native-ground/grid drawing, camera, interface and numbered-path changes documented below.
+- Build a complete manual-install ZIP with the freshly compiled add-on, ReShade 6.8.0, both original Noto fonts, initial configuration and complete license attachments.
+- Keep all dependencies, build outputs and ZIP archives outside Git. Source publishing pushes only committed main; Release assets are uploaded separately.
+- Retire the unused legacy automatic installer. The current package uses manual installation and no SHA checks.
+
 ## Unreleased — drawing interaction and path numbering (2026-10-26)
 
 - Pause the pointer grid while a visible plane-change preview is drawn, including its fade; keep snap markers and the saved preview preference.

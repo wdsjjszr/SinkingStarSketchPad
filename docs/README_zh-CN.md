@@ -1,4 +1,4 @@
-# SinkingStarSketchPad 3.4.6
+# SinkingStarSketchPad 3.4.6-fork.1
 
 《沉星之序》的游戏内绘图与路线标记工具。提供星芒鼠标光标、画笔、几何图形、文字、三页草稿和自动吸附格心的路径。通过原生 64 位 ReShade 插件绘制到 DirectX 12 游戏画面。
 
@@ -15,8 +15,10 @@ sinking_star.exe
 dxgi.dll
 SinkingStarSketch.addon64
 ReShade.ini
+Sketch-ReShadePreset.ini
 SinkingStarSketch-assets/
   NotoSansCJKsc-Regular.otf
+  NotoSansCJKsc-Bold.otf
 ```
 
 不要把整个 `game_files` 文件夹原样放在 EXE 旁。启动游戏后按 E 打开绘图。
@@ -158,7 +160,9 @@ E/G/B 只在不按 Ctrl/Shift/Alt 且没有文字输入框时触发。已核对�
 
 ## 开源仓库
 
-项目源码和文档采用 **MIT** 许可证：[https://github.com/ouyangzhixuan/SinkingStarSketchPad](https://github.com/ouyangzhixuan/SinkingStarSketchPad)。第三方组件仍按各自许可分发。
+本 fork 由 **wdsjjszr** 维护，基于 [ouyangzhixuan 的原项目](https://github.com/ouyangzhixuan/SinkingStarSketchPad)。保留原作者版权；fork 修改部分版权所有 2026 wdsjjszr，继续采用 MIT。
+
+项目源码和文档采用 **MIT** 许可证：[https://github.com/wdsjjszr/SinkingStarSketchPad](https://github.com/wdsjjszr/SinkingStarSketchPad)。第三方组件仍按各自许可分发。
 
 ## 上游相机整合 — 3.4.6
 

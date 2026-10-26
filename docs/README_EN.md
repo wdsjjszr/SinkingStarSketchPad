@@ -1,4 +1,4 @@
-# SinkingStarSketchPad 3.4.6
+# SinkingStarSketchPad 3.4.6-fork.1
 
 In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
 
@@ -21,8 +21,10 @@ sinking_star.exe
 dxgi.dll
 SinkingStarSketch.addon64
 ReShade.ini
+Sketch-ReShadePreset.ini
 SinkingStarSketch-assets/
   NotoSansCJKsc-Regular.otf
+  NotoSansCJKsc-Bold.otf
 ```
 
 Do not place the `game_files` folder itself next to the executable. Start the game and press **E** to open the toolbar.
@@ -191,11 +193,13 @@ The display name is **SinkingStarSketchPad**. The compatible add-on filename (`S
 
 ## Source code and license
 
+This fork is maintained by **wdsjjszr**, based on [the original project by ouyangzhixuan](https://github.com/ouyangzhixuan/SinkingStarSketchPad). Original copyright is retained; fork modifications are copyright 2026 wdsjjszr and remain MIT-licensed.
+
 The project is open source under the **MIT License**.
 
-- Repository: [https://github.com/ouyangzhixuan/SinkingStarSketchPad](https://github.com/ouyangzhixuan/SinkingStarSketchPad)
-- License: [MIT](https://github.com/ouyangzhixuan/SinkingStarSketchPad/blob/main/LICENSE)
-- Bug reports: [GitHub Issues](https://github.com/ouyangzhixuan/SinkingStarSketchPad/issues)
+- Repository: [https://github.com/wdsjjszr/SinkingStarSketchPad](https://github.com/wdsjjszr/SinkingStarSketchPad)
+- License: [MIT](https://github.com/wdsjjszr/SinkingStarSketchPad/blob/main/LICENSE)
+- Bug reports: [GitHub Issues](https://github.com/wdsjjszr/SinkingStarSketchPad/issues)
 
 Third-party components retain their original licenses.
 

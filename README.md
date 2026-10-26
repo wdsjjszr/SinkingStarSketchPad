@@ -2,9 +2,11 @@
 
 An in-game sketchpad for **Order of the Sinking Star**: draw ideas, add text notes, and plan routes snapped to cell centers. This is a native 64-bit ReShade add-on rendered inside the game's DirectX 12 frame, with English and Simplified Chinese interfaces.
 
-**Source repository:** [github.com/ouyangzhixuan/SinkingStarSketchPad](https://github.com/ouyangzhixuan/SinkingStarSketchPad)
+**Fork repository:** [github.com/wdsjjszr/SinkingStarSketchPad](https://github.com/wdsjjszr/SinkingStarSketchPad)
 
-[English usage guide](docs/README_EN.md) · [中文使用说明](docs/README_zh-CN.md) · [报告问题 / Issues](https://github.com/ouyangzhixuan/SinkingStarSketchPad/issues)
+Maintained by **wdsjjszr**, based on [ouyangzhixuan/SinkingStarSketchPad](https://github.com/ouyangzhixuan/SinkingStarSketchPad). The first fork package is **3.4.6-fork.1 Beta**; original copyright and third-party licenses are retained.
+
+[English usage guide](docs/README_EN.md) · [中文使用说明](docs/README_zh-CN.md) · [报告问题 / Issues](https://github.com/wdsjjszr/SinkingStarSketchPad/issues)
 
 ## Features
 
@@ -44,7 +46,7 @@ Requirements: 64-bit Windows and an x86-64 **LLVM-MinGW** toolchain. The retaine
 For a project-local environment, download `llvm-mingw-20261006-ucrt-x86_64.zip` from the [official release](https://github.com/mstorsjo/llvm-mingw/releases/tag/20261006). Extract it into `.tools/`, keeping the archive's top-level directory. The compiler should be at `.tools/llvm-mingw-20261006-ucrt-x86_64/bin/clang++.exe`. No global PATH changes or Visual Studio installation are needed. `.tools/` and `build/` are ignored by Git.
 
 ```powershell
-git clone https://github.com/ouyangzhixuan/SinkingStarSketchPad.git
+git clone https://github.com/wdsjjszr/SinkingStarSketchPad.git
 cd SinkingStarSketchPad
 .\build.ps1
 .\test.ps1
@@ -66,13 +68,15 @@ Repeat with `-InputSuite` to exercise the production keyboard/mouse routing in a
 
 ## Create a distributable package
 
-After building, provide the tested ReShade runtime, the unmodified Noto Sans CJK SC Regular and Bold fonts and their license to the packaging script:
+Prepare the ReShade 6.8.0 full add-on x64 runtime and original Noto Regular/Bold fonts under the ignored `.tools/release-deps/` directory as described in the [release guide](docs/RELEASE_zh-CN.md). Font and runtime license texts are included in the source repository. Build and package with:
 
 ```powershell
-python scripts/package.py --runtime 'C:\deps\ReShade64.dll' --font 'C:\deps\NotoSansCJKsc-Regular.otf' --bold-font 'C:\deps\NotoSansCJKsc-Bold.otf' --font-license 'C:\deps\LICENSE-Noto.txt'
+.\package.ps1
 ```
 
-This creates a ZIP in `dist/` with bilingual manual-install/uninstall guides, checksums, configuration and notices, without installer scripts. It validates the external dependency hashes; it does not download dependencies. The package uses the source build output, not a binary branding patch. Verify a fresh package before distributing it. [Nexus publishing notes](docs/UPLOAD_GUIDE_zh-CN.md) and an [English page draft](docs/NEXUS_DESCRIPTION_EN.md) are included.
+This rebuilds the add-on and creates `dist/SinkingStarSketchPad-3.4.6-fork.1-Manual.zip` with the runtime, both fonts, clean initial configuration, bilingual instructions and original licenses. `build/`, `dist/`, dependencies and ZIP files are ignored by Git. Packaging does not download dependencies or perform SHA checks. It copies an explicit file list and replaces the output ZIP only after writing completes.
+
+To package an existing build with dependencies elsewhere, use `python scripts/package.py --runtime 'C:\deps\ReShade64.dll' --font 'C:\deps\NotoSansCJKsc-Regular.otf' --bold-font 'C:\deps\NotoSansCJKsc-Bold.otf'`. `Publish-To-GitHub.ps1` only pushes already committed `main` to this fork; it does not commit files, build assets or create a GitHub Release. Upload the ZIP as a Release asset separately. [Nexus publishing notes](docs/UPLOAD_GUIDE_zh-CN.md) and an [English page draft](docs/NEXUS_DESCRIPTION_EN.md) are included.
 
 ## Source layout
 
@@ -87,7 +91,7 @@ The DX12 host is a rendering harness, not an automatic gameplay test. Local path
 
 ## License and credits
 
-Mod-specific source code and documentation are available under the **[MIT License](LICENSE)**, copyright 2026 **ouyangzhixuan**. Included third-party components keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Mod-specific source code and documentation are available under the **[MIT License](LICENSE)**. Original work: copyright 2026 **ouyangzhixuan**. Fork modifications: copyright 2026 **wdsjjszr**. Included third-party components keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 This is an unofficial community tool. Code, UI text and translations include generative-AI-produced content. No extracted game artwork or game files are distributed.
 

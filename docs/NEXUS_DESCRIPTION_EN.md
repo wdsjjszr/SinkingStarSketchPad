@@ -1,6 +1,6 @@
 # SinkingStarSketchPad — In-Game Drawing and Cell Paths
 
-**Version 3.4.6 Beta · English / Simplified Chinese · Windows, DirectX 12**
+**Version 3.4.6-fork.1 Beta · English / Simplified Chinese · Windows, DirectX 12**
 
 An in-game scratchpad for Order of the Sinking Star: sketch ideas, place text notes, and plan routes snapped to cell centers. A themed crystal-blade cursor, star crosshair, and rune-ring eraser help keep annotations readable.
 
@@ -38,11 +38,13 @@ This is an unofficial community tool. Development used generative AI; the code, 
 
 ## Source code and license
 
+This fork is maintained by **wdsjjszr**, based on [the original project by ouyangzhixuan](https://github.com/ouyangzhixuan/SinkingStarSketchPad). Original copyright is retained; fork modifications are copyright 2026 wdsjjszr and remain MIT-licensed.
+
 The project is open source under the **MIT License**.
 
-- Repository: [https://github.com/ouyangzhixuan/SinkingStarSketchPad](https://github.com/ouyangzhixuan/SinkingStarSketchPad)
-- License: [MIT](https://github.com/ouyangzhixuan/SinkingStarSketchPad/blob/main/LICENSE)
-- Bug reports: [GitHub Issues](https://github.com/ouyangzhixuan/SinkingStarSketchPad/issues)
+- Repository: [https://github.com/wdsjjszr/SinkingStarSketchPad](https://github.com/wdsjjszr/SinkingStarSketchPad)
+- License: [MIT](https://github.com/wdsjjszr/SinkingStarSketchPad/blob/main/LICENSE)
+- Bug reports: [GitHub Issues](https://github.com/wdsjjszr/SinkingStarSketchPad/issues)
 
 Third-party components retain their original licenses.
 

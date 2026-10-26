@@ -1,4 +1,4 @@
-SinkingStarSketchPad 3.4.6 — Manual installation
+SinkingStarSketchPad 3.4.6-fork.1 — Manual installation
 
 No CMD, batch, PowerShell or executable installer is included or required.
 
@@ -10,7 +10,9 @@ FRESH INSTALL (no existing ReShade or graphics proxy):
    dxgi.dll
    SinkingStarSketch.addon64
    ReShade.ini
+   Sketch-ReShadePreset.ini
    SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf
+   SinkingStarSketch-assets\NotoSansCJKsc-Bold.otf
    Keep the SinkingStarSketch-assets folder intact. Do not copy only the font or place the game_files folder itself next to the executable.
 5. Start the game. E opens drawing; G toggles the cursor; B toggles marks. Alt+letter selects tools; Alt+H selects paths.
 
@@ -39,3 +41,5 @@ FREE CAMERA (EXPERIMENTAL): T toggles. WASD pans, Q/Z moves up/down, Shift speed
 New or missing camera settings default to speed 5 and Y inversion on; existing speed and axis preferences remain. T/Esc exits controls and restores the game view. Only the Hold camera button leaves the pose fixed while releasing input; T resumes adjustment, and Esc or Restore game view restores the native camera. Fixed poses reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.
 
 True bold UI: include SinkingStarSketch-assets/NotoSansCJKsc-Bold.otf. In the existing [STYLE] section of ReShade.ini set EditorFont=.\SinkingStarSketch-assets\NotoSansCJKsc-Bold.otf and EditorFontSize=18. Keep Font and LatinFont on the Regular file. ReShade's shader editor also uses Bold. Restart to load the new face; copying only the add-on does not load it.
+
+Keep LICENSE, THIRD_PARTY_NOTICES.md and licenses/ with this distribution.

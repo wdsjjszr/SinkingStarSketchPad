@@ -1,4 +1,10 @@
-# Validation — 3.4.6 Beta
+# Validation — 3.4.6-fork.1 Beta
+
+## Fork release packaging — 26 October 2026
+
+- Check Python and PowerShell syntax, all C++ core/overlay sources, and production compilation/linking.
+- Inspect ZIP entries, license attachments, initial configuration paths, font metadata, package version/source and the native binary headers without loading executables.
+- No game sessions, test programs, dynamic rendering/input tests or SHA checks are run. Earlier validation records below describe their original revisions.
 
 ## Drawing interaction and numbered paths — 26 October 2026
 
