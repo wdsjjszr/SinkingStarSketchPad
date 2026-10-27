@@ -1,20 +1,176 @@
-# SinkingStarSketchPad 3.4.6-fork.1
+<div align="center">
 
-In-game drawing, scratch pages, a themed cursor, and cell-snapped route planning for **Order of the Sinking Star**. This is a native 64-bit ReShade add-on rendered into the game's DirectX 12 frame. It is not a separate desktop overlay.
+# SinkingStarSketchPad
 
-**Release status: beta.** The user confirmed native ground previews and marking in the levels they checked. The user reported the preceding grid drawing revision works well. This drawing revision has static checks/compilation and an isolated preview performance comparison; actual game appearance/performance remains unverified.
+**An in-game sketchpad for Order of the Sinking Star — draw notes, arrows, and routes directly into the game world**
 
-## Requirements
+Move the camera, and your marks move with the scene as if they were drawn on the ground.
 
-- A 64-bit Windows installation and the DirectX 12 version of the game (`sinking_star.exe`).
-- The package includes the tested **ReShade 6.8.0 full add-on support** runtime, the add-on, a configuration file, and an openly licensed Noto CJK font. No separate ReShade download is needed for a fresh install.
-- Manual file-copy installation. No CMD, batch, PowerShell or executable installer is included or required.
+[简体中文](../README.md) · **English**
 
-## Install or upgrade
+![version](https://img.shields.io/badge/version-1.0-blue)
+![platform](https://img.shields.io/badge/platform-Windows%2064--bit-lightgrey)
+![status](https://img.shields.io/badge/status-Beta-orange)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-See **INSTALL_EN.txt** for the quick-start instructions. Completely exit the game first.
+[Key features](#key-features) · [More features](#more-features) · [Installation](#installation) · [Shortcuts](#shortcuts) · [FAQ](#faq) · [Known limitations](#known-limitations)
 
-For a fresh installation with no existing ReShade/graphics proxy, extract the archive and copy the **contents** of `game_files` into the folder containing `sinking_star.exe`. Keep this layout:
+</div>
+
+<img src="images/hero.gif" alt="In-game drawing and world-space marks" width="720">
+
+---
+
+## Introduction
+
+SinkingStarSketchPad is an in-game sketchpad for **Order of the Sinking Star**. Draw, write notes, and mark routes while playing to keep track of puzzle ideas and plan your next moves.
+
+It runs as a ReShade add-on without modifying the game's files. Once installed, press **E** in the game to start drawing.
+
+> [!NOTE]
+> **Beta release.** Grid drawing and ground marking have been confirmed in some levels. The latest settings, preview, and mouse-wheel changes have only received compilation checks and have not been fully verified in the game. Free camera is experimental; see [Known limitations](#known-limitations).
+
+---
+
+## Key features
+
+### Marks stay in the world, not on the screen
+
+A conventional sketchpad keeps marks on the screen. Move the camera, and those marks no longer line up with the scene.
+
+**Grid drawing** places your marks on a plane in the game world, such as the floor beneath your character. As the camera moves, your strokes, arrows, and text anchors stay in their original positions, as if drawn on the ground.
+
+<table>
+<tr>
+<td width="50%" align="center"><b>Regular drawing: fixed on the screen</b></td>
+<td width="50%" align="center"><b>Grid drawing: fixed in the world</b></td>
+</tr>
+<tr>
+<td>
+<img src="images/compare-screen.gif" alt="Regular drawing stays fixed on the screen" width="720">
+</td>
+<td>
+<img src="images/compare-world.gif" alt="Grid drawing stays fixed in the world" width="720">
+</td>
+</tr>
+</table>
+
+### Get started in three steps
+
+1. **Enter drawing mode:** press `E`, then click **Grid drawing** on the toolbar.
+2. **Choose a plane:** decide which floor or height you want to draw on.
+   - Click **Set to character plane** to use the height beneath your character.
+   - Or click **Manual marking**, then click the ground you want to draw on. Middle-click performs a quick one-shot mark.
+   - To move up or down a level, **scroll the mouse wheel** over the canvas. Each notch changes the height by one cell.
+3. **Start drawing.** Move the camera afterward to see your marks stay with the scene.
+
+### What you can draw on a plane
+
+| Tool | Behavior on the plane |
+|---|---|
+| Pen, ellipse | Draw freely along the plane |
+| Line, arrow, rectangle | Endpoints snap to cell centers or grid intersections for neat shapes |
+| Lines / arrows across heights | When the endpoints are on different levels, the result becomes a vertical line, useful for marking stairs or floor changes |
+| Text | The anchor stays in the world, while the text remains upright and keeps a constant screen size |
+| Eraser | Removes an entire mark at once |
+
+Each mark remembers its own plane, color, and stroke width independently.
+
+Enable **Grid preview** to see nearby cells and where points will snap. Changing the plane height also briefly shows the new plane's position.
+
+<img src="images/grid-preview.png" alt="Grid preview and snap points" width="720">
+
+<img src="images/vertical-line.gif" alt="A vertical line between levels with a landing guide" width="720">
+
+For full rules, see [Grid drawing](GRID_DRAWING.md) and [Ground marking](MANUAL_GROUND.md) (in Chinese).
+
+---
+
+## More features
+
+### Cell paths
+
+Click through cell centers to mark a route.
+
+- Click a cell center to start, then another point along the X, Y, or Z axis. **Intermediate cells are filled in automatically.**
+- Add a point at each turn; you cannot jump directly to a diagonal cell.
+- Change the height with the wheel to connect vertical segments between floors.
+- Enable **Path numbering** to number every path point automatically. Each new path starts at 1.
+- Paths stay fixed to their original cells as the camera moves. Undo is supported.
+
+<img src="images/path.png" alt="A cell path with numbered points" width="720">
+
+> This tool **only marks routes**. It does not check obstacles, find paths automatically, or move your character.
+
+### Free camera (experimental)
+
+Press `T` to leave the default game view and pan, rotate, raise, or lower the camera. Combined with grid drawing, it is useful for planning routes from above.
+
+| Action | Control |
+|---|---|
+| Pan along the ground | `W` `A` `S` `D` |
+| Move up / down | `Q` / `Z` |
+| Move faster | Hold `Shift` |
+| Rotate and tilt | Hold the right mouse button and drag |
+| Zoom | Scroll with drawing mode closed |
+| Exit and restore the game view | `T` or `Esc` |
+
+<details>
+<summary>More about free camera</summary>
+
+- It starts disabled each time you launch the game. Enter a level and wait for the add-on to identify the main game camera before using it.
+- The camera panel provides X / Y / height offsets, rotation, tilt, zoom, and a reset to the current game camera.
+- **Invert mouse X / Y** are independent switches: X changes horizontal right-drag direction; Y changes vertical right-drag direction. They do not affect WASD or the wheel. X defaults off and Y defaults on.
+- Movement speed (default 5), mouse sensitivity, and both inversion switches are saved across restarts.
+- **Hold camera** keeps the current pose and returns keyboard/mouse input to the game. Press `T` to resume adjustments, or `Esc` / **Restore game view** to restore the original view. Held poses do not survive restarts and are cleared on level changes.
+- WASD does not move your character while camera controls are active. Camera shortcuts pause while entering text.
+- A detected scene change or large jump in the original camera may disable free camera automatically.
+
+</details>
+
+### Drawing tools
+
+Pen, line, arrow, rectangle, ellipse, text, and whole-mark eraser, with five ink colors. Hold `Shift` to constrain lines to 45° angles or draw squares and circles. Undo / redo supports 60 steps per page.
+
+<img src="images/toolbar.png" alt="Drawing toolbar" width="720">
+
+### Three scratch pages and export
+
+- Three independent, automatically saved pages; switch with `Ctrl+1 / 2 / 3`.
+- Each page can hold its own plane. Use **different pages for different levels**.
+- Export **SVG** using **Export SVG** on the toolbar.
+
+### Themed cursors
+
+- Normal mode: a pale-gold crystal-blade pointer with star engravings.
+- Drawing mode: a hollow star crosshair in the current ink color.
+- Eraser: a hollow rune ring.
+
+<img src="images/cursors.png" alt="Crystal-blade pointer, star crosshair, and rune-ring eraser" width="720">
+
+### English / Chinese interface and UI scaling
+
+- In **Settings → Language**, choose System, English, or Simplified Chinese. Changes take effect immediately and persist across restarts.
+- **Settings → UI scale** adjusts windows and tooltips from 75% to 200%. Click **Apply scale** to apply the change.
+- Strokes, text annotations, and the grid keep their existing size.
+
+---
+
+## Installation
+
+**Requirements:** 64-bit Windows and the DirectX 12 version of **Order of the Sinking Star**. Download a release package from [Releases](https://github.com/wdsjjszr/SinkingStarSketchPad/releases).
+
+Installation is **manual file copying**. No installer or script is required.
+
+**First installation (no existing ReShade or graphics proxy):**
+
+1. Save your progress and **completely exit the game**.
+2. Extract the release package and copy the **contents of** `game_files` into the folder containing `sinking_star.exe`.
+   Copy the contents, not the `game_files` folder itself.
+3. Start the game and press **E** to open drawing mode.
+
+<details>
+<summary>Expected game directory after copying</summary>
 
 ```text
 sinking_star.exe
@@ -27,182 +183,189 @@ SinkingStarSketch-assets/
   NotoSansCJKsc-Bold.otf
 ```
 
-Do not place the `game_files` folder itself next to the executable. Start the game and press **E** to open the toolbar.
+</details>
 
-For an upgrade, back up the existing add-on, font assets, `ReShade.ini`, and `SinkingStarSketch-data` outside the game directory. Copy the new add-on and font assets, preserve your drafts/preferences, and keep the existing configuration. In `ReShade.ini`, set the key below in its existing section, replacing the old value without duplicates:
+<details>
+<summary>Upgrading from an older version</summary>
+
+1. Back up the old add-on, fonts, `ReShade.ini`, and `SinkingStarSketch-data` **outside the game directory**.
+2. Copy the new add-on and fonts, keeping your existing drafts, preferences, and configuration.
+3. In `ReShade.ini`, change `InputProcessing` to `1` in the existing `[INPUT]` section without adding a duplicate key. If the section is missing, add:
 
 ```ini
 [INPUT]
 InputProcessing=1
 ```
 
-Add this section only if it is absent. This value is required for separate mouse/keyboard capture; mode 2 blocks the keyboard and mode 0 allows drawing clicks to reach the game. This is a manual change; no installer backs up or edits settings for you.
+This value separates keyboard and mouse handling: `2` continues to block keyboard input while drawing, while `0` lets drawing mouse actions reach the game. The package does not automatically back up files, edit settings, or detect conflicts; complete these steps yourself.
 
-Keep an existing ReShade runtime instead of overwriting it blindly. Only the bundled ReShade 6.8.0 full add-on runtime has been tested. Read **Existing ReShade installations** below before combining graphics mods. No automatic conflict detection is performed in this manual package.
+If Chinese characters are missing after upgrading, see the font configuration below.
 
-## Language
+</details>
 
-The **Settings** window's **Language** selector offers **System**, **English**, and **Chinese (Simplified)**. System uses Chinese for a Chinese Windows UI language and English otherwise. Changes take effect immediately and persist in:
+<a id="existing-reshade-installations"></a>
+<details>
+<summary>Existing ReShade installations</summary>
 
-`SinkingStarSketch-data/settings.ini`
+Do not overwrite your existing runtime. Back up your setup and check that it supports **full add-ons**. Copy only the add-on and fonts, keep your existing runtime and configuration, manually set `[INPUT] InputProcessing=1`, and ensure ReShade loads add-ons from the game directory.
 
-You can also close the game and set this file manually:
+Only the bundled **ReShade 6.8.0 full add-on support** runtime has been validated. Other ReShade versions and graphics proxy combinations have not been verified.
+
+</details>
+
+<details>
+<summary>Font configuration for existing installations (missing Chinese characters)</summary>
+
+Set the following in the `[STYLE]` section of `ReShade.ini`:
+
+```ini
+[STYLE]
+Font=.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf
+LatinFont=.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf
+FontSize=18
+EditorFont=.\SinkingStarSketch-assets\NotoSansCJKsc-Bold.otf
+EditorFontSize=18
+```
+
+Restart the game to apply. Replacing only the add-on does not change your existing ReShade font settings. If the bold font or its configuration is missing, regular text is used instead.
+
+</details>
+
+---
+
+## Shortcuts
+
+Hover over toolbar icons to see names and shortcuts. Click **Shortcut help** on the toolbar for a draggable window with the full list.
+
+| Action | Control |
+|---|---|
+| Enter / exit drawing mode | `E` |
+| Pen / line / arrow | `Alt+P` / `Alt+L` / `Alt+A` |
+| Rectangle / ellipse / text | `Alt+R` / `Alt+O` / `Alt+T` |
+| Whole-mark eraser / cell path | `Alt+K` / `Alt+H` |
+| Five ink colors | `Alt+1` – `Alt+5` |
+| **Raise / lower the drawing plane** | Scroll over the canvas (configurable in Settings) |
+| Cycle colors / tools | `Shift+wheel` / `Alt+wheel` |
+| Temporary eraser | Hold the right mouse button |
+| Constrain to 45° lines / squares / circles | Hold `Shift` |
+| Undo / redo | `Ctrl+Z` / `Ctrl+Y` |
+| Switch scratch pages | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` |
+| Save / clear the current page (undoable) | `Ctrl+S` / `Ctrl+Shift+Delete` |
+| Finish text entry | `Ctrl+Enter` |
+| Cancel the current stroke or text; otherwise return to the game | `Esc` |
+| Free camera | `T` |
+| Toggle pointer / draft visibility | `G` / `B` |
+
+<details>
+<summary>Usage tips</summary>
+
+- Lines, arrows, rectangles, and ellipses support both dragging and clicking a start point followed by an endpoint. Right-click cancels an unfinished shape.
+- While drawing, regular keyboard input still reaches the game, so you can move your character and camera. **The sketchpad takes over the mouse**; press `E` when you need the game's mouse controls.
+- Opening text entry or holding `Ctrl` / `Alt` for mod shortcuts temporarily gives the mod keyboard control.
+- `E` / `G` / `B` work only without `Ctrl` / `Shift` / `Alt` held and with no text entry field open.
+- Switching away from the game preserves drawing mode and unfinished text and saves completed marks. Release the mouse buttons before continuing when you return, so the click used to switch windows does not draw on the page.
+- Shortcuts have been checked against the game's default bindings. Custom game bindings may conflict.
+
+</details>
+
+---
+
+## FAQ
+
+**No toolbar after starting the game?**
+Check that the files are beside the actual running `sinking_star.exe`, completely restart the game, and press `E`.
+
+**Grid or camera keeps showing “waiting”?**
+Enter a regular level and wait a moment. Do not assume that any grid visible on screen represents the actual ground.
+
+**Chinese characters missing after an upgrade?**
+Check your preserved `ReShade.ini`. Select `SinkingStarSketch-assets/NotoSansCJKsc-Regular.otf` in ReShade's font settings, or use the font configuration above.
+
+**What should I include in a bug report?**
+Logs are in `ReShade.log` and `SinkingStarSketch-data/status.txt` in the game directory. Check for personal paths before sharing them publicly.
+
+---
+
+## Known limitations
+
+- **Free camera changes the rendered view, not the game's own camera.** Game-side culling, shadows, reflections, object loading, and mouse picking may still use the original view. Large camera moves, low angles, or views into previously unseen areas can cause missing objects or visual issues. It does not unlock unloaded areas or pause the game.
+- **Cell paths only mark routes.** They do not check obstacles or find paths automatically.
+- **Planes do not automatically follow levels.** All three pages reinitialize their target planes on a level change; existing paths retain their own cells. Use separate scratch pages for different levels.
+- Occlusion checks cover only the game's native solid walls, not decorative models, lifts, lily pads, or similar objects.
+- Special slopes, multiple floors, camera transitions, wrapping maps, and behavior after game updates require in-game verification.
+
+---
+
+## Data, export, and removal
+
+<details>
+<summary>Where drafts and settings are stored</summary>
+
+- Drafts: `SinkingStarSketch-data/drafts.txt`, with the previous version backed up as `.bak`.
+- Settings (language, camera, grid drawing, previews, and other preferences): `settings.ini` in the same directory.
+- Exported SVG files: `SinkingStarSketch-data/exports/`. World-space marks are omitted if there is no valid camera; unfinished shapes are not exported.
+- Each page supports up to 2,000 marks and 120,000 points in total. Undo history does not survive restarts.
+
+**The draft format is now v5**, with support for reading v1–v4. Upgrades create a non-overwriting `drafts.pre-v5.txt` backup; saving stops if that backup fails. Older add-ons cannot read v5. Restore this backup before downgrading.
+
+Example language setting (`Language` accepts `zh-CN`, `en`, or `auto`):
 
 ```ini
 [Interface]
 Language=en
 ```
 
-Other accepted values are `zh-CN` and `auto`. The setting changes the mod interface and notifications. Your annotations and the base game language are not translated.
+</details>
 
-## Controls
+<details>
+<summary>Uninstalling</summary>
 
-The toolbar uses icon buttons with names and shortcuts on hover. Open **Shortcut help** from the toolbar or free-camera panel for the full controls in a movable two-column window. E hides/restores Settings and help with drawing, preserving their positions and open state in the current session. Click the relevant toolbar icon again or the window's X to close it. Esc retains its drawing/camera behavior; HUD key hints remain visible when drawing is closed.
+Exit the game and move `SinkingStarSketch.addon64` outside the game directory to disable it. Keep `SinkingStarSketch-data` to retain drafts, preferences, and exports.
 
-**Settings → UI scale** controls all mod windows, tooltips and HUD from 75% to 200% (default 100%, matching the current 18px font). Dragging edits a pending value; click **Apply scale** to apply it on the next frame and save it as `[Interface] UIScalePercent`. Other settings still apply immediately. Ink, annotations, world grids and cursor artwork keep their original sizes. The free-camera panel keeps its original layout and colors.
+To also remove ReShade bundled with a fresh installation, first confirm that no other mod shares it, then move `dxgi.dll`, `ReShade.ini`, and the font assets out of the game directory. Restore your original graphics settings from a backup if needed. No uninstall script is required.
 
-Use unmodified **Noto Sans CJK SC Regular** for body text and **Noto Sans CJK SC Bold** for emphasis. For an existing installation, set both `[STYLE] Font` and `[STYLE] LatinFont` in `ReShade.ini` to `.\SinkingStarSketch-assets\NotoSansCJKsc-Regular.otf`, keep `FontSize=18`, set `EditorFont=.\SinkingStarSketch-assets\NotoSansCJKsc-Bold.otf` and `EditorFontSize=18`, then restart the game. The add-on uses this separately loaded editor font for real bold text, so the ReShade shader editor also uses Bold. Without a loaded CJK bold face the UI stays regular; synthetic bold is removed. Updating the add-on alone does not change the installed ReShade font configuration. Whole-pixel UI metrics reduce fractional-scale blur and false scrollbars. This OFL 1.1 font can ship with the mod when its original copyright notice and license accompany it; see [third-party notices](../THIRD_PARTY_NOTICES.md).
+</details>
 
-Click **Grid preview** to open its controls beside the toolbar. The flyout stays open while the pointer leaves; click the entry again or click outside to close it. That closing click is consumed through release. Native ground Debug controls are in Settings. New/missing plane-change hint settings enable checker fill only, with borders off, 15% opacity and a 0.75-second hold; saved settings remain.
+<details>
+<summary>Building from source</summary>
 
-| Action | Key / input |
-| --- | --- |
-| Enter or leave drawing mode | E |
-| Show or hide the mod cursor | G |
-| Show or hide all marks | B |
-| Cancel a stroke/text entry; otherwise return to the game | Esc |
-| Pen / line / arrow | Alt+P / Alt+L / Alt+A |
-| Rectangle / ellipse / text | Alt+R / Alt+O / Alt+T |
-| Whole-mark eraser / cell path | Alt+K / Alt+H |
-| Draw a stroke or shape | Hold and drag the left mouse button |
-| Line / arrow / rectangle / ellipse | Also supports click start, then click end; right-click cancels |
-| Raise / lower target plane one cell | Default: wheel on drawing canvas; configurable in Settings |
-| Cycle ink color | Default: Shift+wheel on drawing canvas |
-| Cycle drawing tool in toolbar order | Default: Alt+wheel for missing preferences; existing bindings remain |
-| Choose one of five ink colors | Alt+1-5 |
-| Snap a line/arrow to 45 degrees; constrain rectangle/ellipse | Hold Shift |
-| Undo | Ctrl+Z |
-| Temporary whole-mark eraser | Hold right button; pending shape cancellation / active path finish takes priority |
-| Redo | Ctrl+Y, or Ctrl+Shift+Z |
-| Switch among three scratch pages | Ctrl+1 / Ctrl+2 / Ctrl+3 |
-| Save | Ctrl+S |
-| Clear this page, with undo | Ctrl+Shift+Delete |
-| Finish text entry | Ctrl+Enter |
-| Mark the ground under the pointer once | Middle-click on canvas while drawing |
+Requires 64-bit Windows.
 
-E/G/B only trigger without Ctrl, Shift, or Alt, and pause while the text entry dialog is open. They were checked against the game's default keymaps; customized keymaps may conflict. While drawing, ordinary keyboard input continues to the game, including movement and camera controls. Use Alt+letter for tools and Alt+1-5 for colors to avoid triggering tools with game movement keys. The mod captures the keyboard while text entry is open or Ctrl/Alt is held for mod shortcuts. Custom game bindings may still overlap those chords. With the free camera disabled, mouse input is reserved for drawing; press E to use mouse controls in the game. Alt+Tab preserves drawing mode and text entry, finishes actual drag strokes, cancels unfinished click shapes and saves completed marks, and pauses mouse interaction until the game is active again. Release held mouse buttons before drawing again.
+1. Download `llvm-mingw-20261006-ucrt-x86_64.zip` from the [LLVM-MinGW release page](https://github.com/mstorsjo/llvm-mingw/releases/tag/20261006). Extract it into `.tools/` at the repository root, keeping the top-level directory. The compiler should be at `.tools/llvm-mingw-20261006-ucrt-x86_64/bin/clang++.exe`.
+2. Run these commands in PowerShell from the repository root:
 
-## Experimental free camera
+```powershell
+.\build.ps1
+.\test.ps1
+```
 
-Press the single key **T**, or the toolbar's **Free camera** button, after entering a level. The feature starts disabled on each game launch and requires a validated main-view camera. WASD works while hovering an inactive panel; use right drag and wheel outside panels. Camera mode displays the cursor. Active widgets and text entry pause camera keyboard controls. It is integrated with the sketchpad; no second mod or project is needed.
+The output is `build/SinkingStarSketch.addon64`. `test.ps1` performs static compilation checks only and does not run programs. Use `-Compiler 'another\path\clang++.exe'` to select another compiler. `.tools/` and `build/` are ignored by Git.
 
-| Action | Input |
-| --- | --- |
-| Pan on the world plane | W/A/S/D |
-| Move up / down | Q / Z |
-| Move faster | Hold Shift |
-| Orbit the view around its captured focus | Hold right mouse button and drag, including while drawing |
-| Zoom the lens | Mouse wheel on canvas with drawing closed |
-| Show / hide drawing toolbar | E |
-| Undo an annotation while the camera is active | Ctrl+Z |
-| Leave camera controls and restore game view | Esc or T |
-| Restore the native game view | Restore game view button |
+The ReShade headers are included in the repository. Visual Studio and system PATH changes are not required. In-game verification additionally requires a compatible ReShade runtime, fonts, and the game environment.
 
-The camera panel offers separate **Invert mouse X** and **Invert mouse Y** checkboxes. X reverses horizontal right-drag rotation; Y reverses vertical right-drag tilt. Neither changes WASD, height keys or the wheel. X defaults off and Y on; saved axis settings remain. Movement speed and mouse sensitivity are adjustable and are saved together with these checkboxes in `SinkingStarSketch-data/settings.ini`; reopening the camera or restarting the game retains them. Resetting the view keeps these preferences.
+</details>
 
-Default movement speed is now 5 world units/second (previously 3), mouse sensitivity is 0.08 degrees/pixel (previously 0.30), Shift gives 2× speed, and wheel zoom changes by 6% per notch. Tilt stops at the overhead position and five degrees before the horizon, keeping the original side of the view. WASD directions follow yaw independently of tilt, preventing reversal when looking down.
+---
 
-The camera panel also offers X/Y/height offsets, yaw, tilt, zoom and reset-to-current-game-camera controls. While enabled, keyboard and mouse input are reserved for the camera and drawing, so WASD does not move the character. Text entry pauses camera movement. A scene/camera discontinuity may disable the override automatically. The normal 3.3-style keyboard/game coexistence returns when the free camera is disabled. Existing world paths use the same modified camera projection and remain anchored to cells; ordinary pen/text annotations remain in screen space unless created with Grid drawing enabled.
+## Documentation
 
-**Experimental render override:** this changes validated DirectX 12 camera constants referenced by the submitted draw commands, not the game's CPU scene camera. Game-side culling, shadows, reflected views, visibility/streaming and mouse picking may still use the original view. Large translations, low angles or looking outside the originally visible area can reveal missing geometry or visual artifacts. It does not unlock unloaded levels or pause game simulation. Restore the game view if needed; full scene consistency is not yet verified in the actual game.
+- [中文 README](../README.md)
+- [Grid drawing (Chinese)](GRID_DRAWING.md)
+- [Ground marking (Chinese)](MANUAL_GROUND.md)
+- [Third-party components](../THIRD_PARTY_NOTICES.md)
 
-## Grid drawing and previews
+---
 
-Toggle **Grid drawing** to create new marks on the target plane. Pen/ellipse use continuous plane coordinates; line/arrow/rectangle endpoints snap to the nearest center or intersection, with Shift constraints calculated on that plane. For cross-height grid lines/arrows, Shift instead locks the start world X/Y to create a vertical line; same-plane constraints and wheel bindings remain unchanged. Text anchors follow the world while letters stay upright and fixed in screen size. Erasing uses the current projection; paths retain their existing rules. Each mark keeps its own plane, ink and width.
+## About this project
 
-**Grid preview** covers 17×17 cells with an 8.5-cell radial fade, white points/lines/crosses with black outer outlines, and black/white checker fill. Previews sit below saved/pending ink; snap markers remain above it. Grid line/arrow/rectangle tools show the actual snapped endpoint. **Settings** configures hints: new defaults are 15% opacity and a 0.75-second hold followed by a 30% ease-out fade; saved preferences remain. Hints clip against projected native voxel faces at sub-cell boundaries, retaining self-contact surfaces without shifting Z. Initialization stays silent, and the 128×128 cap remains. See [the full behavior and draft-upgrade guide](GRID_DRAWING.md).
+This project is a fork of [ouyangzhixuan/SinkingStarSketchPad](https://github.com/ouyangzhixuan/SinkingStarSketchPad), maintained by **wdsjjszr**.
 
-## Cell paths that follow the camera
+- The add-on filename `SinkingStarSketch.addon64` and the draft/font directory names are unchanged so existing data and preferences remain usable after upgrading.
+- This is an unofficial community tool. No extracted game files or artwork are distributed.
+- Code, UI text, and translations include generative-AI-produced content.
 
-1. Enter a level, press **E**, then **Alt+H** or click **Path**.
-2. The level initializes all three pages once from the controlled character logical Z, without requiring ground below. **Set plane to character** reads the character again for the current page. Targets stay fixed until another mark; wait for a valid game camera to draw paths.
-3. Enable **Grid preview → Cell centers** to inspect the snap points near your mouse.
-4. Click a cell center to start a path. Click along one of X, Y or Z to connect intermediate centers; use wheel height changes for vertical runs.
-5. Place a point at each corner. A diagonal target is rejected until you add the corner.
-6. Click the same XYZ endpoint again or use **Finish / New path** to finish; right-click also finishes when camera controls are off.
-7. Press **E** to return to the game. The path is stored using a world-space grid reference and is reprojected with the camera as it moves or zooms.
+### License
 
-Each page keeps an independent target for this session. **Manual marking** requests fresh native terrain, then previews ground cells. Left-click sets the plane and exits on success; a wall, empty space or pending read keeps marking active. Middle-click marks once using the captured pointer/camera, preserves active world lines/arrows and paths, and adds no point. A held line/arrow drag waits for a new endpoint click. Failed picks keep the plane and drawing. Esc, switching pages/tools and a newer marking request invalidate a pending result. Drawing wheel defaults are height/plain, color/Shift and tool/Alt; existing bindings (including None) remain, and multiple modifiers do nothing. Wheel up selects the previous color/tool, down the next, wrapping in toolbar order. Height changes preserve fractional Z; close drawing for free-camera zoom. See [ground marking](MANUAL_GROUND.md).
+Source code and documentation use the **MIT** license. The original author's copyright is retained; fork modifications are copyright 2026 wdsjjszr and also use MIT.
 
-**Path count**, beside **Finish / New path**, defaults off and saves its preference. It numbers every stored path point, including intermediate and vertical cells, from 1 for each new path. Toggling updates the entire active path in one undo step and leaves finished paths unchanged. Numbers keep the path color with a black outline, appear above all ink/previews but below UI, and remain in drafts and SVG exports. Text annotations also use a black outline.
-
-While a plane-change preview is visible, the pointer grid pauses and returns after the fade; snap markers remain. Across heights, a half-opacity dashed guide projects the line/arrow start or current path endpoint vertically onto the new plane, with a landing dot. These guides are temporary and never exported.
-
-The background reader only probes level identity about once per second while idle. Terrain refreshes on level entry and manual/middle-click requests; characters are sampled for initialization and the character-plane button. Initialization retries until a valid character is available, then stops. The duplicate backup GPU camera collector is disabled; effective-camera and free-camera processing remain active.
-
-Ctrl+Z undoes a path addition or numbering change and ends the active path. Enabled camera controls own right drag; with controls off, right-click cancels a pending shape, finishes a path, then temporarily erases. Holding a camera pose alone keeps ordinary drawing right-click behavior. Alt+K selects the whole-path/whole-mark eraser. Each path retains its original grid reference.
-
-This tool marks routes only: it does not move the player, push boxes, check obstacles, or solve puzzles. Ordinary drawing stays in screen space; enable Grid drawing for new pen/shapes and text anchors to follow the world. Use a different scratch page for another level; pages are not automatically assigned to level names.
-
-## Cursor artwork
-
-Normal mode uses a pale gold crystal-blade pointer with a dark edge and a small engraved star. Drawing uses an open star-shaped crosshair whose arms, center and outer dots show the selected ink color. The eraser uses an open gold rune ring. The pointer tip or crosshair center is the mouse hotspot. Vector artwork scales modestly at higher resolutions.
-
-## Drafts, export, and limits
-
-- Draft: `SinkingStarSketch-data/drafts.txt` in the game folder.
-- Previous save: `drafts.txt.bak`.
-- Language, camera, grid drawing and preview preferences: `settings.ini` in the same folder.
-- **Export SVG** writes a transparent vector image to `SinkingStarSketch-data/exports`. World marks use the same current-camera projection as display and erasing; without a valid camera they are omitted. Unfinished shape previews are never exported.
-- Up to 2,000 marks per page, 120,000 total points, and 60 undo steps. Undo history does not survive a restart.
-- Draft format **v5** reads v1–v4 and stores each mark's grid, relative point Z and path-numbering flag. Old paths default to unnumbered. Before upgrading, `drafts.pre-v5.txt` is preserved without overwriting it; backup failure blocks saving. Older upgrade backups remain. Restore the pre-v5 draft before downgrading; older add-ons cannot read v5. The regular `.bak` tracks the previous save.
-
-## Uninstall
-
-Completely exit the game and move `SinkingStarSketch.addon64` outside the game folder. This disables the sketchpad. Preserve `SinkingStarSketch-data` to keep drafts, language preferences and exports.
-
-To remove the bundled ReShade from a fresh installation as well, move its `dxgi.dll`, `ReShade.ini`, and font assets outside the game folder only after confirming they are not used by another graphics mod. Restore a previous graphics setup from your backup if applicable. No uninstall script is required.
-
-## Existing ReShade installations
-
-If you already use ReShade, back up that setup and verify its version and **full add-on support** before proceeding. You may copy only `SinkingStarSketch.addon64` and the font assets into your existing installation, enable loading add-ons from the game folder, and keep your own `dxgi.dll` and other ReShade settings. Set `[INPUT] InputProcessing=1` in `ReShade.ini` before starting the game; mode 2 still blocks the keyboard during drawing, and mode 0 does not protect game mouse input. Only the bundled 6.8.0 runtime has been validated here. Other ReShade versions and graphics proxy combinations are not verified. Select the bundled Noto font in ReShade's settings if Chinese glyphs are missing.
-
-To disable a manual install, exit the game and move this add-on out of the game directory. Remove the bundled `dxgi.dll` only if it belongs to this mod's installation and is not shared by another setup.
-
-## Troubleshooting and scope
-
-- No toolbar: confirm installation beside the actual executable, completely restart the game, then press E. **Home** opens ReShade's own settings, whose language is separate from this mod.
-- Grid/camera still waiting: enter a regular level, wait, and inspect the preview. Ground cells come from native scene data. Character selection, special supports, camera/level transitions, wrapping-map copies and game updates need verification. Manual wall occlusion only covers solid native voxels, not decorative models. Do not assume an arbitrary grid if detection is unavailable.
-- Incorrect alignment: stop using that route and keep a screenshot plus a description of the level/camera view for a bug report. Do not treat the preview as an obstacle or walkability map.
-- Missing Chinese glyphs after an upgrade: keep your existing `ReShade.ini` and inspect its font setting. In ReShade settings, choose `SinkingStarSketch-assets/NotoSansCJKsc-Regular.otf` as the font and restart if needed.
-- Diagnostics: `ReShade.log` and `SinkingStarSketch-data/status.txt`. Review logs and remove personal paths before posting them publicly.
-- Native preview and ground marking were confirmed by the user in tested levels. The preceding grid drawing revision was reported usable. Apart from the authorized isolated preview performance probe, this drawing revision received static checks and compilation only; no other test programs or game sessions were run.
-
-## Credits and third-party notices
-
-This is an unofficial community tool, not an official game feature. The cursor artwork is drawn by the add-on; no extracted game artwork or game files are distributed.
-
-- ReShade 6.8.0 by Patrick Mours and contributors: [official site](https://reshade.me/) — BSD 3-Clause notice in `licenses`.
-- Dear ImGui by Omar Cornut and contributors: [repository](https://github.com/ocornut/imgui) — MIT notice in `licenses`.
-- Noto Sans CJK: [official repository](https://github.com/notofonts/noto-cjk) — unmodified font and SIL Open Font License 1.1 notice in `licenses`.
-- LLVM-MinGW runtime components: bundled notices in `licenses`.
-
-Development and translations include generative-AI-produced code and text. Mod-specific source code and documentation are licensed under MIT, copyright 2026 ouyangzhixuan. Third-party components retain their original licenses.
-
-The display name is **SinkingStarSketchPad**. The compatible add-on filename (`SinkingStarSketch.addon64`) and existing data/font folders retain their original names, so upgrades continue using your saved pages and preferences.
-
-## Source code and license
-
-This fork is maintained by **wdsjjszr**, based on [the original project by ouyangzhixuan](https://github.com/ouyangzhixuan/SinkingStarSketchPad). Original copyright is retained; fork modifications are copyright 2026 wdsjjszr and remain MIT-licensed.
-
-The project is open source under the **MIT License**.
-
-- Repository: [https://github.com/wdsjjszr/SinkingStarSketchPad](https://github.com/wdsjjszr/SinkingStarSketchPad)
-- License: [MIT](https://github.com/wdsjjszr/SinkingStarSketchPad/blob/main/LICENSE)
-- Bug reports: [GitHub Issues](https://github.com/wdsjjszr/SinkingStarSketchPad/issues)
-
-Third-party components retain their original licenses.
-
-## Upstream camera integration — 3.4.6
-
-New or missing camera settings default to speed 5 and Y inversion on; existing speed and axis preferences remain. T/Esc exits controls and restores the game view. Only the Hold camera button leaves the pose fixed while releasing input; T resumes adjustment, and Esc or Restore game view restores the native camera. Fixed poses reset on restart or a native scene change. Drawing, native picking and voxel clipping continue using the effective camera position/direction. The full font-bearing manual package is retained.
+Bundled third-party components keep their own licenses: ReShade (BSD 3-Clause), Dear ImGui (MIT), Noto Sans CJK (SIL OFL 1.1), and LLVM-MinGW runtimes. Full license texts are in the release package's `licenses` directory.
