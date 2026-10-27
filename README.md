@@ -17,7 +17,10 @@
 
 </div>
 
-<img src="docs/images/hero.gif" alt="游戏内绘图与世界标记演示" width="720">
+<p align="center">
+<img src="docs/images/hero.gif" alt="游戏内绘图与世界标记演示" width="720"><br>
+<em>游戏内绘图与世界标记演示</em>
+</p>
 
 ---
 
@@ -40,7 +43,7 @@ SinkingStarSketchPad 是一个《沉星之序》的游戏内画板。你可以�
 
 本项目的 **「网格绘画」** 把笔迹画在游戏世界里的一个平面上（比如你脚下这一层地面）。之后不管镜头怎么变，笔迹、箭头、文字都会留在原来的位置，像真的画在地上。
 
-<table>
+<table align="center" width="680">
 <tr>
 <td width="50%" align="center"><b>普通绘画：贴在屏幕上</b></td>
 <td width="50%" align="center"><b>网格绘画：贴在世界里</b></td>
@@ -48,12 +51,18 @@ SinkingStarSketchPad 是一个《沉星之序》的游戏内画板。你可以�
 <tr>
 <td>
 
-<img src="docs/images/compare-screen.gif" alt="普通绘画：笔迹固定在屏幕上" width="720">
+<p align="center">
+<img src="docs/images/compare-screen.gif" alt="普通绘画：笔迹固定在屏幕上" width="320"><br>
+<em>普通绘画：笔迹固定在屏幕上</em>
+</p>
 
 </td>
 <td>
 
-<img src="docs/images/compare-world.gif" alt="网格绘画：笔迹固定在世界里" width="720">
+<p align="center">
+<img src="docs/images/compare-world.gif" alt="网格绘画：笔迹固定在世界里" width="320"><br>
+<em>网格绘画：笔迹固定在世界里</em>
+</p>
 
 </td>
 </tr>
@@ -82,9 +91,15 @@ SinkingStarSketchPad 是一个《沉星之序》的游戏内画板。你可以�
 
 打开 **「网格预览」** 可以在鼠标周围看到一片格子，提前知道会吸附到哪一格。升降平面时还会短暂显示新平面的位置。
 
-<img src="docs/images/grid-preview.png" alt="网格预览与吸附点" width="720">
+<p>
+<img src="docs/images/grid-preview.png" alt="网格预览与吸附点" width="720"><br>
+<em>网格预览与吸附点</em>
+</p>
 
-<img src="docs/images/vertical-line.gif" alt="跨层竖直线与辅助落点演示" width="720">
+<p>
+<img src="docs/images/vertical-line.gif" alt="跨层竖直线与辅助落点演示" width="720"><br>
+<em>跨层竖直线与辅助落点演示</em>
+</p>
 
 更完整的规则见 [网格绘画说明](docs/GRID_DRAWING.md) 和 [地面标识说明](docs/MANUAL_GROUND.md)。
 
@@ -102,7 +117,10 @@ SinkingStarSketchPad 是一个《沉星之序》的游戏内画板。你可以�
 - 可开启 **「路径计数」**，自动给每个路径点编号，每条新路径从 1 重新开始；
 - 路径会固定在原来的格子上，镜头怎么变都不会漂；支持撤销。
 
-<img src="docs/images/path.png" alt="格子路径与路径计数" width="720">
+<p>
+<img src="docs/images/path.png" alt="格子路径与路径计数" width="720"><br>
+<em>格子路径与路径计数</em>
+</p>
 
 > 这个工具**只负责标记**，不会检查障碍、自动寻路，也不会替你移动角色。
 
@@ -136,7 +154,10 @@ SinkingStarSketchPad 是一个《沉星之序》的游戏内画板。你可以�
 
 画笔、直线、箭头、矩形、椭圆、文字、整笔橡皮，加上五种笔色。按住 `Shift` 可以约束成 45° 直线、正方形或正圆。支持撤销 / 重做（每页 60 步）。
 
-<img src="docs/images/toolbar.png" alt="绘图工具栏" width="720">
+<p>
+<img src="docs/images/toolbar.png" alt="绘图工具栏" width="720"><br>
+<em>绘图工具栏</em>
+</p>
 
 ### 三页草稿与导出
 
@@ -150,7 +171,10 @@ SinkingStarSketchPad 是一个《沉星之序》的游戏内画板。你可以�
 - 绘图时：镂空星芒准星，颜色跟随当前笔色；
 - 橡皮：镂空符文圆环。
 
-<img src="docs/images/cursors.png" alt="晶刃指针、星芒准星与符文圆环橡皮" width="720">
+<p>
+<img src="docs/images/cursors.png" alt="晶刃指针、星芒准星与符文圆环橡皮" width="720"><br>
+<em>晶刃指针、星芒准星与符文圆环橡皮</em>
+</p>
 
 ### 中英文界面与界面缩放
 

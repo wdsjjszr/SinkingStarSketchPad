@@ -17,7 +17,10 @@ Move the camera, and your marks move with the scene as if they were drawn on the
 
 </div>
 
-<img src="images/hero.gif" alt="In-game drawing and world-space marks" width="720">
+<p align="center">
+<img src="images/hero.gif" alt="In-game drawing and world-space marks" width="720"><br>
+<em>In-game drawing and world-space marks</em>
+</p>
 
 ---
 
@@ -40,17 +43,23 @@ A conventional sketchpad keeps marks on the screen. Move the camera, and those m
 
 **Grid drawing** places your marks on a plane in the game world, such as the floor beneath your character. As the camera moves, your strokes, arrows, and text anchors stay in their original positions, as if drawn on the ground.
 
-<table>
+<table align="center" width="680">
 <tr>
 <td width="50%" align="center"><b>Regular drawing: fixed on the screen</b></td>
 <td width="50%" align="center"><b>Grid drawing: fixed in the world</b></td>
 </tr>
 <tr>
 <td>
-<img src="images/compare-screen.gif" alt="Regular drawing stays fixed on the screen" width="720">
+<p align="center">
+<img src="images/compare-screen.gif" alt="Regular drawing stays fixed on the screen" width="320"><br>
+<em>Regular drawing stays fixed on the screen</em>
+</p>
 </td>
 <td>
-<img src="images/compare-world.gif" alt="Grid drawing stays fixed in the world" width="720">
+<p align="center">
+<img src="images/compare-world.gif" alt="Grid drawing stays fixed in the world" width="320"><br>
+<em>Grid drawing stays fixed in the world</em>
+</p>
 </td>
 </tr>
 </table>
@@ -78,9 +87,15 @@ Each mark remembers its own plane, color, and stroke width independently.
 
 Enable **Grid preview** to see nearby cells and where points will snap. Changing the plane height also briefly shows the new plane's position.
 
-<img src="images/grid-preview.png" alt="Grid preview and snap points" width="720">
+<p>
+<img src="images/grid-preview.png" alt="Grid preview and snap points" width="720"><br>
+<em>Grid preview and snap points</em>
+</p>
 
-<img src="images/vertical-line.gif" alt="A vertical line between levels with a landing guide" width="720">
+<p>
+<img src="images/vertical-line.gif" alt="A vertical line between levels with a landing guide" width="720"><br>
+<em>A vertical line between levels with a landing guide</em>
+</p>
 
 For full rules, see [Grid drawing](GRID_DRAWING.md) and [Ground marking](MANUAL_GROUND.md) (in Chinese).
 
@@ -98,7 +113,10 @@ Click through cell centers to mark a route.
 - Enable **Path numbering** to number every path point automatically. Each new path starts at 1.
 - Paths stay fixed to their original cells as the camera moves. Undo is supported.
 
-<img src="images/path.png" alt="A cell path with numbered points" width="720">
+<p>
+<img src="images/path.png" alt="A cell path with numbered points" width="720"><br>
+<em>A cell path with numbered points</em>
+</p>
 
 > This tool **only marks routes**. It does not check obstacles, find paths automatically, or move your character.
 
@@ -132,7 +150,10 @@ Press `T` to leave the default game view and pan, rotate, raise, or lower the ca
 
 Pen, line, arrow, rectangle, ellipse, text, and whole-mark eraser, with five ink colors. Hold `Shift` to constrain lines to 45° angles or draw squares and circles. Undo / redo supports 60 steps per page.
 
-<img src="images/toolbar.png" alt="Drawing toolbar" width="720">
+<p>
+<img src="images/toolbar.png" alt="Drawing toolbar" width="720"><br>
+<em>Drawing toolbar</em>
+</p>
 
 ### Three scratch pages and export
 
@@ -146,7 +167,10 @@ Pen, line, arrow, rectangle, ellipse, text, and whole-mark eraser, with five ink
 - Drawing mode: a hollow star crosshair in the current ink color.
 - Eraser: a hollow rune ring.
 
-<img src="images/cursors.png" alt="Crystal-blade pointer, star crosshair, and rune-ring eraser" width="720">
+<p>
+<img src="images/cursors.png" alt="Crystal-blade pointer, star crosshair, and rune-ring eraser" width="720"><br>
+<em>Crystal-blade pointer, star crosshair, and rune-ring eraser</em>
+</p>
 
 ### English / Chinese interface and UI scaling
 
